@@ -1,6 +1,6 @@
 # 📦 Inventory Management System (IMS) dengan Approval System
 
-Sistem Manajemen Inventori berbasis web untuk ESDM yang dilengkapi dengan sistem approval bertingkat, multi-warehouse management, dan role-based access control.
+Sistem Manajemen Inventori berbasis web yang dilengkapi dengan sistem approval bertingkat, multi-warehouse management, dan role-based access control.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Laravel-11-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel">
@@ -179,7 +179,7 @@ This project is open-sourced software licensed under the [MIT license](https://o
 
 ## 👨‍💻 Developer
 
-Developed by **Ramadityaeka** for ESDM Inventory Management System
+Developed by **Ramadityaeka** Inventory Management System
 
 ## 🤝 Contributing
 
