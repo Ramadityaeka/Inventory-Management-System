@@ -12,8 +12,8 @@ Sistem Manajemen Inventori berbasis web yang dilengkapi dengan sistem approval b
 ## ✨ Fitur Utama
 
 ### 🔐 Multi-Role Authentication System
-- **Super Admin**: Manajemen penuh sistem, user management, approval transfer
-- **Admin Gudang**: Kelola stock, submission, transfer antar gudang
+- **Super Admin**: Manajemen penuh sistem, user management,
+- **Admin Gudang**: Kelola stock, submission
 - **Staff**: Pengajuan barang, tracking submission status
 
 ### 📊 Stock & Warehouse Management
