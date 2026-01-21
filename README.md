@@ -25,17 +25,15 @@ Sistem Manajemen Inventori berbasis web yang dilengkapi dengan sistem approval b
 
 ### 📝 Approval Workflow System
 - Multi-level approval untuk submission barang
-- Transfer approval dengan review system
 - Tracking status real-time
 - Rejection dengan reason tracking
-- Email/in-app notifications
+- in-app notifications
 
 ### 📈 Reporting & Analytics
 - Stock overview & summary reports
 - Monthly warehouse reports
 - Transfer summary & history
 - Export to Excel & PDF
-- Audit log untuk semua aktivitas
 
 ### 🔔 Notification System
 - Real-time in-app notifications
@@ -58,7 +56,6 @@ Sistem Manajemen Inventori berbasis web yang dilengkapi dengan sistem approval b
 - PHP >= 8.2
 - Composer
 - MySQL >= 8.0
-- Node.js & NPM (untuk asset compilation)
 - Git
 
 ## 🚀 Instalasi
