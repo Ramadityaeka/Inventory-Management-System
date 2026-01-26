@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\AdminGudang;
+namespace App\Http\Controllers\AdminUnit;
 
 use App\Http\Controllers\Controller;
 use App\Models\StockMovement;
@@ -27,18 +27,21 @@ class MonthlyReportController extends Controller
         $month = $request->input('month', now()->month);
         $year = $request->input('year', now()->year);
         
-        // Get warehouses for filter
+        // Get warehouses and categories for filter
         $warehouses = auth()->user()->warehouses;
+        $categories = \App\Models\Category::orderBy('name')->get();
         $selectedWarehouse = $request->input('warehouse_id', $userWarehouses->first());
+        $categoryId = $request->input('category_id');
         
         // Generate report data if month and year are selected
         $reportData = null;
         if ($request->filled('generate') || $request->filled('month')) {
-            $reportData = $this->generateReportData($selectedWarehouse, $month, $year);
+            $reportData = $this->generateReportData($selectedWarehouse, $month, $year, $categoryId);
         }
         
         return view('gudang.reports.monthly', compact(
             'warehouses',
+            'categories',
             'selectedWarehouse',
             'month',
             'year',
@@ -52,6 +55,7 @@ class MonthlyReportController extends Controller
             'warehouse_id' => 'required|exists:warehouses,id',
             'month' => 'required|integer|min:1|max:12',
             'year' => 'required|integer|min:2020',
+            'category_id' => 'nullable|exists:categories,id',
         ]);
         
         // Check if user has access to this warehouse
@@ -63,6 +67,7 @@ class MonthlyReportController extends Controller
             'warehouse_id' => $validated['warehouse_id'],
             'month' => $validated['month'],
             'year' => $validated['year'],
+            'category_id' => $validated['category_id'] ?? null,
             'generate' => 1
         ]);
     }
@@ -98,16 +103,37 @@ class MonthlyReportController extends Controller
         return $pdf->download($filename);
     }
     
-    private function generateReportData($warehouseId, $month, $year)
+    private function generateReportData($warehouseId, $month, $year, $categoryId = null)
     {
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = Carbon::create($year, $month, 1)->endOfMonth();
         
-        // Get stock movements for the period
-        $movements = StockMovement::with(['item', 'warehouse'])
+        // Base query for stock movements
+        $movementsQuery = StockMovement::with(['item.category', 'warehouse', 'creator'])
             ->where('warehouse_id', $warehouseId)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->get();
+            ->whereBetween('created_at', [$startDate, $endDate]);
+        
+        // Filter by category if specified
+        if ($categoryId) {
+            $movementsQuery->whereHas('item', function($q) use ($categoryId) {
+                $q->where('category_id', $categoryId);
+            });
+        }
+        
+        $movements = $movementsQuery->orderBy('created_at', 'desc')->get();
+        
+        // Get detailed transactions (submissions)
+        $transactionsQuery = Submission::with(['item.category', 'staff', 'approvals.admin'])
+            ->where('warehouse_id', $warehouseId)
+            ->whereBetween('created_at', [$startDate, $endDate]);
+            
+        if ($categoryId) {
+            $transactionsQuery->whereHas('item', function($q) use ($categoryId) {
+                $q->where('category_id', $categoryId);
+            });
+        }
+        
+        $transactions = $transactionsQuery->orderBy('created_at', 'desc')->get();
         
         // Group movements by item
         $itemMovements = $movements->groupBy('item_id')->map(function ($movements, $itemId) use ($warehouseId, $startDate, $endDate) {
@@ -162,10 +188,38 @@ class MonthlyReportController extends Controller
             ->whereBetween('requested_at', [$startDate, $endDate])
             ->count();
         
-        // Get current stock levels
-        $currentStocks = Stock::with('item')
-            ->where('warehouse_id', $warehouseId)
-            ->get();
+        // Get current stock levels with price info
+        $currentStocksQuery = Stock::with(['item.category'])
+            ->where('warehouse_id', $warehouseId);
+            
+        if ($categoryId) {
+            $currentStocksQuery->whereHas('item', function($q) use ($categoryId) {
+                $q->where('category_id', $categoryId);
+            });
+        }
+        
+        $currentStocks = $currentStocksQuery->get();
+        
+        // Calculate stock values with prices
+        $stocksWithValues = $currentStocks->map(function($stock) use ($warehouseId, $startDate, $endDate) {
+            // Get latest submission price for this item
+            $latestSubmission = Submission::where('warehouse_id', $warehouseId)
+                ->where('item_id', $stock->item_id)
+                ->where('status', 'approved')
+                ->whereNotNull('unit_price')
+                ->orderBy('created_at', 'desc')
+                ->first();
+            
+            $unitPrice = $latestSubmission ? $latestSubmission->unit_price : 0;
+            $totalValue = $stock->quantity * $unitPrice;
+            
+            return [
+                'item' => $stock->item,
+                'quantity' => $stock->quantity,
+                'unit_price' => $unitPrice,
+                'total_value' => $totalValue,
+            ];
+        });
         
         // Calculate purchase values
         $totalPurchaseValue = $submissions->where('status', 'approved')
@@ -176,6 +230,9 @@ class MonthlyReportController extends Controller
             ->whereNotNull('unit_price')
             ->avg('unit_price');
         
+        // Calculate total stock value
+        $totalStockValue = $stocksWithValues->sum('total_value');
+        
         return [
             'period' => $startDate->format('F Y'),
             'warehouse' => auth()->user()->warehouses->find($warehouseId),
@@ -183,6 +240,7 @@ class MonthlyReportController extends Controller
             'total_stock_out' => abs($movements->where('quantity', '<', 0)->sum('quantity')),
             'total_movements' => $movements->count(),
             'item_movements' => $itemMovements,
+            'transactions' => $transactions,
             'submissions_count' => $submissions->count(),
             'submissions_approved' => $submissions->where('status', 'approved')->count(),
             'submissions_pending' => $submissions->where('status', 'pending')->count(),
@@ -190,9 +248,8 @@ class MonthlyReportController extends Controller
             'transfers_out' => $transfersOut,
             'transfers_in' => $transfersIn,
             'current_stocks' => $currentStocks,
-            'low_stock_items' => $currentStocks->filter(function ($stock) {
-                return $stock->quantity <= $stock->item->min_threshold && $stock->quantity > 0;
-            })->count(),
+            'stocks_with_values' => $stocksWithValues,
+            'total_stock_value' => $totalStockValue,
             'out_of_stock_items' => $currentStocks->where('quantity', 0)->count(),
             'total_purchase_value' => $totalPurchaseValue,
             'avg_purchase_price' => $avgPurchaseValue,

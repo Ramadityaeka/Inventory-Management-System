@@ -171,8 +171,8 @@ class NotificationService
             $notifications[] = $this->create([
                 'user_id' => $admin->id,
                 'type' => 'low_stock_alert',
-                'title' => 'Alert: Stok Rendah',
-                'message' => "Stok {$stock->item->name} di {$stock->warehouse->name} rendah: {$stock->quantity} {$stock->item->unit} (minimum: {$stock->item->min_threshold})",
+                'title' => 'Alert: Stok Habis',
+                'message' => "Stok {$stock->item->name} di {$stock->warehouse->name} habis: {$stock->quantity} {$stock->item->unit}",
                 'reference_type' => 'stock',
                 'reference_id' => $stock->id,
             ]);

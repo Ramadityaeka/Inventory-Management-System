@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Staff;
 
 use App\Events\SubmissionCreated;
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Item;
 use App\Models\Submission;
 use App\Models\SubmissionPhoto;
@@ -42,6 +43,8 @@ class ReceiveItemController extends Controller
         $validated = $request->validate([
             'item_id' => 'nullable|exists:items,id',
             'item_name' => 'required|string|max:255',
+            'item_code' => 'nullable|string|max:50',
+            'category_id' => 'nullable|exists:categories,id',
             'quantity' => 'required|integer|min:1',
             'unit' => 'required|string|max:50',
             'unit_price' => 'nullable|numeric|min:0',
@@ -55,6 +58,28 @@ class ReceiveItemController extends Controller
 
         DB::beginTransaction();
         try {
+            $itemId = $validated['item_id'];
+            
+            // Jika item_id tidak ada, berarti barang baru - buat item baru
+            if (!$itemId && $validated['item_code'] && $validated['category_id']) {
+                // Cek apakah kode sudah ada
+                $existingItem = Item::where('code', $validated['item_code'])->first();
+                if ($existingItem) {
+                    return back()->withErrors(['item_code' => 'Kode barang sudah digunakan.'])->withInput();
+                }
+                
+                // Buat item baru
+                $newItem = Item::create([
+                    'category_id' => $validated['category_id'],
+                    'code' => $validated['item_code'],
+                    'name' => $validated['item_name'],
+                    'unit' => $validated['unit'],
+                    'is_active' => true
+                ]);
+                
+                $itemId = $newItem->id;
+            }
+            
             // Calculate total price
             $totalPrice = null;
             if ($request->filled('unit_price') && $request->filled('quantity')) {
@@ -68,7 +93,7 @@ class ReceiveItemController extends Controller
             }
 
             $submission = Submission::create([
-                'item_id' => $validated['item_id'] ?? null,
+                'item_id' => $itemId,
                 'item_name' => $validated['item_name'],
                 'quantity' => $validated['quantity'],
                 'unit' => $validated['unit'],
@@ -334,6 +359,63 @@ class ReceiveItemController extends Controller
             ->limit(10)
             ->get();
         
-        return response()->json($items);
+        return response()->json($items->map(function($item) {
+            return [
+                'id' => $item->id,
+                'code' => $item->code,
+                'name' => $item->name,
+                'category_name' => $item->category ? $item->category->name : 'Tanpa Kategori',
+                'unit' => $item->unit
+            ];
+        }));
+    }
+    
+    public function searchCategories(Request $request)
+    {
+        $query = $request->input('q');
+        
+        $categories = Category::where('name', 'like', "%{$query}%")
+            ->orWhere('code', 'like', "%{$query}%")
+            ->orderBy('code')
+            ->limit(20)
+            ->get();
+        
+        return response()->json($categories->map(function($category) {
+            return [
+                'id' => $category->id,
+                'code' => $category->code,
+                'name' => $category->name,
+                'level' => $category->level
+            ];
+        }));
+    }
+    
+    public function generateItemCode(Request $request)
+    {
+        $categoryId = $request->input('category_id');
+        $category = Category::find($categoryId);
+        
+        if (!$category) {
+            return response()->json(['error' => 'Kategori tidak ditemukan'], 404);
+        }
+        
+        // Cari item terakhir dalam kategori ini
+        $lastItem = Item::where('category_id', $categoryId)
+            ->orderBy('code', 'desc')
+            ->first();
+        
+        if ($lastItem) {
+            // Parse nomor urut dari kode terakhir
+            // Misal: 1.01.03.01.001 -> ambil 001
+            $parts = explode('.', $lastItem->code);
+            $lastNumber = intval(end($parts));
+            $nextNumber = $lastNumber + 1;
+            $newCode = $category->code . '.' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        } else {
+            // Belum ada item di kategori ini, mulai dari 001
+            $newCode = $category->code . '.001';
+        }
+        
+        return response()->json(['code' => $newCode]);
     }
 }

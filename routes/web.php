@@ -1,10 +1,11 @@
 <?php
 
-use App\Http\Controllers\AdminGudang\AlertController;
-use App\Http\Controllers\AdminGudang\MonthlyReportController;
-use App\Http\Controllers\AdminGudang\StockController;
-use App\Http\Controllers\AdminGudang\StockRequestManagementController;
-use App\Http\Controllers\AdminGudang\SubmissionController;
+use App\Http\Controllers\AdminUnit\AlertController;
+use App\Http\Controllers\AdminUnit\MonthlyReportController;
+use App\Http\Controllers\AdminUnit\StockController;
+use App\Http\Controllers\AdminUnit\StockReportController;
+use App\Http\Controllers\AdminUnit\StockRequestManagementController;
+use App\Http\Controllers\AdminUnit\SubmissionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Staff\DraftController;
@@ -42,7 +43,7 @@ Route::middleware('auth')->group(function () {
             'isAdminGudang' => $user->isAdminGudang(),
             'isStaffGudang' => $user->isStaffGudang(),
             'warehouses' => $user->warehouses->pluck('name', 'id'),
-            'should_redirect_to' => $user->isAdminGudang() ? 'admin-gudang.blade.php' : ($user->isSuperAdmin() ? 'super-admin.blade.php' : 'staff.blade.php')
+            'should_redirect_to' => $user->isAdminGudang() ? 'admin-unit.blade.php' : ($user->isSuperAdmin() ? 'super-admin.blade.php' : 'staff.blade.php')
         ]);
     });
     
@@ -60,6 +61,10 @@ Route::middleware('auth')->group(function () {
         Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword']);
         Route::resource('warehouses', WarehouseController::class);
         Route::resource('categories', CategoryController::class);
+        // Category API endpoints for AJAX
+        Route::get('categories/api/search', [CategoryController::class, 'search'])->name('categories.search');
+        Route::get('categories/api/generate-code', [CategoryController::class, 'generateCode'])->name('categories.generate-code');
+        
         Route::resource('suppliers', SupplierController::class);
         Route::resource('items', ItemController::class);
         Route::post('items/{item}/set-threshold', [ItemController::class, 'setThreshold']);
@@ -68,7 +73,17 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/stock-overview', [ReportController::class, 'stockOverview'])->name('reports.stock-overview');
         Route::get('reports/stock-overview/export-excel', [ReportController::class, 'exportStockOverviewExcel'])->name('reports.stock-overview.export-excel');
         Route::get('reports/stock-overview/export-pdf', [ReportController::class, 'exportStockOverviewPdf'])->name('reports.stock-overview.export-pdf');
-        Route::get('reports/monthly', [ReportController::class, 'monthly'])->name('reports.monthly');
+        
+        // Custom Reports
+        Route::get('reports/custom', [ReportController::class, 'customReports'])->name('reports.custom');
+        Route::get('reports/export-by-category', [ReportController::class, 'exportByCategory'])->name('reports.export-by-category');
+        Route::get('reports/export-by-warehouse', [ReportController::class, 'exportByWarehouse'])->name('reports.export-by-warehouse');
+        Route::get('reports/export-by-supplier', [ReportController::class, 'exportBySupplier'])->name('reports.export-by-supplier');
+        Route::get('reports/export-detailed', [ReportController::class, 'exportDetailed'])->name('reports.export-detailed');
+        
+        Route::get('reports/monthly', [\App\Http\Controllers\Admin\MonthlyReportController::class, 'index'])->name('reports.monthly');
+        Route::post('reports/monthly/generate', [\App\Http\Controllers\Admin\MonthlyReportController::class, 'generate'])->name('reports.monthly.generate');
+        Route::post('reports/monthly/export-pdf', [\App\Http\Controllers\Admin\MonthlyReportController::class, 'exportPdf'])->name('reports.monthly.exportPdf');
         Route::post('reports/export-excel', [ReportController::class, 'exportExcel'])->name('reports.export-excel');
         Route::post('reports/export-pdf', [ReportController::class, 'exportPdf'])->name('reports.export-pdf');
     });
@@ -108,6 +123,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/monthly', [MonthlyReportController::class, 'index'])->name('reports.monthly');
         Route::post('/reports/monthly/generate', [MonthlyReportController::class, 'generate'])->name('reports.monthly.generate');
         Route::post('/reports/monthly/export-pdf', [MonthlyReportController::class, 'exportPdf'])->name('reports.monthly.exportPdf');
+        
+        // Stock Reports
+        Route::get('/reports/movements', [StockReportController::class, 'movements'])->name('reports.movements');
+        Route::get('/reports/in-out', [StockReportController::class, 'inOut'])->name('reports.in-out');
+        Route::get('/reports/stock-status', [StockReportController::class, 'stockStatus'])->name('reports.stock-status');
+        Route::post('/reports/movements/export-pdf', [StockReportController::class, 'exportMovementsPdf'])->name('reports.movements.exportPdf');
     });
 
     // Staff Gudang Routes
@@ -119,6 +140,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/drafts', [DraftController::class, 'index'])->name('drafts');
         Route::get('/drafts/{submission}/edit', [DraftController::class, 'edit'])->name('drafts.edit');
         Route::delete('/drafts/{submission}', [DraftController::class, 'destroy'])->name('drafts.destroy');
+        
+        // API endpoints
+        Route::get('/api/search-items', [ReceiveItemController::class, 'search'])->name('api.search-items');
+        Route::get('/api/search-categories', [ReceiveItemController::class, 'searchCategories'])->name('api.search-categories');
+        Route::get('/api/generate-item-code', [ReceiveItemController::class, 'generateItemCode'])->name('api.generate-item-code');
+        
+        // Legacy route for backward compatibility
         Route::get('/search-items', [ReceiveItemController::class, 'search'])->name('search-items');
         
         // Stock Requests

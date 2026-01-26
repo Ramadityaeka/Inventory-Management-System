@@ -141,13 +141,9 @@
                                 <div class="row g-2">
                                     <div class="col-auto">
                                         <small class="text-muted">Current Stock:</small>
-                                        <strong class="{{ $alert->current_stock == 0 ? 'text-danger' : 'text-warning' }}">
+                                        <strong class="{{ $alert->current_stock == 0 ? 'text-danger' : 'text-success' }}">
                                             {{ number_format($alert->current_stock) }}
                                         </strong>
-                                    </div>
-                                    <div class="col-auto">
-                                        <small class="text-muted">Threshold:</small>
-                                        <strong>{{ number_format($alert->threshold) }}</strong>
                                     </div>
                                     <div class="col-auto">
                                         <small class="text-muted">Unit:</small>
@@ -206,10 +202,9 @@
     <div class="card-body">
         <h6 class="mb-3"><i class="bi bi-info-circle me-2"></i>Tentang Stock Alerts</h6>
         <ul class="mb-0">
-            <li><strong>Low Stock Alert:</strong> Muncul ketika stock berada pada atau di bawah minimum threshold yang ditentukan.</li>
             <li><strong>Out of Stock Alert:</strong> Muncul ketika stock mencapai 0 (habis).</li>
             <li><strong>Action:</strong> Segera lakukan stock adjustment atau hubungi supplier untuk restock barang.</li>
-            <li>Alert akan otomatis dibuat oleh sistem saat stock mencapai threshold.</li>
+            <li>Alert akan otomatis dibuat oleh sistem saat stock habis.</li>
         </ul>
     </div>
 </div>

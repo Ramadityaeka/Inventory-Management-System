@@ -30,8 +30,8 @@
     <div class="col-md-4">
         <div class="card bg-light">
             <div class="card-body text-center">
-                <h5 class="card-title text-warning">{{ number_format($item->min_threshold) }}</h5>
-                <p class="card-text text-muted mb-0">Min Threshold</p>
+                <h5 class="card-title text-warning">-</h5>
+                <p class="card-text text-muted mb-0">-</p>
             </div>
         </div>
     </div>
@@ -110,7 +110,7 @@
 
             <div class="row">
                 <!-- Unit -->
-                <div class="col-md-6 mb-3">
+                <div class="col-md-12 mb-3">
                     <label for="unit" class="form-label">Unit <span class="text-danger">*</span></label>
                     <select class="form-select @error('unit') is-invalid @enderror"
                             id="unit" name="unit" required>
@@ -121,18 +121,6 @@
                         <option value="rim" {{ old('unit', $item->unit) == 'rim' ? 'selected' : '' }}>rim</option>
                     </select>
                     @error('unit')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <!-- Min Threshold -->
-                <div class="col-md-6 mb-3">
-                    <label for="min_threshold" class="form-label">Minimum Threshold <span class="text-danger">*</span></label>
-                    <input type="number" class="form-control @error('min_threshold') is-invalid @enderror"
-                           id="min_threshold" name="min_threshold" value="{{ old('min_threshold', $item->min_threshold) }}"
-                           min="0" required>
-                    <div class="form-text">Jumlah minimum sebelum dianggap low stock</div>
-                    @error('min_threshold')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>

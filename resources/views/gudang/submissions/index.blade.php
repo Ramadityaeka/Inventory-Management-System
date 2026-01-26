@@ -79,13 +79,13 @@
                             <thead class="table-dark">
                                 <tr>
                                     <th width="80">ID</th>
-                                    <th width="180">Submitted By</th>
-                                    <th>Item Name</th>
-                                    <th width="120">Quantity & Unit</th>
+                                    <th width="180">Diajukan Oleh</th>
+                                    <th>Nama Barang</th>
+                                    <th width="120">Jumlah & Satuan</th>
                                     <th width="150">Supplier</th>
-                                    <th width="140">Submitted At</th>
+                                    <th width="140">Waktu Pengajuan</th>
                                     <th width="100">Status</th>
-                                    <th width="120">Actions</th>
+                                    <th width="120">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('page-title', 'Stock Movement History - ' . $item->name)
+@section('page-title', 'Riwayat Pergerakan Stok - ' . $item->name)
 
 @section('content')
 <div class="row">
@@ -10,7 +10,7 @@
                 <a href="{{ route('gudang.stocks.index') }}" class="btn btn-outline-secondary btn-sm me-2">
                     <i class="bi bi-arrow-left"></i>
                 </a>
-                Stock Movement History
+                Riwayat Pergerakan Stok
             </h4>
         </div>
     </div>
@@ -42,15 +42,15 @@
                 </table>
             </div>
             <div class="col-md-6">
-                <h6 class="mb-3">Current Stock by Warehouse</h6>
+                <h6 class="mb-3">Stok Saat Ini per Unit</h6>
                 @if($currentStocks->count() > 0)
                     <div class="table-responsive">
                         <table class="table table-sm">
                             <thead>
                                 <tr>
-                                    <th>Warehouse</th>
-                                    <th class="text-end">Stock</th>
-                                    <th class="text-end">Min Stock</th>
+                                    <th>Unit</th>
+                                    <th class="text-end">Stok</th>
+                                    <th class="text-end">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -58,22 +58,22 @@
                                     <tr>
                                         <td>{{ $stock->warehouse->name }}</td>
                                         <td class="text-end">
-                                            @if($stock->quantity <= 0)
-                                                <span class="badge bg-danger">{{ number_format($stock->quantity) }}</span>
-                                            @elseif($stock->quantity <= $stock->minimum_stock)
-                                                <span class="badge bg-warning">{{ number_format($stock->quantity) }}</span>
+                                            {{ number_format($stock->quantity) }} {{ $stock->item->unit }}
+                                        </td>
+                                        <td class="text-end">
+                                            @if($stock->quantity == 0)
+                                                <span class="badge bg-danger">Habis</span>
                                             @else
-                                                <span class="badge bg-success">{{ number_format($stock->quantity) }}</span>
+                                                <span class="badge bg-success">Tersedia</span>
                                             @endif
                                         </td>
-                                        <td class="text-end">{{ number_format($stock->minimum_stock) }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
                     </div>
                 @else
-                    <p class="text-muted">No stock information available</p>
+                    <p class="text-muted">Tidak ada informasi stok</p>
                 @endif
             </div>
         </div>
@@ -85,9 +85,9 @@
     <div class="card-body">
         <form method="GET" action="{{ route('gudang.stocks.history', $item) }}" class="row g-3">
             <div class="col-md-3">
-                <label for="warehouse_id" class="form-label">Warehouse</label>
+                <label for="warehouse_id" class="form-label">Unit</label>
                 <select class="form-select" id="warehouse_id" name="warehouse_id">
-                    <option value="">All Warehouses</option>
+                    <option value="">Semua Unit</option>
                     @foreach($warehouses as $warehouse)
                         <option value="{{ $warehouse->id }}" {{ request('warehouse_id') == $warehouse->id ? 'selected' : '' }}>
                             {{ $warehouse->name }}
@@ -96,21 +96,21 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <label for="type" class="form-label">Type</label>
+                <label for="type" class="form-label">Tipe</label>
                 <select class="form-select" id="type" name="type">
-                    <option value="">All Types</option>
-                    <option value="in" {{ request('type') == 'in' ? 'selected' : '' }}>Stock In (Barang Masuk)</option>
-                    <option value="out" {{ request('type') == 'out' ? 'selected' : '' }}>Stock Out (Barang Keluar)</option>
-                    <option value="adjustment" {{ request('type') == 'adjustment' ? 'selected' : '' }}>Adjustment</option>
+                    <option value="">Semua Tipe</option>
+                    <option value="in" {{ request('type') == 'in' ? 'selected' : '' }}>Barang Masuk</option>
+                    <option value="out" {{ request('type') == 'out' ? 'selected' : '' }}>Barang Keluar</option>
+                    <option value="adjustment" {{ request('type') == 'adjustment' ? 'selected' : '' }}>Penyesuaian</option>
                 </select>
             </div>
             <div class="col-md-2">
-                <label for="start_date" class="form-label">Start Date</label>
+                <label for="start_date" class="form-label">Tanggal Mulai</label>
                 <input type="date" class="form-control" id="start_date" name="start_date" 
                        value="{{ request('start_date') }}">
             </div>
             <div class="col-md-2">
-                <label for="end_date" class="form-label">End Date</label>
+                <label for="end_date" class="form-label">Tanggal Akhir</label>
                 <input type="date" class="form-control" id="end_date" name="end_date" 
                        value="{{ request('end_date') }}">
             </div>
@@ -129,8 +129,8 @@
 <!-- Movement History Table -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">Movement History</h6>
-        <span class="badge bg-secondary">{{ $movements->total() }} movements</span>
+        <h6 class="mb-0">Riwayat Pergerakan</h6>
+        <span class="badge bg-secondary">{{ $movements->total() }} pergerakan</span>
     </div>
     <div class="card-body">
         @if($movements->count() > 0)
@@ -138,13 +138,13 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>Date/Time</th>
-                            <th>Warehouse</th>
-                            <th>Type</th>
-                            <th class="text-end">Quantity</th>
-                            <th>Reference</th>
-                            <th>User</th>
-                            <th>Notes</th>
+                            <th>Tanggal/Waktu</th>
+                            <th>Unit</th>
+                            <th>Tipe</th>
+                            <th class="text-end">Jumlah</th>
+                            <th>Referensi</th>
+                            <th>Pengguna</th>
+                            <th>Catatan</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -161,21 +161,18 @@
                                     @switch($movement->movement_type)
                                         @case('in')
                                             <span class="badge bg-success">
-                                                <i class="bi bi-arrow-up-circle me-1"></i>Stock In
+                                                <i class="bi bi-arrow-up-circle me-1"></i>Barang Masuk
                                             </span>
-                                            <br><small class="text-muted">Barang Masuk</small>
                                             @break
                                         @case('out')
                                             <span class="badge bg-danger">
-                                                <i class="bi bi-arrow-down-circle me-1"></i>Stock Out
+                                                <i class="bi bi-arrow-down-circle me-1"></i>Barang Keluar
                                             </span>
-                                            <br><small class="text-muted">Barang Keluar</small>
                                             @break
                                         @case('adjustment')
                                             <span class="badge bg-warning text-dark">
-                                                <i class="bi bi-gear me-1"></i>Adjustment
+                                                <i class="bi bi-gear me-1"></i>Penyesuaian
                                             </span>
-                                            <br><small class="text-muted">Penyesuaian Stock</small>
                                             @break
                                         @default
                                             <span class="badge bg-secondary">{{ ucfirst($movement->movement_type) }}</span>
@@ -211,7 +208,7 @@
                                         <small class="text-muted">
                                             @if($movement->creator->role === 'super_admin')
                                                 Super Admin
-                                            @elseif($movement->creator->role === 'admin_gudang')
+                                            @elseif($movement->creator->role === 'admin_unit')
                                                 Admin Gudang
                                             @elseif($movement->creator->role === 'staff_gudang')
                                                 Staff Gudang
@@ -245,9 +242,9 @@
         @else
             <div class="text-center py-5">
                 <i class="bi bi-clock-history text-muted" style="font-size: 3rem;"></i>
-                <p class="text-muted mt-3 mb-0">No movement history found for this item</p>
+                <p class="text-muted mt-3 mb-0">Tidak ada riwayat pergerakan untuk barang ini</p>
                 @if(request()->hasAny(['warehouse_id', 'type', 'start_date', 'end_date']))
-                    <p class="text-muted small">Try adjusting your filters</p>
+                    <p class="text-muted small">Coba sesuaikan filter Anda</p>
                 @endif
             </div>
         @endif
@@ -260,7 +257,7 @@
         <div class="col-md-4">
             <div class="card">
                 <div class="card-body text-center">
-                    <h6 class="text-muted mb-3">Total Stock In</h6>
+                    <h6 class="text-muted mb-3">Total Barang Masuk</h6>
                     <h3 class="text-success mb-0">
                         +{{ number_format($movements->where('movement_type', 'in')->sum('quantity')) }}
                     </h3>
@@ -271,7 +268,7 @@
         <div class="col-md-4">
             <div class="card">
                 <div class="card-body text-center">
-                    <h6 class="text-muted mb-3">Total Stock Out</h6>
+                    <h6 class="text-muted mb-3">Total Barang Keluar</h6>
                     <h3 class="text-danger mb-0">
                         {{ number_format(abs($movements->where('movement_type', 'out')->sum('quantity'))) }}
                     </h3>
@@ -282,11 +279,11 @@
         <div class="col-md-4">
             <div class="card">
                 <div class="card-body text-center">
-                    <h6 class="text-muted mb-3">Adjustments</h6>
+                    <h6 class="text-muted mb-3">Total Penyesuaian</h6>
                     <h3 class="text-warning mb-0">
                         {{ number_format($movements->where('movement_type', 'adjustment')->count()) }}
                     </h3>
-                    <small class="text-muted">Penyesuaian Stock</small>
+                    <small class="text-muted">Penyesuaian Stok</small>
                 </div>
             </div>
         </div>

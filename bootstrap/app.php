@@ -28,5 +28,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo('/dashboard');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Custom exception handling for session errors
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            // Handle CSRF token mismatch (session errors)
+            if ($request->expectsJson()) {
+                return response()->json(['error' => 'Session expired or invalid CSRF token. Please refresh the page and try again.'], 419);
+            }
+
+            return redirect()->back()->withErrors(['session' => 'Session expired. Please try again.'])->withInput();
+        });
+
+        // You can add more custom handlers here for other session-related exceptions
+        // For example, handling authentication exceptions or other session issues
     })->create();

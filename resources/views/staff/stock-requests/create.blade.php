@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (selectedOption.value !== '') {
             const unit = selectedOption.dataset.unit;
             const quantity = selectedOption.dataset.quantity;
-            availableStockText.textContent = `Available: ${quantity} ${unit}`;
+            availableStockText.textContent = `Tersedia: ${quantity} ${unit}`;
             availableStockText.className = quantity > 0 ? 'form-text text-success' : 'form-text text-danger';
             quantityInput.max = quantity;
         } else {

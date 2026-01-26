@@ -1,19 +1,19 @@
 @extends('layouts.app')
 
-@section('page-title', 'Manajemen Gudang')
+@section('page-title', 'Manajemen Unit')
 
 @section('content')
 <div class="row">
     <div class="col-12">
-        <h4 class="mb-4">Manajemen Gudang</h4>
+        <h4 class="mb-4">Manajemen Unit</h4>
     </div>
 </div>
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">Daftar Gudang</h6>
+        <h6 class="mb-0">Daftar Unit</h6>
         <a href="{{ route('admin.warehouses.create') }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>Tambah Gudang
+            <i class="bi bi-plus-circle me-2"></i>Tambah Unit
         </a>
     </div>
 
@@ -21,9 +21,9 @@
         <!-- Search Form -->
         <form method="GET" action="{{ route('admin.warehouses.index') }}" class="row g-3 mb-4">
             <div class="col-md-6">
-                <label for="search" class="form-label">Cari Gudang</label>
+                <label for="search" class="form-label">Cari Unit</label>
                 <input type="text" class="form-control" id="search" name="search"
-                       value="{{ request('search') }}" placeholder="Nama atau lokasi gudang">
+                       value="{{ request('search') }}" placeholder="Nama atau lokasi unit">
             </div>
             <div class="col-md-6 d-flex align-items-end">
                 <button type="submit" class="btn btn-outline-primary me-2">
@@ -35,19 +35,19 @@
             </div>
         </form>
 
-        <!-- Warehouses Table -->
+        <!-- Units Table -->
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
-                        <th>Code</th>
+                        <th>Kode</th>
                         <th>Nama</th>
                         <th>Lokasi</th>
                         <th>PIC</th>
                         <th>Telepon</th>
                         <th>Status</th>
-                        <th>Total Items</th>
-                        <th>Total Stock</th>
+                        <th>Total Barang</th>
+                        <th>Total Stok</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -94,7 +94,7 @@
                         <tr>
                             <td colspan="9" class="text-center py-4">
                                 <i class="bi bi-building text-muted fs-1 mb-3"></i>
-                                <p class="text-muted mb-0">Tidak ada gudang ditemukan.</p>
+                                <p class="text-muted mb-0">Tidak ada unit ditemukan.</p>
                             </td>
                         </tr>
                     @endforelse

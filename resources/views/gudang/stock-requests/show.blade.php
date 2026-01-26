@@ -173,11 +173,11 @@
     <div class="col-md-4">
         <div class="card mb-3">
             <div class="card-header">
-                <h5 class="mb-0">Stock Information</h5>
+                <h5 class="mb-0">Informasi Stok</h5>
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label class="text-muted small">Current Stock</label>
+                    <label class="text-muted small">Stok Saat Ini</label>
                     <h3 class="mb-0 {{ ($currentStock && $currentStock->quantity >= $stockRequest->quantity) ? 'text-success' : 'text-danger' }}">
                         {{ $currentStock ? $currentStock->quantity : 0 }} {{ $stockRequest->item->unit }}
                     </h3>

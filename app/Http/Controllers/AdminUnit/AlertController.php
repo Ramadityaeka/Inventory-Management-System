@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\AdminGudang;
+namespace App\Http\Controllers\AdminUnit;
 
 use App\Http\Controllers\Controller;
 use App\Models\StockAlert;

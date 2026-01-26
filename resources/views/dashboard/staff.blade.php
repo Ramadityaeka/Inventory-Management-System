@@ -37,7 +37,7 @@
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <h5 class="mb-1">{{ number_format($stats['total_submissions']) }}</h5>
-                                <p class="text-muted small mb-0">Total Submissions</p>
+                                <p class="text-muted small mb-0">Total Submission</p>
                             </div>
                             <div class="text-primary">
                                 <i class="bi bi-file-earmark-text fs-5"></i>
@@ -62,7 +62,7 @@
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <h5 class="mb-1">{{ number_format($stats['pending_approval']) }}</h5>
-                                <p class="text-muted small mb-0">Pending Approval</p>
+                                <p class="text-muted small mb-0">Menunggu Persetujuan</p>
                             </div>
                             @if($stats['pending_approval'] > 0)
                                 <span class="badge bg-warning rounded-pill">{{ $stats['pending_approval'] }}</span>
@@ -91,7 +91,7 @@
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <h5 class="mb-1">{{ number_format($stats['approved_this_month']) }}</h5>
-                                <p class="text-muted small mb-0">Approved This Month</p>
+                                <p class="text-muted small mb-0">Disetujui Bulan Ini</p>
                             </div>
                             @if($stats['approved_this_month'] > 0)
                                 <span class="badge bg-success rounded-pill">{{ $stats['approved_this_month'] }}</span>
@@ -120,7 +120,7 @@
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <h5 class="mb-1">{{ number_format($stats['rejected']) }}</h5>
-                                <p class="text-muted small mb-0">Rejected</p>
+                                <p class="text-muted small mb-0">Ditolak</p>
                             </div>
                             @if($stats['rejected'] > 0)
                                 <span class="badge bg-danger rounded-pill">{{ $stats['rejected'] }}</span>
@@ -254,11 +254,11 @@
                                                 <div class="mt-1">
                                                     <span class="badge bg-info me-2">{{ number_format($submission->quantity) }} {{ $submission->unit }}</span>
                                                     @if($submission->status == 'pending')
-                                                        <span class="badge bg-warning">Pending</span>
+                                                        <span class="badge bg-warning">Menunggu</span>
                                                     @elseif($submission->status == 'approved')
-                                                        <span class="badge bg-success">Approved</span>
+                                                        <span class="badge bg-success">Disetujui</span>
                                                     @elseif($submission->status == 'rejected')
-                                                        <span class="badge bg-danger">Rejected</span>
+                                                        <span class="badge bg-danger">Ditolak</span>
                                                     @elseif($submission->status == 'draft')
                                                         <span class="badge bg-secondary">Draft</span>
                                                     @else

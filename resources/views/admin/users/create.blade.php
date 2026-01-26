@@ -80,7 +80,7 @@
                             id="role" name="role" required onchange="toggleWarehouseSection()">
                         <option value="">Pilih Role</option>
                         <option value="super_admin" {{ old('role') === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
-                        <option value="admin_gudang" {{ old('role') === 'admin_gudang' ? 'selected' : '' }}>Admin Gudang</option>
+                        <option value="admin_unit" {{ old('role') === 'admin_unit' ? 'selected' : '' }}>Admin Unit</option>
                         <option value="staff_gudang" {{ old('role') === 'staff_gudang' ? 'selected' : '' }}>Staff Gudang</option>
                     </select>
                     @error('role')
@@ -196,7 +196,7 @@
         document.getElementById('userForm').addEventListener('submit', function(e) {
             const role = document.getElementById('role').value;
             
-            if (role === 'admin_gudang') {
+            if (role === 'admin_unit') {
                 const warehouseSelect = document.getElementById('warehouse_select');
                 if (warehouseSelect && !warehouseSelect.value) {
                     e.preventDefault();
@@ -234,7 +234,7 @@
                 checkbox.checked = false;
                 checkbox.required = false;
             });
-        } else if (role === 'admin_gudang') {
+        } else if (role === 'admin_unit') {
             // Show warehouse section with select dropdown for single selection
             warehouseCard.style.display = 'block';
             adminSection.style.display = 'block';

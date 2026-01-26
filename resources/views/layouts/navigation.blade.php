@@ -46,9 +46,29 @@
         </li>
 
         <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" href="{{ route('admin.reports.stock-overview') }}">
+            <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" data-bs-toggle="collapse" href="#reportsMenu" role="button" aria-expanded="{{ request()->routeIs('admin.reports.*') ? 'true' : 'false' }}">
                 <i class="bi bi-file-earmark-bar-graph me-2"></i>Laporan
+                <i class="bi bi-chevron-down ms-auto"></i>
             </a>
+            <div class="collapse {{ request()->routeIs('admin.reports.*') ? 'show' : '' }}" id="reportsMenu">
+                <ul class="nav flex-column ms-3">
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.reports.stock-overview') ? 'active' : '' }}" href="{{ route('admin.reports.stock-overview') }}">
+                            <i class="bi bi-box me-2"></i>Stok Overview
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.reports.custom') ? 'active' : '' }}" href="{{ route('admin.reports.custom') }}">
+                            <i class="bi bi-file-earmark-excel me-2"></i>Laporan Custom
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.reports.monthly') ? 'active' : '' }}" href="{{ route('admin.reports.monthly') }}">
+                            <i class="bi bi-calendar-month me-2"></i>Laporan Bulanan
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </li>
     @elseif(auth()->user()->isAdminGudang())
         <!-- Admin Gudang Menu -->
@@ -100,8 +120,26 @@
         </li>
 
         <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('gudang.reports.*') ? 'active' : '' }}" href="{{ route('gudang.reports.monthly') }}">
+            <a class="nav-link {{ request()->routeIs('gudang.reports.monthly') ? 'active' : '' }}" href="{{ route('gudang.reports.monthly') }}">
                 <i class="bi bi-calendar-month me-2"></i>Laporan Bulanan
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {{ request()->routeIs('gudang.reports.movements') ? 'active' : '' }}" href="{{ route('gudang.reports.movements') }}">
+                <i class="bi bi-arrow-left-right me-2"></i>Perpindahan Barang
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {{ request()->routeIs('gudang.reports.in-out') ? 'active' : '' }}" href="{{ route('gudang.reports.in-out') }}">
+                <i class="bi bi-arrow-down-up me-2"></i>Barang Masuk & Keluar
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {{ request()->routeIs('gudang.reports.stock-status') ? 'active' : '' }}" href="{{ route('gudang.reports.stock-status') }}">
+                <i class="bi bi-clipboard-data me-2"></i>Status Stok
             </a>
         </li>
     @elseif(auth()->user()->isStaffGudang())

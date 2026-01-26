@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('page-title', 'Available Stock')
+@section('page-title', 'Stok Tersedia')
 
 @section('content')
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="mb-0">Available Stock</h4>
+        <div class="d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Stok Tersedia</h4>
             <div>
                 <a href="{{ route('staff.stock-requests.my-requests') }}" class="btn btn-info me-2">
                     <i class="bi bi-clock-history me-1"></i>My Requests
@@ -39,8 +39,8 @@
             <div class="card-header">
                 <form method="GET" class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">Search Item</label>
-                        <input type="text" name="search" class="form-control" placeholder="Search by item name or code" value="{{ request('search') }}">
+                        <label class="form-label">Cari Barang</label>
+                        <input type="text" name="search" class="form-control" placeholder="Cari berdasarkan nama atau kode barang" value="{{ request('search') }}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Category</label>
@@ -66,7 +66,7 @@
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-search me-1"></i>Search
+                            <i class="bi bi-search me-1"></i>Cari
                         </button>
                     </div>
                 </form>

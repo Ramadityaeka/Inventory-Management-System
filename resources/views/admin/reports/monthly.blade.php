@@ -1,376 +1,450 @@
 @extends('layouts.app')
 
-@section('page-title', 'Laporan Bulanan')
+@section('page-title', 'Laporan Bulanan Semua Gudang')
 
 @section('content')
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="mb-0">Laporan Bulanan</h4>
-            <button type="button" class="btn btn-danger" onclick="exportPdf()">
-                <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF
-            </button>
+            <h4 class="mb-0">Laporan Bulanan Semua Gudang</h4>
         </div>
     </div>
 </div>
 
-<!-- Month/Year Selector -->
+<!-- Report Generator Form -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-calendar-month me-2"></i>Buat Laporan</h6>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ route('admin.reports.monthly.generate') }}" class="row g-3">
+            @csrf
+            <div class="col-md-4">
+                <label class="form-label">Gudang <span class="text-danger">*</span></label>
+                <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="select_all_warehouses">
+                        <label class="form-check-label fw-bold" for="select_all_warehouses">
+                            Pilih Semua
+                        </label>
+                    </div>
+                    <hr class="my-2">
+                    @foreach($warehouses as $warehouse)
+                        <div class="form-check mb-2">
+                            <input class="form-check-input warehouse-checkbox" 
+                                   type="checkbox" 
+                                   name="warehouse_ids[]" 
+                                   value="{{ $warehouse->id }}"
+                                   id="warehouse_{{ $warehouse->id }}"
+                                   {{ in_array($warehouse->id, $selectedWarehouses) ? 'checked' : '' }}>
+                            <label class="form-check-label" for="warehouse_{{ $warehouse->id }}">
+                                {{ $warehouse->name }}
+                            </label>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label for="month" class="form-label">Bulan <span class="text-danger">*</span></label>
+                <select class="form-select" id="month" name="month" required>
+                    @for($m = 1; $m <= 12; $m++)
+                        <option value="{{ $m }}" {{ $month == $m ? 'selected' : '' }}>
+                            {{ \Carbon\Carbon::create()->month($m)->format('F') }}
+                        </option>
+                    @endfor
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="year" class="form-label">Tahun <span class="text-danger">*</span></label>
+                <select class="form-select" id="year" name="year" required>
+                    @for($y = now()->year; $y >= 2020; $y--)
+                        <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
+                    @endfor
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="category_id" class="form-label">Kategori</label>
+                <select class="form-select" id="category_id" name="category_id">
+                    <option value="">Semua Kategori</option>
+                    @foreach($categories as $category)
+                        <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
+                            {{ $category->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-bar-chart me-1"></i>Generate
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if($reportData)
+<!-- Report Header -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h5 class="mb-1">
+                    @if($reportData['warehouse_count'] > 1)
+                        {{ $reportData['warehouse_count'] }} Gudang Terpilih
+                    @else
+                        {{ $reportData['warehouses'] }}
+                    @endif
+                </h5>
+                <p class="text-muted mb-2">{{ $reportData['period'] }}</p>
+                @if($reportData['warehouse_count'] > 1)
+                    <small class="text-muted">{{ $reportData['warehouses'] }}</small>
+                @endif
+            </div>
+            <div class="text-end">
+                <small class="text-muted d-block">Dibuat pada:</small>
+                <strong>{{ now()->format('d M Y H:i') }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Statistics -->
 <div class="row mb-4">
-    <div class="col-12">
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <i class="bi bi-arrow-up-circle text-success fs-1 mb-2"></i>
+                <h3 class="mb-1 text-success">{{ number_format($reportData['total_stock_in']) }}</h3>
+                <p class="text-muted mb-0 small">Total Barang Masuk</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <i class="bi bi-arrow-down-circle text-danger fs-1 mb-2"></i>
+                <h3 class="mb-1 text-danger">{{ number_format($reportData['total_stock_out']) }}</h3>
+                <p class="text-muted mb-0 small">Total Barang Keluar</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <i class="bi bi-arrow-left-right text-primary fs-1 mb-2"></i>
+                <h3 class="mb-1 text-primary">{{ number_format($reportData['total_movements']) }}</h3>
+                <p class="text-muted mb-0 small">Total Pergerakan</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <i class="bi bi-currency-dollar text-info fs-1 mb-2"></i>
+                <h3 class="mb-1 text-info">Rp {{ number_format($reportData['total_purchase_value'] ?? 0, 0, ',', '.') }}</h3>
+                <p class="text-muted mb-0 small">Nilai Pembelian</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TABEL 1: Transaksi Barang Masuk/Keluar -->
+<div class="row mb-4">
+    <div class="col-12 mb-4">
         <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="bi bi-calendar-month me-2"></i>Pilih Periode</h6>
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="bi bi-arrow-left-right me-2"></i>Tabel 1: Transaksi Barang Masuk & Keluar</h6>
             </div>
             <div class="card-body">
-                <form method="GET" id="filterForm">
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label for="month" class="form-label">Month</label>
-                            <select name="month" id="month" class="form-select">
-                                @for($m = 1; $m <= 12; $m++)
-                                    <option value="{{ $m }}" {{ $month == $m ? 'selected' : '' }}>
-                                        {{ \Carbon\Carbon::create()->month($m)->format('F') }}
-                                    </option>
-                                @endfor
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="year" class="form-label">Year</label>
-                            <select name="year" id="year" class="form-select">
-                                @for($y = now()->year - 2; $y <= now()->year + 2; $y++)
-                                    <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>
-                                        {{ $y }}
-                                    </option>
-                                @endfor
-                            </select>
-                        </div>
-                        <div class="col-md-6 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary me-2">
-                                <i class="bi bi-play-circle me-1"></i>Generate Report
-                            </button>
-                            <a href="{{ route('admin.reports.monthly') }}" class="btn btn-secondary">
-                                <i class="bi bi-arrow-clockwise me-1"></i>Current Month
-                            </a>
+                @if($reportData['transactions']->count() > 0)
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="4%">No</th>
+                                    <th width="10%">Gudang</th>
+                                    <th width="14%">Nama Barang</th>
+                                    <th width="8%" class="text-center">Jumlah</th>
+                                    <th width="8%" class="text-center">Sisa Stok</th>
+                                    <th width="15%">Keterangan</th>
+                                    <th width="8%" class="text-center">Status</th>
+                                    <th width="12%">Diproses Oleh</th>
+                                    <th width="11%" class="text-center">Waktu</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($reportData['transactions'] as $index => $transaction)
+                                    @php
+                                        $currentStock = \App\Models\Stock::where('warehouse_id', $transaction->warehouse_id)
+                                            ->where('item_id', $transaction->item_id)
+                                            ->first();
+                                        $remainingStock = $currentStock ? $currentStock->quantity : 0;
+                                        $approval = $transaction->approvals->first();
+                                    @endphp
+                                    <tr>
+                                        <td class="text-center">{{ $index + 1 }}</td>
+                                        <td>
+                                            <small class="badge bg-info">{{ $transaction->warehouse->name }}</small>
+                                        </td>
+                                        <td>
+                                            <strong>{{ $transaction->item->name }}</strong>
+                                            <br><small class="text-muted">{{ $transaction->item->code }}</small>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-success">+{{ number_format($transaction->quantity) }}</span>
+                                            <br><small class="text-muted">{{ $transaction->item->unit }}</small>
+                                        </td>
+                                        <td class="text-center">
+                                            <strong class="text-primary">{{ number_format($remainingStock) }}</strong>
+                                            <br><small class="text-muted">{{ $transaction->item->unit }}</small>
+                                        </td>
+                                        <td>
+                                            @if($transaction->notes)
+                                                <small>{{ Str::limit($transaction->notes, 40) }}</small>
+                                            @else
+                                                <small class="text-muted">Penerimaan dari {{ $transaction->supplier->name ?? '-' }}</small>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            @if($transaction->status == 'approved')
+                                                <span class="badge bg-success">Disetujui</span>
+                                            @elseif($transaction->status == 'rejected')
+                                                <span class="badge bg-danger">Ditolak</span>
+                                            @else
+                                                <span class="badge bg-warning">Menunggu</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($approval)
+                                                <strong>{{ $approval->admin->name }}</strong>
+                                                <br><small class="text-muted">Admin</small>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            <small>{{ $transaction->created_at->format('d M Y') }}</small>
+                                            <br><small class="text-muted">{{ $transaction->created_at->format('H:i') }}</small>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="alert alert-success mb-0">
+                                    <i class="bi bi-check-circle me-2"></i>
+                                    <strong>{{ $reportData['submissions_approved'] }}</strong> Transaksi Disetujui
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="alert alert-warning mb-0">
+                                    <i class="bi bi-clock me-2"></i>
+                                    <strong>{{ $reportData['submissions_pending'] }}</strong> Transaksi Menunggu
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="alert alert-danger mb-0">
+                                    <i class="bi bi-x-circle me-2"></i>
+                                    <strong>{{ $reportData['submissions_rejected'] }}</strong> Transaksi Ditolak
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </form>
+                @else
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox text-muted fs-1"></i>
+                        <p class="text-muted mt-2 mb-0">Tidak ada transaksi bulan ini</p>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <!-- TABEL 2: Stok Barang dengan Harga -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0"><i class="bi bi-box-seam me-2"></i>Tabel 2: Daftar Stok Barang & Nilai</h6>
+            </div>
+            <div class="card-body">
+                @if($reportData['stocks_with_values']->count() > 0)
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="4%">No</th>
+                                    <th width="12%">Gudang</th>
+                                    <th width="8%">Kode Barang</th>
+                                    <th width="18%">Nama Barang</th>
+                                    <th width="10%">Kategori</th>
+                                    <th width="7%" class="text-center">Jumlah</th>
+                                    <th width="7%" class="text-center">Satuan</th>
+                                    <th width="13%" class="text-end">Harga/Satuan</th>
+                                    <th width="15%" class="text-end">Harga Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($reportData['stocks_with_values'] as $index => $stockData)
+                                    <tr>
+                                        <td class="text-center">{{ $index + 1 }}</td>
+                                        <td>
+                                            <small class="badge bg-info">{{ $stockData['warehouse']->name }}</small>
+                                        </td>
+                                        <td><code>{{ $stockData['item']->code }}</code></td>
+                                        <td>
+                                            <strong>{{ $stockData['item']->name }}</strong>
+                                            @if($stockData['quantity'] <= 0)
+                                                <br><small class="badge bg-danger">Habis</small>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary bg-opacity-25">
+                                                {{ $stockData['item']->category->name }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <strong>{{ number_format($stockData['quantity']) }}</strong>
+                                        </td>
+                                        <td class="text-center">{{ $stockData['item']->unit }}</td>
+                                        <td class="text-end">
+                                            @if($stockData['unit_price'] > 0)
+                                                Rp {{ number_format($stockData['unit_price'], 0, ',', '.') }}
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-end">
+                                            @if($stockData['total_value'] > 0)
+                                                <strong class="text-success">Rp {{ number_format($stockData['total_value'], 0, ',', '.') }}</strong>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="5" class="text-end"><strong>TOTAL KESELURUHAN:</strong></td>
+                                    <td class="text-center">
+                                        <strong class="text-primary">{{ number_format($reportData['stocks_with_values']->sum('quantity')) }}</strong>
+                                    </td>
+                                    <td class="text-center"><small class="text-muted">item</small></td>
+                                    <td></td>
+                                    <td class="text-end">
+                                        <strong class="text-success fs-5">Rp {{ number_format($reportData['total_stock_value'], 0, ',', '.') }}</strong>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    <!-- Summary Box -->
+                    <div class="mt-3">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="card border-primary">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-box-seam text-primary fs-3"></i>
+                                        <h4 class="mt-2 mb-0 text-primary">{{ number_format($reportData['stocks_with_values']->count()) }}</h4>
+                                        <small class="text-muted">Total Jenis Barang</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-info">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-stack text-info fs-3"></i>
+                                        <h4 class="mt-2 mb-0 text-info">{{ number_format($reportData['stocks_with_values']->sum('quantity')) }}</h4>
+                                        <small class="text-muted">Total Jumlah Barang</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-success">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-currency-dollar text-success fs-3"></i>
+                                        <h3 class="mt-2 mb-0 text-success">Rp {{ number_format($reportData['total_stock_value'], 0, ',', '.') }}</h3>
+                                        <small class="text-muted">Total Nilai Stok Keseluruhan</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox text-muted fs-1"></i>
+                        <p class="text-muted mt-2 mb-0">Tidak ada stok barang</p>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
 </div>
 
-@if(count($monthlyData) > 0)
-    <!-- Grand Total Card -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-primary">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="mb-0">
-                        <i class="bi bi-calculator me-2"></i>Grand Total - {{ \Carbon\Carbon::create($year, $month)->format('F Y') }}
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-md-2">
-                            <div class="bg-light p-3 rounded">
-                                <h5 class="text-secondary mb-1">{{ number_format($grandTotals['opening']) }}</h5>
-                                <small class="text-muted">Total Opening</small>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="bg-success bg-opacity-10 p-3 rounded">
-                                <h5 class="text-success mb-1">+{{ number_format($grandTotals['in']) }}</h5>
-                                <small class="text-success">Total IN</small>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="bg-danger bg-opacity-10 p-3 rounded">
-                                <h5 class="text-danger mb-1">-{{ number_format($grandTotals['out']) }}</h5>
-                                <small class="text-danger">Total OUT</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="bg-primary bg-opacity-10 p-3 rounded">
-                                <h5 class="text-primary mb-1 fw-bold">{{ number_format($grandTotals['closing']) }}</h5>
-                                <small class="text-primary">Total Closing</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="bg-info bg-opacity-10 p-3 rounded">
-                                <h5 class="text-info mb-1 fw-bold">Rp {{ number_format($grandTotals['purchase_value'] ?? 0, 0, ',', '.') }}</h5>
-                                <small class="text-info">Total Nilai Pembelian</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<!-- Export Actions -->
+<div class="card">
+    <div class="card-body text-center">
+        <form method="POST" action="{{ route('admin.reports.monthly.exportPdf') }}" class="d-inline">
+            @csrf
+            @foreach($selectedWarehouses as $whId)
+                <input type="hidden" name="warehouse_ids[]" value="{{ $whId }}">
+            @endforeach
+            <input type="hidden" name="month" value="{{ $month }}">
+            <input type="hidden" name="year" value="{{ $year }}">
+            @if(request('category_id'))
+                <input type="hidden" name="category_id" value="{{ request('category_id') }}">
+            @endif
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="bi bi-file-pdf me-1"></i>Export ke PDF
+            </button>
+        </form>
+        <button class="btn btn-outline-success" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Cetak Laporan
+        </button>
     </div>
-
-    <!-- Warehouse Accordion -->
-    <div class="row">
-        <div class="col-12">
-            <div class="accordion" id="warehouseAccordion">
-                @foreach($monthlyData as $index => $warehouseData)
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="heading{{ $index }}">
-                            <button class="accordion-button {{ $index !== 0 ? 'collapsed' : '' }}" type="button" 
-                                    data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}" 
-                                    aria-expanded="{{ $index === 0 ? 'true' : 'false' }}" 
-                                    aria-controls="collapse{{ $index }}">
-                                <div class="d-flex justify-content-between align-items-center w-100 me-3">
-                                    <div>
-                                        <i class="bi bi-building me-2"></i>
-                                        <strong>{{ $warehouseData['warehouse']->name }}</strong>
-                                    </div>
-                                    <div class="text-end">
-                                        <span class="badge bg-secondary me-2">{{ count($warehouseData['items']) }} Items</span>
-                                        <small class="text-muted">
-                                            Opening: {{ number_format($warehouseData['total_opening']) }} | 
-                                            Closing: {{ number_format($warehouseData['total_closing']) }}
-                                            @if(isset($warehouseData['total_purchase_value']) && $warehouseData['total_purchase_value'] > 0)
-                                                | Nilai: Rp {{ number_format($warehouseData['total_purchase_value'], 0, ',', '.') }}
-                                            @endif
-                                        </small>
-                                    </div>
-                                </div>
-                            </button>
-                        </h2>
-                        <div id="collapse{{ $index }}" class="accordion-collapse collapse {{ $index === 0 ? 'show' : '' }}" 
-                             aria-labelledby="heading{{ $index }}" data-bs-parent="#warehouseAccordion">
-                            <div class="accordion-body">
-                                <!-- Summary Row -->
-                                <div class="row mb-3">
-                                    <div class="col-12">
-                                        <div class="card bg-light border-0">
-                                            <div class="card-body py-3">
-                                                <div class="row text-center">
-                                                    <div class="col-3">
-                                                        <h6 class="text-secondary mb-1">{{ number_format($warehouseData['total_opening']) }}</h6>
-                                                        <small class="text-muted">Opening</small>
-                                                    </div>
-                                                    <div class="col-3">
-                                                        <h6 class="text-success mb-1">+{{ number_format($warehouseData['total_in']) }}</h6>
-                                                        <small class="text-success">IN</small>
-                                                    </div>
-                                                    <div class="col-3">
-                                                        <h6 class="text-danger mb-1">-{{ number_format($warehouseData['total_out']) }}</h6>
-                                                        <small class="text-danger">OUT</small>
-                                                    </div>
-                                                    <div class="col-3">
-                                                        <h6 class="text-primary mb-1 fw-bold">{{ number_format($warehouseData['total_closing']) }}</h6>
-                                                        <small class="text-primary">Closing</small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                @if(count($warehouseData['items']) > 0)
-                                    <!-- Items Table -->
-                                    <div class="table-responsive">
-                                        <table class="table table-striped table-hover">
-                                            <thead class="table-dark">
-                                                <tr>
-                                                    <th>Item Name</th>
-                                                    <th>Category</th>
-                                                    <th class="text-center">Opening</th>
-                                                    <th class="text-center">IN</th>
-                                                    <th class="text-center">OUT</th>
-                                                    <th class="text-center">Closing</th>
-                                                    <th class="text-center">Harga Terakhir</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach($warehouseData['items'] as $itemData)
-                                                    <tr>
-                                                        <td>
-                                                            <div>
-                                                                <strong>{{ $itemData['item']->name }}</strong>
-                                                                <br>
-                                                                <small class="text-muted">{{ $itemData['item']->code }}</small>
-                                                            </div>
-                                                        </td>
-                                                        <td>
-                                                            <span class="badge bg-light text-dark">{{ $itemData['item']->category->name ?? 'N/A' }}</span>
-                                                        </td>
-                                                        <td class="text-center">{{ number_format($itemData['opening_stock']) }}</td>
-                                                        <td class="text-center text-success">+{{ number_format($itemData['stock_in']) }}</td>
-                                                        <td class="text-center text-danger">-{{ number_format($itemData['stock_out']) }}</td>
-                                                        <td class="text-center fw-bold">{{ number_format($itemData['closing_stock']) }}</td>
-                                                        <td class="text-center">
-                                                            @if(isset($itemData['last_price']) && $itemData['last_price'])
-                                                                <span class="badge bg-info bg-opacity-25 text-info">
-                                                                    Rp {{ number_format($itemData['last_price'], 0, ',', '.') }}
-                                                                </span>
-                                                            @else
-                                                                <span class="text-muted">-</span>
-                                                            @endif
-                                                        </td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                            
-                                            <!-- Subtotal Row -->
-                                            <tfoot class="table-primary">
-                                                <tr class="fw-bold">
-                                                    <td colspan="2" class="text-end">Subtotal:</td>
-                                                    <td class="text-center">{{ number_format($warehouseData['total_opening']) }}</td>
-                                                    <td class="text-center text-success">+{{ number_format($warehouseData['total_in']) }}</td>
-                                                    <td class="text-center text-danger">-{{ number_format($warehouseData['total_out']) }}</td>
-                                                    <td class="text-center">{{ number_format($warehouseData['total_closing']) }}</td>
-                                                </tr>
-                                            </tfoot>
-                                        </table>
-                                    </div>
-                                @else
-                                    <div class="text-center py-4">
-                                        <i class="bi bi-info-circle text-muted fs-2 mb-3"></i>
-                                        <p class="text-muted mb-0">No stock movement data for this warehouse in {{ \Carbon\Carbon::create($year, $month)->format('F Y') }}</p>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    </div>
+</div>
 @else
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body text-center py-5">
-                    <i class="bi bi-calendar-x text-muted" style="font-size: 4rem;"></i>
-                    <h5 class="text-muted mt-3">Tidak Ada Data</h5>
-                    <p class="text-muted mb-0">Tidak ditemukan data stok untuk periode yang dipilih.</p>
-                    <a href="{{ route('admin.reports.monthly') }}" class="btn btn-outline-primary mt-3">
-                        <i class="bi bi-arrow-clockwise me-1"></i>Reset ke Bulan Sekarang
-                    </a>
-                </div>
-            </div>
-        </div>
+<!-- Empty State -->
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-file-earmark-bar-graph text-muted" style="font-size: 5rem;"></i>
+        <h5 class="text-muted mt-3">Belum Ada Laporan</h5>
+        <p class="text-muted">Pilih gudang, bulan, dan tahun di atas, lalu klik "Generate" untuk membuat laporan bulanan.</p>
     </div>
+</div>
 @endif
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
-function exportPdf() {
-    const form = document.getElementById('filterForm');
-    const formData = new FormData(form);
-    
-    // Create a temporary form for POST request
-    const exportForm = document.createElement('form');
-    exportForm.method = 'POST';
-    exportForm.action = '{{ route("admin.reports.export-pdf") }}';
-    exportForm.style.display = 'none';
-    
-    // Add CSRF token
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = '_token';
-    csrfInput.value = '{{ csrf_token() }}';
-    exportForm.appendChild(csrfInput);
-    
-    // Add report type
-    const reportTypeInput = document.createElement('input');
-    reportTypeInput.type = 'hidden';
-    reportTypeInput.name = 'report_type';
-    reportTypeInput.value = 'monthly';
-    exportForm.appendChild(reportTypeInput);
-    
-    // Add form data
-    for (let [key, value] of formData.entries()) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = key;
-        input.value = value;
-        exportForm.appendChild(input);
-    }
-    
-    document.body.appendChild(exportForm);
-    exportForm.submit();
-    document.body.removeChild(exportForm);
-}
-
-// Auto-expand first accordion on page load
-document.addEventListener('DOMContentLoaded', function() {
-    // Optional: Add smooth scroll behavior for accordion items
-    const accordionButtons = document.querySelectorAll('.accordion-button');
-    accordionButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            setTimeout(() => {
-                if (!this.classList.contains('collapsed')) {
-                    this.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            }, 100);
+    // Select all warehouses checkbox
+    document.getElementById('select_all_warehouses')?.addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.warehouse-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
         });
     });
-});
+    
+    // Update "select all" when individual checkboxes change
+    document.querySelectorAll('.warehouse-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const allCheckboxes = document.querySelectorAll('.warehouse-checkbox');
+            const checkedCount = document.querySelectorAll('.warehouse-checkbox:checked').length;
+            document.getElementById('select_all_warehouses').checked = checkedCount === allCheckboxes.length;
+        });
+    });
 </script>
+@endpush
 
+@push('styles')
 <style>
-/* Custom accordion styling */
-.accordion-button {
-    background-color: #f8f9fa;
-    border: none;
-    box-shadow: none;
-}
-
-.accordion-button:not(.collapsed) {
-    background-color: #e7f3ff;
-    border-color: #b6d7ff;
-}
-
-.accordion-button:focus {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-}
-
-/* Card hover effects */
-.card {
-    transition: all 0.2s ease-in-out;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-/* Table improvements */
-.table-hover tbody tr:hover {
-    background-color: rgba(0,123,255,0.05);
-}
-
-/* Badge styling */
-.badge {
-    font-size: 0.75em;
-}
-
-/* Summary cards styling */
-.bg-light {
-    background-color: #f8f9fa !important;
-}
-
-.bg-success.bg-opacity-10 {
-    background-color: rgba(25, 135, 84, 0.1) !important;
-}
-
-.bg-danger.bg-opacity-10 {
-    background-color: rgba(220, 53, 69, 0.1) !important;
-}
-
-.bg-primary.bg-opacity-10 {
-    background-color: rgba(13, 110, 253, 0.1) !important;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .accordion-button .text-end {
-        display: none;
+    @media print {
+        .btn, .card-header, form { display: none !important; }
+        .card { border: none !important; box-shadow: none !important; }
     }
-}
 </style>
-@endsection
+@endpush

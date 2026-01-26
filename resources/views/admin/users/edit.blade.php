@@ -34,7 +34,7 @@
                 <span class="me-3">Current Role:</span>
                 @if($user->role === 'super_admin')
                     <span class="badge bg-danger fs-6">Super Admin</span>
-                @elseif($user->role === 'admin_gudang')
+                @elseif($user->role === 'admin_unit')
                     <span class="badge bg-primary fs-6">Admin Gudang</span>
                 @elseif($user->role === 'staff_gudang')
                     <span class="badge bg-success fs-6">Staff Gudang</span>
@@ -99,7 +99,7 @@
                             id="role" name="role" required onchange="toggleWarehouseSection()">
                         <option value="">Pilih Role</option>
                         <option value="super_admin" {{ old('role', $user->role) === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
-                        <option value="admin_gudang" {{ old('role', $user->role) === 'admin_gudang' ? 'selected' : '' }}>Admin Gudang</option>
+                        <option value="admin_unit" {{ old('role', $user->role) === 'admin_unit' ? 'selected' : '' }}>Admin Unit</option>
                         <option value="staff_gudang" {{ old('role', $user->role) === 'staff_gudang' ? 'selected' : '' }}>Staff Gudang</option>
                     </select>
                     @error('role')
@@ -116,7 +116,7 @@
             <h6 class="mb-0">Assign Gudang</h6>
         </div>
         <div class="card-body">
-            <div id="adminGudangSection" style="display: {{ old('role', $user->role) === 'admin_gudang' ? 'block' : 'none' }};">
+            <div id="adminUnitSection" style="display: {{ old('role', $user->role) === 'admin_unit' ? 'block' : 'none' }};">
                 <p class="text-muted mb-3">Pilih <strong>satu</strong> gudang untuk admin gudang:</p>
                 @if($warehouses->count() > 0)
                     <div class="mb-3">
@@ -220,7 +220,7 @@
         document.getElementById('userForm').addEventListener('submit', function(e) {
             const role = document.getElementById('role').value;
             
-            if (role === 'admin_gudang') {
+            if (role === 'admin_unit') {
                 const warehouseSelect = document.getElementById('warehouse_select');
                 if (warehouseSelect && !warehouseSelect.value) {
                     e.preventDefault();
@@ -258,7 +258,7 @@
                 checkbox.checked = false;
                 checkbox.required = false;
             });
-        } else if (role === 'admin_gudang') {
+        } else if (role === 'admin_unit') {
             // Show warehouse section with select dropdown for single selection
             warehouseCard.style.display = 'block';
             adminSection.style.display = 'block';

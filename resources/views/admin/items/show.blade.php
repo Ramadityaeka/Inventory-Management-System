@@ -94,7 +94,6 @@
                     <div class="col-md-3">
                         <p><strong>Supplier:</strong> {{ $item->supplier->name ?? '-' }}</p>
                         <p><strong>Unit:</strong> {{ $item->unit }}</p>
-                        <p><strong>Min Threshold:</strong> {{ number_format($item->min_threshold) }}</p>
                     </div>
                     <div class="col-md-3">
                         <p><strong>Total Stock:</strong> {{ number_format($totalStock) }}</p>
@@ -118,11 +117,9 @@
                         </p>
                         <p><strong>Stock Status:</strong>
                             @if($totalStock == 0)
-                                <span class="badge bg-danger">Out of Stock</span>
-                            @elseif($totalStock <= $item->min_threshold)
-                                <span class="badge bg-warning text-dark">Low Stock</span>
+                                <span class="badge bg-danger">Habis</span>
                             @else
-                                <span class="badge bg-success">Normal</span>
+                                <span class="badge bg-success">Tersedia</span>
                             @endif
                         </p>
                     </div>
@@ -198,11 +195,9 @@
                                         <td>{{ $item->unit }}</td>
                                         <td>
                                             @if($stock->quantity == 0)
-                                                <span class="badge bg-danger">Out of Stock</span>
-                                            @elseif($stock->quantity <= $item->min_threshold)
-                                                <span class="badge bg-warning text-dark">Low Stock</span>
+                                                <span class="badge bg-danger">Habis</span>
                                             @else
-                                                <span class="badge bg-success">Normal</span>
+                                                <span class="badge bg-success">Tersedia</span>
                                             @endif
                                         </td>
                                     </tr>
@@ -214,11 +209,9 @@
                                     <td><strong>{{ $item->unit }}</strong></td>
                                     <td>
                                         @if($totalStock == 0)
-                                            <span class="badge bg-danger">Out of Stock</span>
-                                        @elseif($totalStock <= $item->min_threshold)
-                                            <span class="badge bg-warning text-dark">Low Stock</span>
+                                            <span class="badge bg-danger">Habis</span>
                                         @else
-                                            <span class="badge bg-success">Normal</span>
+                                            <span class="badge bg-success">Tersedia</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -335,19 +328,19 @@
                                             <h6 class="mb-1">
                                                 @switch($movement->movement_type)
                                                     @case('in')
-                                                        Stock In
+                                                        Barang Masuk
                                                         @break
                                                     @case('out')
-                                                        Stock Out
+                                                        Barang Keluar
                                                         @break
                                                     @case('adjustment')
-                                                        Adjustment
+                                                        Penyesuaian
                                                         @break
                                                     @default
                                                         {{ ucfirst($movement->movement_type) }}
                                                 @endswitch
                                             </h6>
-                                            <p class="text-muted mb-1">{{ $movement->warehouse->name ?? 'Unknown Warehouse' }}</p>
+                                            <p class="text-muted mb-1">{{ $movement->warehouse->name ?? 'Unit Tidak Diketahui' }}</p>
                                             @if($movement->notes)
                                                 <p class="text-muted small mb-0">{{ $movement->notes }}</p>
                                             @endif

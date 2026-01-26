@@ -40,24 +40,45 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
-                        <th>Nama</th>
-                        <th>Deskripsi</th>
-                        <th>Total Items</th>
+                        <th>Kode</th>
+                        <th>Nama Kategori</th>
+                        <th>Induk</th>
+                        <th>Total Barang</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($categories as $category)
                         <tr>
-                            <td>{{ $category->name }}</td>
-                            <td>{{ $category->description ?: '-' }}</td>
+                            <td><code class="text-primary">{{ $category->code }}</code></td>
                             <td>
-                                <span class="badge bg-info" title="Jumlah item aktif dalam kategori ini">
+                                <div style="padding-left: {{ $category->level * 20 }}px;">
+                                    @if($category->level > 0)
+                                        <i class="bi bi-arrow-return-right text-muted me-1"></i>
+                                    @endif
+                                    <strong>{{ $category->name }}</strong>
+                                </div>
+                            </td>
+                            <td>
+                                @if($category->parent)
+                                    <small class="text-muted">{{ $category->parent->code }}</small><br>
+                                    {{ $category->parent->name }}
+                                @else
+                                    <span class="badge bg-primary">Root</span>
+                                @endif
+                            </td>
+                            <td>
+                                <span class="badge bg-info" title="Jumlah barang aktif dalam kategori ini">
                                     <i class="bi bi-box me-1"></i>{{ $category->items_count }}
                                 </span>
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
+                                    <a href="{{ route('admin.categories.create', ['parent_id' => $category->id]) }}"
+                                       class="btn btn-outline-success"
+                                       title="Tambah Sub-Kategori">
+                                        <i class="bi bi-plus"></i>
+                                    </a>
                                     <a href="{{ route('admin.categories.edit', $category) }}"
                                        class="btn btn-outline-primary"
                                        title="Edit">
@@ -66,7 +87,7 @@
                                     <button type="button"
                                             class="btn btn-outline-danger"
                                             onclick="deleteCategory({{ $category->id }}, '{{ $category->name }}')"
-                                            title="Delete">
+                                            title="Hapus">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
@@ -74,7 +95,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="text-center py-4">
+                            <td colspan="5" class="text-center py-4">
                                 <i class="bi bi-tag text-muted fs-1 mb-3"></i>
                                 <p class="text-muted mb-0">Tidak ada kategori ditemukan.</p>
                             </td>

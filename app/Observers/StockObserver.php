@@ -13,12 +13,12 @@ class StockObserver
      */
     public function updated(Stock $stock): void
     {
-        // Check if quantity changed and is now low
+        // Check if quantity changed and is now out of stock
         if ($stock->wasChanged('quantity')) {
             $stock->load('item');
             
-            // Jika stock <= min_threshold dan quantity > 0, dispatch low stock event
-            if ($stock->quantity > 0 && $stock->quantity <= $stock->item->min_threshold) {
+            // Jika stock = 0 (habis), dispatch out of stock event
+            if ($stock->quantity == 0) {
                 // Check if we haven't already notified recently (within last hour)
                 // Use reference_type and reference_id to track specific item+warehouse combination
                 $recentNotification = \App\Models\Notification::where('type', 'low_stock_alert')

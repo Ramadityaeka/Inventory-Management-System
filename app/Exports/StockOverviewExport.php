@@ -35,7 +35,6 @@ class StockOverviewExport implements FromCollection, WithHeadings, WithMapping, 
             'Kategori',
             'Gudang',
             'Stok Saat Ini',
-            'Stok Minimum',
             'Status'
         ];
     }
@@ -48,7 +47,6 @@ class StockOverviewExport implements FromCollection, WithHeadings, WithMapping, 
             $stock->item->category->name ?? '-',
             $stock->warehouse->name ?? '-',
             $stock->quantity ?? 0,
-            $stock->item->min_threshold ?? 0,
             $this->getStatus($stock)
         ];
     }
@@ -56,7 +54,7 @@ class StockOverviewExport implements FromCollection, WithHeadings, WithMapping, 
     public function styles(Worksheet $sheet)
     {
         // Style the header row
-        $sheet->getStyle('A1:G1')->applyFromArray([
+        $sheet->getStyle('A1:F1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF'],
@@ -78,7 +76,7 @@ class StockOverviewExport implements FromCollection, WithHeadings, WithMapping, 
 
         // Style data rows
         $lastRow = $sheet->getHighestRow();
-        $sheet->getStyle('A2:G' . $lastRow)->applyFromArray([
+        $sheet->getStyle('A2:F' . $lastRow)->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,
@@ -88,7 +86,7 @@ class StockOverviewExport implements FromCollection, WithHeadings, WithMapping, 
         ]);
 
         // Auto-size columns
-        foreach (range('A', 'G') as $column) {
+        foreach (range('A', 'F') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
@@ -99,10 +97,8 @@ class StockOverviewExport implements FromCollection, WithHeadings, WithMapping, 
     {
         if ($stock->quantity == 0) {
             return 'Habis';
-        } elseif ($stock->quantity <= $stock->item->min_threshold) {
-            return 'Stok Rendah';
         } else {
-            return 'Aman';
+            return 'Tersedia';
         }
     }
 }

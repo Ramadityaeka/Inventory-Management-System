@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\AdminGudang;
+namespace App\Http\Controllers\AdminUnit;
 
 use App\Http\Controllers\Controller;
 use App\Models\Item;
@@ -36,16 +36,10 @@ class StockController extends Controller
         
         // Apply stock status filter
         if ($request->filled('stock_status')) {
-            switch ($request->stock_status) {
-                case 'low':
-                    $query->whereColumn('stocks.quantity', '<=', 'items.min_threshold')
-                          ->where('stocks.quantity', '>', 0);
-                    break;
-                case 'out':
-                    $query->where('stocks.quantity', 0);
-                    break;
-                // 'all' or default - no additional filter
+            if ($request->stock_status == 'out') {
+                $query->where('stocks.quantity', '=', 0);
             }
+            // 'all' or default - no additional filter
         }
         
         // Apply search filter
@@ -78,12 +72,8 @@ class StockController extends Controller
         $statistics = [
             'total_items' => $statsQuery->distinct('stocks.item_id')->count(),
             'total_stock' => $statsQuery->sum('stocks.quantity'),
-            'low_stock_count' => $statsQuery->clone()
-                ->whereColumn('stocks.quantity', '<=', 'items.min_threshold')
-                ->where('stocks.quantity', '>', 0)
-                ->count(),
             'out_stock_count' => $statsQuery->clone()
-                ->where('stocks.quantity', 0)
+                ->where('stocks.quantity', '=', 0)
                 ->count()
         ];
         

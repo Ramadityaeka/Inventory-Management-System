@@ -104,7 +104,7 @@
 
 <!-- Summary Cards -->
 <div class="row mb-4">
-    <div class="col-lg-3 col-md-6">
+    <div class="col-lg-4 col-md-6">
         <div class="card bg-primary text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
@@ -120,7 +120,7 @@
         </div>
     </div>
     
-    <div class="col-lg-3 col-md-6">
+    <div class="col-lg-4 col-md-6">
         <div class="card bg-info text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
@@ -136,23 +136,7 @@
         </div>
     </div>
     
-    <div class="col-lg-3 col-md-6">
-        <div class="card bg-warning text-dark h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title mb-1">Low Stock Items</h6>
-                        <h3 class="mb-0">{{ number_format($stocks->lowStockItems) }}</h3>
-                    </div>
-                    <div class="fs-2 opacity-75">
-                        <i class="bi bi-exclamation-triangle"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6">
+    <div class="col-lg-4 col-md-6">
         <div class="card bg-danger text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
@@ -189,7 +173,6 @@
                                     <th>Quantity</th>
                                     <th>Unit</th>
                                     <th>Harga Terakhir</th>
-                                    <th>Threshold</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -211,7 +194,7 @@
                                         </td>
                                         <td>{{ $stock->warehouse_name }}</td>
                                         <td class="text-end">
-                                            <span class="fw-bold {{ $stock->quantity <= $stock->min_threshold && $stock->quantity > 0 ? 'text-warning' : ($stock->quantity == 0 ? 'text-danger' : 'text-success') }}">
+                                            <span class="fw-bold {{ $stock->quantity == 0 ? 'text-danger' : 'text-success' }}">
                                                 {{ number_format($stock->quantity) }}
                                             </span>
                                         </td>
@@ -224,19 +207,14 @@
                                                 <span class="text-muted">-</span>
                                             @endif
                                         </td>
-                                        <td class="text-end">{{ number_format($stock->min_threshold) }}</td>
                                         <td>
                                             @if($stock->quantity == 0)
                                                 <span class="badge bg-danger">
-                                                    <i class="bi bi-x-circle me-1"></i>Out of Stock
-                                                </span>
-                                            @elseif($stock->quantity <= $stock->min_threshold)
-                                                <span class="badge bg-warning">
-                                                    <i class="bi bi-exclamation-triangle me-1"></i>Low Stock
+                                                    <i class="bi bi-x-circle me-1"></i>Habis
                                                 </span>
                                             @else
                                                 <span class="badge bg-success">
-                                                    <i class="bi bi-check-circle me-1"></i>Normal
+                                                    <i class="bi bi-check-circle me-1"></i>Tersedia
                                                 </span>
                                             @endif
                                         </td>

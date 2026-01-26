@@ -30,12 +30,12 @@
         <div class="card">
             <div class="card-body text-center">
                 <div class="d-flex align-items-center justify-content-center mb-2">
-                    <div class="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                        <i class="bi bi-exclamation-triangle fs-4 text-warning"></i>
+                    <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="bi bi-boxes fs-4 text-success"></i>
                     </div>
                 </div>
-                <h3 class="mb-1">{{ number_format($statistics['low_stock_count']) }}</h3>
-                <p class="text-muted mb-0 small">Low Stock</p>
+                <h3 class="mb-1">{{ number_format($statistics['total_stock']) }}</h3>
+                <p class="text-muted mb-0 small">Total Stock</p>
             </div>
         </div>
     </div>
@@ -118,7 +118,6 @@
                                     <th>Category</th>
                                     <th>Current Stock</th>
                                     <th>Unit</th>
-                                    <th>Min Threshold</th>
                                     <th>Status</th>
                                     <th style="width: 280px;">Recent Activity</th>
                                     <th>Last Updated</th>
@@ -135,14 +134,11 @@
                                             <strong class="fs-5">{{ number_format($stock->quantity) }}</strong>
                                         </td>
                                         <td>{{ $stock->item->unit }}</td>
-                                        <td>{{ number_format($stock->item->min_threshold) }}</td>
                                         <td>
                                             @if($stock->quantity == 0)
-                                                <span class="badge bg-danger">Out of Stock</span>
-                                            @elseif($stock->quantity <= $stock->item->min_threshold)
-                                                <span class="badge bg-warning text-dark">Low Stock</span>
+                                                <span class="badge bg-danger">Habis</span>
                                             @else
-                                                <span class="badge bg-success">Available</span>
+                                                <span class="badge bg-success">Tersedia</span>
                                             @endif
                                         </td>
                                         <td>
@@ -260,24 +256,24 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="adjustment_type" class="form-label">Type <span class="text-danger">*</span></label>
+                        <label for="adjustment_type" class="form-label">Tipe <span class="text-danger">*</span></label>
                         <select class="form-select" id="adjustment_type" name="adjustment_type" required>
                             <option value="">Pilih Tipe</option>
-                            <option value="add">Tambah Stock (Stock In)</option>
-                            <option value="reduce">Kurangi Stock (Stock Out)</option>
+                            <option value="add">Tambah Stok (Barang Masuk)</option>
+                            <option value="reduce">Kurangi Stok (Barang Keluar)</option>
                         </select>
-                        <small class="text-muted">Pilih "Kurangi Stock" jika barang sudah digunakan/keluar</small>
+                        <small class="text-muted">Pilih "Kurangi Stok" jika barang sudah digunakan/keluar</small>
                     </div>
 
                     <div class="mb-3">
-                        <label for="quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
+                        <label for="quantity" class="form-label">Jumlah <span class="text-danger">*</span></label>
                         <input type="number" class="form-control" id="quantity" name="quantity" 
                                min="1" step="1" required>
                         <small class="text-muted">Masukkan jumlah yang akan ditambah/dikurangi</small>
                     </div>
 
                     <div class="mb-3">
-                        <label for="notes" class="form-label">Notes/Reason <span class="text-danger">*</span></label>
+                        <label for="notes" class="form-label">Catatan/Alasan <span class="text-danger">*</span></label>
                         <textarea class="form-control" id="notes" name="notes" rows="3" 
                                   placeholder="Contoh: Barang rusak, Barang digunakan untuk kegiatan X, Stock opname, dll." required></textarea>
                         <small class="text-muted">Jelaskan alasan adjustment untuk audit trail</small>
@@ -285,7 +281,7 @@
 
                     <div class="alert alert-warning d-none" id="warning_reduce">
                         <i class="bi bi-exclamation-triangle me-2"></i>
-                        <small>Pengurangan stock akan mengurangi jumlah barang yang tersedia di gudang.</small>
+                        <small>Pengurangan stock akan mengurangi jumlah barang yang tersedia di unit.</small>
                     </div>
                 </div>
                 

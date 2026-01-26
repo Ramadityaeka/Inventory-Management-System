@@ -1,0 +1,134 @@
+/* Admin Gudang Dashboard Styles */
+
+.hover-card {
+    transition: all 0.3s ease;
+}
+
+.hover-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 60px;
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 22px;
+    top: 50px;
+    width: 2px;
+    height: calc(100% - 30px);
+    background: linear-gradient(180deg, #e9ecef 0%, transparent 100%);
+}
+
+.timeline-icon {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 1;
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+.clickable-card {
+    cursor: pointer;
+}
+
+.clickable-card:active {
+    transform: translateY(0px);
+}
+
+.badge {
+    font-size: 0.7em;
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.card-header {
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.bg-light {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+}
+
+.border-warning {
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0%, 100% {
+        border-color: #ffc107;
+    }
+    50% {
+        border-color: #ffdb6d;
+    }
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+    transition: background-color 0.2s ease;
+}
+
+.timeline-item {
+    transition: all 0.3s ease;
+}
+
+.badge {
+    font-weight: 600;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: slideIn 0.5s ease-out;
+}
+
+kbd {
+    background-color: #2a5298;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.progress {
+    height: 10px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    border-radius: 10px;
+    transition: width 1s ease-in-out;
+}

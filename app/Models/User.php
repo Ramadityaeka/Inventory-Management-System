@@ -66,6 +66,18 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Warehouse::class, 'user_warehouses')->withPivot('created_at');
     }
+    
+    // Alias untuk units (mendukung perubahan nama warehouse -> unit)
+    public function units(): BelongsToMany
+    {
+        // Cek apakah tabel units sudah ada (setelah migration)
+        try {
+            return $this->belongsToMany(Unit::class, 'user_unit')->withPivot('created_at');
+        } catch (\Exception $e) {
+            // Fallback ke warehouses jika tabel units belum ada
+            return $this->warehouses();
+        }
+    }
 
     public function submissions(): HasMany
     {

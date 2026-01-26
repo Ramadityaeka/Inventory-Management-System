@@ -338,132 +338,6 @@
         </div>
     </div>
 
-    <div class="col-12 col-lg-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-light">
-                <h6 class="mb-0">
-                    <i class="bi bi-people-fill text-primary me-2"></i>Top 5 Staff Aktif
-                </h6>
-            </div>
-            <div class="card-body">
-                @if(isset($topStaff) && $topStaff->count() > 0)
-                    <div class="list-group list-group-flush">
-                        @foreach($topStaff as $index => $staff)
-                            <div class="list-group-item px-0 py-2 border-0">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-shrink-0 me-3">
-                                        <div class="bg-{{ ['primary', 'success', 'info', 'warning', 'secondary'][$index] }} rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                            <span class="text-white fw-bold">#{{ $index + 1 }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1">{{ $staff->name }}</h6>
-                                        <div class="d-flex gap-2">
-                                            <small class="badge bg-primary">{{ $staff->total_submissions }} total</small>
-                                            <small class="badge bg-success">{{ $staff->approved_count }} approved</small>
-                                            @if($staff->rejected_count > 0)
-                                                <small class="badge bg-danger">{{ $staff->rejected_count }} rejected</small>
-                                            @endif
-                                        </div>
-                                    </div>
-                                    @php
-                                        $staffApprovalRate = $staff->total_submissions > 0 
-                                            ? ($staff->approved_count / $staff->total_submissions) * 100 
-                                            : 0;
-                                    @endphp
-                                    <div class="text-end">
-                                        <span class="badge bg-{{ $staffApprovalRate >= 80 ? 'success' : ($staffApprovalRate >= 60 ? 'warning' : 'danger') }} fs-6">
-                                            {{ number_format($staffApprovalRate, 0) }}%
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @else
-                    <div class="text-center py-4">
-                        <i class="bi bi-people text-muted fs-1 mb-3"></i>
-                        <p class="text-muted mb-0">Belum ada data staff</p>
-                    </div>
-                @endif
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Warehouse Performance Insights -->
-<div class="row mb-4 g-3">
-    <!-- Critical Items Alert -->
-    <div class="col-12 col-lg-6">
-        <div class="card border-0 shadow-sm h-100 border-start border-danger border-3">
-            <div class="card-header bg-danger bg-opacity-10">
-                <h6 class="mb-0 text-danger">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Item Kritis (Stok < 25% Minimum)
-                </h6>
-            </div>
-            <div class="card-body">
-                @if(isset($criticalItems) && $criticalItems->count() > 0)
-                    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-                        <strong><i class="bi bi-bell-fill me-2"></i>Perhatian!</strong> 
-                        {{ $criticalItems->count() }} item memerlukan penambahan stok segera!
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Kode</th>
-                                    <th>Nama Item</th>
-                                    <th class="text-end">Stok</th>
-                                    <th class="text-end">Min</th>
-                                    <th class="text-end">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($criticalItems as $item)
-                                    <tr>
-                                        <td><span class="badge bg-secondary">{{ $item->code }}</span></td>
-                                        <td>
-                                            <strong>{{ Str::limit($item->name, 20) }}</strong>
-                                            <br><small class="text-muted">{{ $item->unit }}</small>
-                                        </td>
-                                        <td class="text-end">
-                                            <span class="badge bg-danger">{{ number_format($item->quantity) }}</span>
-                                        </td>
-                                        <td class="text-end">
-                                            <span class="text-muted">{{ number_format($item->min_threshold) }}</span>
-                                        </td>
-                                        <td class="text-end">
-                                            @php
-                                                $percentage = $item->min_threshold > 0 
-                                                    ? ($item->quantity / $item->min_threshold) * 100 
-                                                    : 0;
-                                            @endphp
-                                            <span class="badge bg-{{ $percentage < 10 ? 'danger' : 'warning' }}">
-                                                {{ number_format($percentage, 0) }}%
-                                            </span>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="mt-3 text-center">
-                        <a href="{{ route('admin.items.index') }}" class="btn btn-danger btn-sm">
-                            <i class="bi bi-box-seam me-2"></i>Lihat Semua Item Kritis
-                        </a>
-                    </div>
-                @else
-                    <div class="text-center py-4">
-                        <i class="bi bi-check-circle text-success fs-1 mb-3"></i>
-                        <h5 class="text-success mb-2">Semua Item Aman!</h5>
-                        <p class="text-muted mb-0">Tidak ada item dengan stok kritis saat ini</p>
-                    </div>
-                @endif
-            </div>
-        </div>
-    </div>
-
     <!-- Most Active Items -->
     <div class="col-12 col-lg-6">
         <div class="card border-0 shadow-sm h-100 border-start border-primary border-3">
@@ -520,78 +394,6 @@
                     <div class="text-center py-4">
                         <i class="bi bi-inbox text-muted fs-1 mb-3"></i>
                         <p class="text-muted mb-0">Belum ada pergerakan stok bulan ini</p>
-                    </div>
-                @endif
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Chart and Analytics Row -->
-<div class="row mb-4 g-3">
-    <div class="col-12 col-lg-8">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">
-                    <i class="bi bi-graph-up text-primary me-2"></i>Pergerakan Stok 30 Hari Terakhir
-                </h6>
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-filter me-1"></i>Filter
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#">7 Hari</a></li>
-                        <li><a class="dropdown-item" href="#">30 Hari</a></li>
-                        <li><a class="dropdown-item" href="#">90 Hari</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="card-body">
-                <canvas id="dailyChart" height="300"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-12 col-lg-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-light">
-                <h6 class="mb-0">
-                    <i class="bi bi-trophy text-warning me-2"></i>Top Items
-                </h6>
-            </div>
-            <div class="card-body">
-                @if(isset($topItems) && $topItems->count() > 0)
-                    <div class="list-group list-group-flush">
-                        @foreach($topItems->take(5) as $index => $item)
-                            <div class="list-group-item px-0 py-3 border-0">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-shrink-0 me-3">
-                                        <div class="bg-{{ ['primary', 'success', 'info', 'warning', 'danger'][$index % 5] }} bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                            <span class="fw-bold text-{{ ['primary', 'success', 'info', 'warning', 'danger'][$index % 5] }}">{{ $index + 1 }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <h6 class="mb-1">{{ $item->item_name }}</h6>
-                                                <small class="text-muted">{{ $item->category_name ?? 'N/A' }}</small>
-                                            </div>
-                                            <div class="text-end">
-                                                <span class="badge bg-primary">{{ number_format($item->total_stock) }}</span>
-                                                <a href="{{ route('gudang.stocks.history', $item->item_id) }}" class="btn btn-sm btn-outline-primary ms-2">
-                                                    <i class="bi bi-eye"></i>
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @else
-                    <div class="text-center py-4">
-                        <i class="bi bi-bar-chart text-muted fs-1 mb-3"></i>
-                        <p class="text-muted small mb-0">Belum ada data item</p>
                     </div>
                 @endif
             </div>
@@ -695,14 +497,10 @@
                                                 <h6 class="mb-1">{{ $item->item_name }}</h6>
                                                 <small class="text-muted d-block mb-2">{{ $item->warehouse_name }}</small>
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <span class="badge bg-danger">Stok: {{ $item->current_stock }}</span>
-                                                    <span class="badge bg-secondary">Min: {{ $item->threshold }}</span>
-                                                    @php
-                                                        $percentage = $item->threshold > 0 ? ($item->current_stock / $item->threshold) * 100 : 0;
-                                                    @endphp
-                                                    <span class="badge {{ $percentage < 50 ? 'bg-danger' : 'bg-warning' }}">
-                                                        {{ number_format($percentage, 0) }}%
-                                                    </span>
+                                                    <span class="badge {{ $item->current_stock == 0 ? 'bg-danger' : 'bg-warning' }}">Stok: {{ $item->current_stock }}</span>
+                                                    @if($item->current_stock == 0)
+                                                        <span class="badge bg-danger">Habis</span>
+                                                    @endif
                                                 </div>
                                             </div>
                                             <a href="{{ route('gudang.stocks.history', $item->item_id) }}" class="btn btn-sm btn-outline-danger ms-2">
@@ -761,8 +559,8 @@
                                     </div>
                                     <div class="flex-grow-1">
                                         <div class="d-flex justify-content-between align-items-start mb-1">
-                                            <h6 class="mb-1">{{ $activity->item->name }}</h6>
-                                            <span class="badge bg-{{ $activity->quantity > 0 ? 'success' : 'danger' }}">
+                                            <h6 class="mb-1">{{ $activity->item->name ?? 'Unknown Item' }}</h6>
+                                            <span class="badge bg-{{ $activity->quantity > 0 ? 'success' : 'danger' }} fs-6 px-3 py-2">
                                                 {{ $activity->quantity > 0 ? '+' : '' }}{{ number_format($activity->quantity) }}
                                             </span>
                                         </div>
@@ -1266,13 +1064,5 @@
                 })
                 .catch(error => console.log('Error fetching notification count:', error));
         }, 30000); // Check every 30 seconds
-    });
-
-    // Ctrl + R for refresh
-    document.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.key === 'r') {
-            e.preventDefault();
-            refreshDashboard();
-        }
     });</script>
 @endpush

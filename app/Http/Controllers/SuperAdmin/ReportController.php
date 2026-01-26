@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Stock;
 use App\Models\StockMovement;
+use App\Models\Submission;
+use App\Models\Supplier;
 use App\Models\Transfer;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
@@ -15,6 +17,10 @@ use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\StockOverviewExport;
+use App\Exports\StockByCategoryExport;
+use App\Exports\StockByWarehouseExport;
+use App\Exports\StockBySupplierExport;
+use App\Exports\DetailedStockExport;
 
 class ReportController extends Controller
 {
@@ -29,7 +35,6 @@ class ReportController extends Controller
                 'items.name as item_name',
                 'items.code as item_code',
                 'items.unit as item_unit',
-                'items.min_threshold',
                 'warehouses.name as warehouse_name',
                 'categories.name as category_name'
             ]);
@@ -46,15 +51,10 @@ class ReportController extends Controller
 
         // Apply stock status filter
         if ($request->filled('stock_status')) {
-            switch ($request->stock_status) {
-                case 'low':
-                    $query->whereRaw('stocks.quantity <= items.min_threshold AND stocks.quantity > 0');
-                    break;
-                case 'out':
-                    $query->where('stocks.quantity', 0);
-                    break;
-                // 'all' doesn't need additional filtering
+            if ($request->stock_status == 'out') {
+                $query->where('stocks.quantity', '=', 0);
             }
+            // 'all' doesn't need additional filtering
         }
 
         // Get all stocks for summary calculations (before pagination)
@@ -66,9 +66,6 @@ class ReportController extends Controller
         // Calculate summary statistics
         $totalItems = $allStocks->count();
         $totalStock = $allStocks->sum('quantity');
-        $lowStockItems = $allStocks->filter(function($stock) {
-            return $stock->quantity <= $stock->min_threshold && $stock->quantity > 0;
-        })->count();
         $outOfStockItems = $allStocks->filter(function($stock) {
             return $stock->quantity <= 0;
         })->count();
@@ -82,7 +79,6 @@ class ReportController extends Controller
         // Add summary data to paginated collection
         $stocks->totalItems = $totalItems;
         $stocks->totalStock = $totalStock;
-        $stocks->lowStockItems = $lowStockItems;
         $stocks->outOfStockItems = $outOfStockItems;
 
         // Get filter options
@@ -267,7 +263,6 @@ class ReportController extends Controller
                 'items.name as item_name',
                 'items.code as item_code',
                 'items.unit as item_unit',
-                'items.min_threshold',
                 'warehouses.name as warehouse_name',
                 'categories.name as category_name'
             ]);
@@ -282,13 +277,8 @@ class ReportController extends Controller
         }
 
         if ($request->filled('stock_status')) {
-            switch ($request->stock_status) {
-                case 'low':
-                    $query->whereRaw('stocks.quantity <= items.min_threshold AND stocks.quantity > 0');
-                    break;
-                case 'out':
-                    $query->where('stocks.quantity', 0);
-                    break;
+            if ($request->stock_status == 'out') {
+                $query->where('stocks.quantity', '=', 0);
             }
         }
 
@@ -300,9 +290,6 @@ class ReportController extends Controller
         // Calculate summary statistics
         $totalItems = $stocks->count();
         $totalStock = $stocks->sum('quantity');
-        $lowStockItems = $stocks->filter(function($stock) {
-            return $stock->quantity <= $stock->item->min_threshold && $stock->quantity > 0;
-        })->count();
         $outOfStockItems = $stocks->filter(function($stock) {
             return $stock->quantity <= 0;
         })->count();
@@ -331,7 +318,6 @@ class ReportController extends Controller
                 'items.name as item_name',
                 'items.code as item_code',
                 'items.unit as item_unit',
-                'items.min_threshold',
                 'warehouses.name as warehouse_name',
                 'categories.name as category_name'
             ]);
@@ -346,13 +332,8 @@ class ReportController extends Controller
         }
 
         if ($request->filled('stock_status')) {
-            switch ($request->stock_status) {
-                case 'low':
-                    $query->whereRaw('stocks.quantity <= items.min_threshold AND stocks.quantity > 0');
-                    break;
-                case 'out':
-                    $query->where('stocks.quantity', 0);
-                    break;
+            if ($request->stock_status == 'out') {
+                $query->where('stocks.quantity', '=', 0);
             }
         }
 
@@ -364,9 +345,6 @@ class ReportController extends Controller
         // Calculate summary statistics
         $totalItems = $stocks->count();
         $totalStock = $stocks->sum('quantity');
-        $lowStockItems = $stocks->filter(function($stock) {
-            return $stock->quantity <= $stock->item->min_threshold && $stock->quantity > 0;
-        })->count();
         $outOfStockItems = $stocks->filter(function($stock) {
             return $stock->quantity <= 0;
         })->count();
@@ -382,7 +360,6 @@ class ReportController extends Controller
             'warehouse' => $warehouse,
             'totalItems' => $totalItems,
             'totalStock' => $totalStock,
-            'lowStockItems' => $lowStockItems,
             'outOfStockItems' => $outOfStockItems,
         ];
 
@@ -426,13 +403,8 @@ class ReportController extends Controller
             $query->where('items.category_id', $request->category_id);
         }
         if ($request->filled('stock_status')) {
-            switch ($request->stock_status) {
-                case 'low':
-                    $query->whereRaw('stocks.quantity <= items.min_threshold AND stocks.quantity > 0');
-                    break;
-                case 'out':
-                    $query->where('stocks.quantity', 0);
-                    break;
+            if ($request->stock_status == 'out') {
+                $query->where('stocks.quantity', '=', 0);
             }
         }
 
@@ -454,13 +426,8 @@ class ReportController extends Controller
             $query->where('items.category_id', $request->category_id);
         }
         if ($request->filled('stock_status')) {
-            switch ($request->stock_status) {
-                case 'low': 
-                    $query->whereRaw('stocks.quantity <= items.min_threshold AND stocks.quantity > 0'); 
-                    break;
-                case 'out': 
-                    $query->where('stocks.quantity', 0); 
-                    break;
+            if ($request->stock_status == 'out') {
+                $query->where('stocks.quantity', '=', 0);
             }
         }
 
@@ -469,16 +436,7 @@ class ReportController extends Controller
         // Calculate statistics
         $totalItems = $stocks->unique('item_id')->count();
         $totalStock = $stocks->sum('quantity');
-        $lowStockItems = $stocks->filter(function($stock) {
-            return $stock->quantity > 0 && $stock->quantity <= $stock->item->min_threshold;
-        })->count();
         $outOfStockItems = $stocks->where('quantity', 0)->count();
-        
-        // Get warehouse info if single warehouse selected
-        $warehouse = null;
-        if ($request->filled('warehouse_ids') && count($request->warehouse_ids) == 1) {
-            $warehouse = Warehouse::find($request->warehouse_ids[0]);
-        }
         
         $pdf = Pdf::loadView('admin.reports.stock-overview-pdf', compact(
             'stocks', 
@@ -490,5 +448,61 @@ class ReportController extends Controller
         ))->setPaper('a4', 'landscape');
         
         return $pdf->download('Stock_Overview_' . now()->format('Y-m-d_His') . '.pdf');
+    }
+
+    // Export by Category
+    public function exportByCategory(Request $request)
+    {
+        $categoryId = $request->get('category_id');
+        $warehouseId = $request->get('warehouse_id');
+        
+        $filename = 'Stock_By_Category_' . now()->format('Y-m-d_His') . '.xlsx';
+        
+        return Excel::download(new StockByCategoryExport($categoryId, $warehouseId), $filename);
+    }
+
+    // Export by Warehouse
+    public function exportByWarehouse(Request $request)
+    {
+        $warehouseId = $request->get('warehouse_id');
+        
+        $filename = 'Stock_By_Warehouse_' . now()->format('Y-m-d_His') . '.xlsx';
+        
+        return Excel::download(new StockByWarehouseExport($warehouseId), $filename);
+    }
+
+    // Export by Supplier
+    public function exportBySupplier(Request $request)
+    {
+        $supplierId = $request->get('supplier_id');
+        
+        $filename = 'Stock_By_Supplier_' . now()->format('Y-m-d_His') . '.xlsx';
+        
+        return Excel::download(new StockBySupplierExport($supplierId), $filename);
+    }
+
+    // Export Detailed (with all filters)
+    public function exportDetailed(Request $request)
+    {
+        $filters = [
+            'warehouse_id' => $request->get('warehouse_id'),
+            'category_id' => $request->get('category_id'),
+            'supplier_id' => $request->get('supplier_id'),
+            'status' => $request->get('status'),
+        ];
+        
+        $filename = 'Detailed_Stock_Report_' . now()->format('Y-m-d_His') . '.xlsx';
+        
+        return Excel::download(new DetailedStockExport($filters), $filename);
+    }
+
+    // View for custom reports
+    public function customReports()
+    {
+        $warehouses = Warehouse::orderBy('name')->get();
+        $categories = Category::orderBy('name')->get();
+        $suppliers = Supplier::orderBy('name')->get();
+
+        return view('admin.reports.custom-reports', compact('warehouses', 'categories', 'suppliers'));
     }
 }

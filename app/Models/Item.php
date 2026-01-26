@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $name
  * @property int $category_id
  * @property string $unit
- * @property int $min_threshold
  * @property string $description
  * @property bool $is_active
  * @property string|null $inactive_reason
@@ -34,9 +33,7 @@ class Item extends Model
         'code',
         'name',
         'category_id',
-        'supplier_id',
         'unit',
-        'min_threshold',
         'description',
         'is_active',
         'inactive_reason',
@@ -50,7 +47,6 @@ class Item extends Model
     {
         return [
             'is_active' => 'boolean',
-            'min_threshold' => 'integer',
             'deactivated_at' => 'datetime',
         ];
     }

@@ -74,9 +74,9 @@
                     <div class="flex-grow-1 ms-3">
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
-                                <h5 class="mb-1">{{ number_format($stats['total_warehouses']) }}</h5>
-                                <p class="text-muted small mb-0">Total Gudang</p>
-                                <small class="text-primary">{{ $stats['active_warehouses'] ?? 0 }} aktif</small>
+                                <h5 class="mb-1">{{ number_format($stats['total_warehouses'] ?? $stats['total_units'] ?? 0) }}</h5>
+                                <p class="text-muted small mb-0">Total Unit</p>
+                                <small class="text-primary">{{ $stats['active_warehouses'] ?? $stats['active_units'] ?? 0 }} aktif</small>
                             </div>
                             <div class="text-primary">
                                 <i class="bi bi-arrow-right fs-5"></i>
@@ -101,7 +101,7 @@
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <h5 class="mb-1">{{ number_format($stats['total_items']) }}</h5>
-                                <p class="text-muted small mb-0">Total Items</p>
+                                <p class="text-muted small mb-0">Total Barang</p>
                                 <small class="text-success">Semua kategori</small>
                             </div>
                             <div class="text-success">
@@ -153,7 +153,7 @@
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <h5 class="mb-1">{{ number_format($stats['pending_transfers']) }}</h5>
-                                <p class="text-muted small mb-0">Pending Transfer</p>
+                                <p class="text-muted small mb-0">Transfer Menunggu</p>
                                 @if($stats['pending_transfers'] > 0)
                                     <small class="text-warning fw-bold">Butuh persetujuan</small>
                                 @else
@@ -265,7 +265,7 @@
                     <div class="col-6 col-md-3">
                         <a href="{{ route('admin.items.index') }}" class="btn btn-outline-success w-100 d-flex align-items-center justify-content-center p-3">
                             <i class="bi bi-box-seam me-2"></i>
-                            <span>Kelola Items</span>
+                            <span>Kelola Barang</span>
                         </a>
                     </div>
                     <div class="col-6 col-md-3">
@@ -303,7 +303,7 @@
                                 <i class="bi bi-plus-circle fs-3 text-success"></i>
                             </div>
                             <h5 class="mb-1">{{ number_format($stats['today_total_stock_in'] ?? 0) }}</h5>
-                            <p class="text-muted small mb-0">Total Stock Masuk</p>
+                            <p class="text-muted small mb-0">Total Stok Masuk</p>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
@@ -312,7 +312,7 @@
                                 <i class="bi bi-dash-circle fs-3 text-danger"></i>
                             </div>
                             <h5 class="mb-1">{{ number_format($stats['today_total_stock_out'] ?? 0) }}</h5>
-                            <p class="text-muted small mb-0">Total Stock Keluar</p>
+                            <p class="text-muted small mb-0">Total Stok Keluar</p>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
@@ -397,20 +397,20 @@
                     @forelse($warehouses as $warehouse)
                         @php
                             $totalStock = $warehouse->stocks->sum('quantity');
-                            $lowStockCount = $warehouse->stocks->filter(function($stock) {
-                                return $stock->quantity <= ($stock->item->min_threshold ?? 0);
+                            $outOfStockCount = $warehouse->stocks->filter(function($stock) {
+                                return $stock->quantity <= 0;
                             })->count();
                         @endphp
                         <div class="col-12 col-md-6 col-lg-4">
-                            <div class="card border {{ $lowStockCount > 0 ? 'border-warning' : 'border-success' }} h-100">
+                            <div class="card border {{ $outOfStockCount > 0 ? 'border-danger' : 'border-success' }} h-100">
                                 <div class="card-body">
                                     <div class="d-flex align-items-start justify-content-between mb-2">
                                         <div>
                                             <h6 class="mb-1">{{ $warehouse->name }}</h6>
                                             <small class="text-muted">{{ $warehouse->location ?? 'N/A' }}</small>
                                         </div>
-                                        @if($lowStockCount > 0)
-                                            <span class="badge bg-warning">{{ $lowStockCount }} alert</span>
+                                        @if($outOfStockCount > 0)
+                                            <span class="badge bg-danger">{{ $outOfStockCount }} habis</span>
                                         @else
                                             <span class="badge bg-success"><i class="bi bi-check"></i></span>
                                         @endif
@@ -517,7 +517,7 @@
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">
-                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>Pending Approvals
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>Persetujuan Menunggu
                 </h6>
                 @if($pendingTransfers->count() > 0)
                     <span class="badge bg-warning">{{ $pendingTransfers->count() }}</span>
@@ -594,8 +594,8 @@
                                                 <h6 class="mb-1">{{ $item->item_name }}</h6>
                                                 <small class="text-muted">{{ $item->warehouse_name }}</small>
                                                 <div class="mt-1">
-                                                    <span class="badge bg-danger me-2">{{ $item->current_stock }}</span>
-                                                    <small class="text-muted">Threshold: {{ $item->threshold }}</small>
+                                                    <span class="badge bg-danger me-2">Stok: {{ $item->current_stock }}</span>
+                                                    <span class="badge bg-warning">Habis</span>
                                                 </div>
                                             </div>
                                             <a href="{{ route('admin.reports.stock-overview') }}" class="btn btn-sm btn-outline-danger">

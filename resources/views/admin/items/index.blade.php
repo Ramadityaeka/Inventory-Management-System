@@ -1,19 +1,19 @@
 @extends('layouts.app')
 
-@section('page-title', 'Manajemen Item')
+@section('page-title', 'Manajemen Barang')
 
 @section('content')
 <div class="row">
     <div class="col-12">
-        <h4 class="mb-4">Manajemen Item</h4>
+        <h4 class="mb-4">Manajemen Barang</h4>
     </div>
 </div>
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">Daftar Item</h6>
+        <h6 class="mb-0">Daftar Barang</h6>
         <a href="{{ route('admin.items.create') }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>Tambah Item
+            <i class="bi bi-plus-circle me-2"></i>Tambah Barang
         </a>
     </div>
 
@@ -21,7 +21,7 @@
         <!-- Filters -->
         <form method="GET" action="{{ route('admin.items.index') }}" class="row g-3 mb-4">
             <div class="col-md-3">
-                <label for="search" class="form-label">Cari Item</label>
+                <label for="search" class="form-label">Cari Barang</label>
                 <input type="text" class="form-control" id="search" name="search"
                        value="{{ request('search') }}" placeholder="Nama atau kode">
             </div>
@@ -73,12 +73,11 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
-                        <th>Code</th>
-                        <th>Name</th>
-                        <th>Category</th>
+                        <th>Kode</th>
+                        <th>Nama</th>
+                        <th>Kategori</th>
                         <th>Supplier</th>
-                        <th>Unit</th>
-                        <th>Min Threshold</th>
+                        <th>Satuan</th>
                         <th>Total Stock</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -100,12 +99,9 @@
                             </td>
                             <td>{{ $item->supplier->name ?? '-' }}</td>
                             <td>{{ $item->unit }}</td>
-                            <td>{{ number_format($item->min_threshold) }}</td>
                             <td>
                                 @if($item->total_stock == 0)
                                     <span class="badge bg-danger">{{ number_format($item->total_stock) }}</span>
-                                @elseif($item->total_stock <= $item->min_threshold)
-                                    <span class="badge bg-warning text-dark">{{ number_format($item->total_stock) }}</span>
                                 @else
                                     <span class="badge bg-success">{{ number_format($item->total_stock) }}</span>
                                 @endif
@@ -144,12 +140,6 @@
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     <button type="button"
-                                            class="btn btn-outline-warning"
-                                            onclick="setThreshold({{ $item->id }}, '{{ $item->name }}', {{ $item->min_threshold }})"
-                                            title="Set Threshold">
-                                        <i class="bi bi-graph-up"></i>
-                                    </button>
-                                    <button type="button"
                                             class="btn btn-outline-danger"
                                             onclick="deleteItem({{ $item->id }}, '{{ $item->name }}')"
                                             title="Delete">
@@ -176,39 +166,6 @@
                 {{ $items->appends(request()->query())->links() }}
             </div>
         @endif
-    </div>
-</div>
-
-<!-- Set Threshold Modal -->
-<div class="modal fade" id="thresholdModal" tabindex="-1" aria-labelledby="thresholdModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="thresholdModalLabel">Set Minimum Threshold</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">Item</label>
-                    <p class="form-control-plaintext" id="thresholdItemName"></p>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Current Threshold</label>
-                    <p class="form-control-plaintext" id="currentThreshold"></p>
-                </div>
-                <div class="mb-3">
-                    <label for="newThreshold" class="form-label">New Threshold</label>
-                    <input type="number" class="form-control" id="newThreshold" min="0" required>
-                    <div class="form-text">Jumlah minimum sebelum dianggap low stock</div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="saveThresholdBtn" onclick="saveThreshold()">
-                    <i class="bi bi-check-circle me-1"></i>Save
-                </button>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -244,69 +201,6 @@
 
 @push('scripts')
 <script>
-    let currentItemId = null;
-
-    function setThreshold(itemId, itemName, currentThreshold) {
-        currentItemId = itemId;
-        document.getElementById('thresholdItemName').textContent = itemName;
-        document.getElementById('currentThreshold').textContent = currentThreshold.toLocaleString();
-        document.getElementById('newThreshold').value = currentThreshold;
-
-        const modal = new bootstrap.Modal(document.getElementById('thresholdModal'));
-        modal.show();
-    }
-
-    function saveThreshold() {
-        const newThreshold = document.getElementById('newThreshold').value;
-
-        if (!newThreshold || newThreshold < 0) {
-            alert('Please enter a valid threshold value (0 or greater)');
-            return;
-        }
-
-        const saveBtn = document.getElementById('saveThresholdBtn');
-        const originalText = saveBtn.innerHTML;
-        saveBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving...';
-        saveBtn.disabled = true;
-
-        fetch(`/admin/items/${currentItemId}/set-threshold`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify({
-                min_threshold: parseInt(newThreshold)
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Close modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('thresholdModal'));
-                modal.hide();
-
-                // Show success message
-                showToast('Threshold updated successfully!', 'success');
-
-                // Reload page to show updated data
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-            } else {
-                throw new Error('Failed to update threshold');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('Failed to update threshold. Please try again.', 'error');
-        })
-        .finally(() => {
-            saveBtn.innerHTML = originalText;
-            saveBtn.disabled = false;
-        });
-    }
-
     function deleteItem(itemId, itemName) {
         document.getElementById('itemName').textContent = itemName;
         document.getElementById('deleteForm').action = `/admin/items/${itemId}`;

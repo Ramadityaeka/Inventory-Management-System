@@ -85,7 +85,6 @@ class ItemController extends Controller
             'category_id' => 'required|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'unit' => 'required|string|max:50',
-            'min_threshold' => 'required|integer|min:0',
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
         ]);
@@ -137,7 +136,6 @@ class ItemController extends Controller
             'category_id' => 'required|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'unit' => 'required|string|max:50',
-            'min_threshold' => 'required|integer|min:0',
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
             'inactive_reason' => 'nullable|in:discontinued,wrong_input,seasonal',
@@ -163,7 +161,6 @@ class ItemController extends Controller
                 'category_id' => $validated['category_id'],
                 'supplier_id' => $validated['supplier_id'],
                 'unit' => $validated['unit'],
-                'min_threshold' => $validated['min_threshold'],
                 'description' => $validated['description'],
                 'is_active' => $isActive,
             ];
@@ -208,21 +205,6 @@ class ItemController extends Controller
             return redirect()->route('admin.items.index')
                 ->with('success', 'Item updated successfully.');
         });
-    }
-
-    public function setThreshold(Request $request, Item $item)
-    {
-        $validated = $request->validate([
-            'min_threshold' => 'required|integer|min:0',
-        ]);
-
-        $item->update($validated);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Threshold updated successfully.',
-            'min_threshold' => $item->min_threshold,
-        ]);
     }
 
     public function destroy(Item $item)

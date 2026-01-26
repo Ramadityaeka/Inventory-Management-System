@@ -161,15 +161,15 @@
     <div class="summary-cards">
         <div class="summary-card">
             <h3 style="color: #198754;">{{ number_format($reportData['total_stock_in']) }}</h3>
-            <p>Total Stock In</p>
+            <p>Total Barang Masuk</p>
         </div>
         <div class="summary-card">
             <h3 style="color: #dc3545;">{{ number_format($reportData['total_stock_out']) }}</h3>
-            <p>Total Stock Out</p>
+            <p>Total Barang Keluar</p>
         </div>
         <div class="summary-card">
             <h3 style="color: #0d6efd;">{{ number_format($reportData['total_movements']) }}</h3>
-            <p>Total Movements</p>
+            <p>Total Pergerakan</p>
         </div>
         <div class="summary-card">
             <h3 style="color: #0dcaf0;">{{ number_format($reportData['submissions_count']) }}</h3>
@@ -177,17 +177,17 @@
         </div>
     </div>
 
-    <div class="section-title">Stock Movements by Item</div>
+    <div class="section-title">Pergerakan Stok per Barang</div>
     @if($reportData['item_movements']->count() > 0)
         <table>
             <thead>
                 <tr>
-                    <th>Item Code</th>
-                    <th>Item Name</th>
-                    <th class="text-right">Stock In</th>
-                    <th class="text-right">Stock Out</th>
-                    <th class="text-right">Adjustment</th>
-                    <th class="text-right">Current Stock</th>
+                    <th>Kode Barang</th>
+                    <th>Nama Barang</th>
+                    <th class="text-right">Barang Masuk</th>
+                    <th class="text-right">Barang Keluar</th>
+                    <th class="text-right">Penyesuaian</th>
+                    <th class="text-right">Stok Saat Ini</th>
                 </tr>
             </thead>
             <tbody>
@@ -285,7 +285,6 @@
                     <th>Item Code</th>
                     <th>Item Name</th>
                     <th class="text-right">Current Stock</th>
-                    <th class="text-right">Min Threshold</th>
                     <th class="text-center">Status</th>
                 </tr>
             </thead>
@@ -295,14 +294,11 @@
                         <td>{{ $stock->item->code }}</td>
                         <td>{{ $stock->item->name }}</td>
                         <td class="text-right"><strong>{{ number_format($stock->quantity) }}</strong></td>
-                        <td class="text-right">{{ number_format($stock->item->min_threshold) }}</td>
                         <td class="text-center">
                             @if($stock->quantity == 0)
-                                <span class="badge badge-danger">Out of Stock</span>
-                            @elseif($stock->quantity <= $stock->item->min_threshold)
-                                <span class="badge badge-warning">Low Stock</span>
+                                <span class="badge badge-danger">Habis</span>
                             @else
-                                <span class="badge badge-success">Available</span>
+                                <span class="badge badge-success">Tersedia</span>
                             @endif
                         </td>
                     </tr>

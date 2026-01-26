@@ -9,6 +9,7 @@ use App\Models\StockMovement;
 use App\Models\Submission;
 use App\Models\Transfer;
 use App\Models\Warehouse;
+use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -35,16 +36,26 @@ class DashboardController extends Controller
                 return $this->staffGudangDashboard();
             }
 
-            // Default fallback
-            return view('dashboard');
+            // Default fallback - redirect to staff dashboard for users without specific role
+            return $this->staffGudangDashboard();
         } catch (\Exception $e) {
             // Log the error and show a friendly message
             \Log::error('Dashboard error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             \Log::error('Stack trace: ' . $e->getTraceAsString());
             
-            return view('dashboard', [
+            return view('dashboard.staff', [
                 'user' => auth()->user(),
-                'error' => 'Dashboard temporarily unavailable: ' . $e->getMessage()
+                'error' => 'Dashboard temporarily unavailable: ' . $e->getMessage(),
+                'stats' => [
+                    'total_submissions' => 0,
+                    'pending_approval' => 0,
+                    'approved_this_month' => 0,
+                    'rejected' => 0,
+                ],
+                'draftCount' => 0,
+                'recentSubmissions' => collect(),
+                'recentNotifications' => collect(),
+                'unreadNotifications' => 0,
             ]);
         }
     }
@@ -52,21 +63,28 @@ class DashboardController extends Controller
     private function superAdminDashboard()
     {
         // Optimize queries with caching where possible
+        // Support both Warehouse and Unit models
+        $warehouseModel = class_exists('App\\Models\\Unit') ? Unit::class : Warehouse::class;
+        
         $stats = [
-            'total_warehouses' => Warehouse::count(),
+            'total_units' => $warehouseModel::count(),
+            'total_warehouses' => $warehouseModel::count(), // Alias untuk backward compatibility
             'total_items' => Item::count(),
             'total_stock' => Stock::sum('quantity') ?? 0,
             'pending_transfers' => Transfer::where('status', 'waiting_approval')->count(),
             'total_users' => \App\Models\User::count(),
-            'active_warehouses' => Warehouse::whereHas('stocks', function($q) {
+            'active_units' => $warehouseModel::whereHas('stocks', function($q) {
                 $q->where('quantity', '>', 0);
             })->count(),
+            'active_warehouses' => $warehouseModel::whereHas('stocks', function($q) {
+                $q->where('quantity', '>', 0);
+            })->count(), // Alias untuk backward compatibility
             // Today's stats
             'today_total_stock_in' => StockMovement::whereDate('created_at', today())->where('quantity', '>', 0)->sum('quantity') ?? 0,
             'today_total_stock_out' => abs(StockMovement::whereDate('created_at', today())->where('quantity', '<', 0)->sum('quantity')) ?? 0,
             'today_transfers_approved' => Transfer::whereDate('approved_at', today())->count() ?? 0,
             'today_new_alerts' => Item::join('stocks', 'items.id', '=', 'stocks.item_id')
-                ->whereColumn('stocks.quantity', '<=', 'items.min_threshold')
+                ->where('stocks.quantity', '=', 0)
                 ->distinct('items.id')
                 ->count(),
             // Monthly progress targets (these could be configurable)
@@ -100,16 +118,15 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        // Optimized low stock items with limit
+        // Out of stock items
         $lowStockItems = Item::join('stocks', 'items.id', '=', 'stocks.item_id')
             ->join('warehouses', 'stocks.warehouse_id', '=', 'warehouses.id')
-            ->whereColumn('stocks.quantity', '<=', 'items.min_threshold')
+            ->where('stocks.quantity', '=', 0)
             ->select(
                 'items.id as item_id',
                 'items.name as item_name',
                 'warehouses.name as warehouse_name',
-                'stocks.quantity as current_stock',
-                'items.min_threshold as threshold'
+                'stocks.quantity as current_stock'
             )
             ->limit(20)
             ->get();
@@ -153,7 +170,7 @@ class DashboardController extends Controller
 
         // Check if user has warehouses assigned
         if ($warehouseIds->isEmpty()) {
-            return view('dashboard.admin-gudang', [
+            return view('dashboard.admin-unit', [
                 'warehouseName' => 'No Warehouse Assigned',
                 'stats' => [
                     'total_items' => 0,
@@ -184,8 +201,7 @@ class DashboardController extends Controller
                 ->where('status', 'approved')
                 ->count(),
             'low_stock_items' => Stock::whereIn('stocks.warehouse_id', $warehouseIds)
-                ->join('items', 'stocks.item_id', '=', 'items.id')
-                ->whereColumn('stocks.quantity', '<=', 'items.min_threshold')
+                ->where('stocks.quantity', '=', 0)
                 ->count(),
             'stock_in_count' => StockMovement::whereIn('warehouse_id', $warehouseIds)
                 ->where('quantity', '>', 0)
@@ -276,24 +292,23 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        // Optimized low stock items with limit
+        // Out of stock items
         $lowStockItems = Item::join('stocks', 'items.id', '=', 'stocks.item_id')
             ->join('warehouses', 'stocks.warehouse_id', '=', 'warehouses.id')
             ->whereIn('stocks.warehouse_id', $warehouseIds)
-            ->whereColumn('stocks.quantity', '<=', 'items.min_threshold')
+            ->where('stocks.quantity', '=', 0)
             ->select(
                 'items.id as item_id',
                 'items.name as item_name',
                 'warehouses.name as warehouse_name',
-                'stocks.quantity as current_stock',
-                'items.min_threshold as threshold'
+                'stocks.quantity as current_stock'
             )
             ->limit(20)
             ->get();
 
         // Optimized recent activities with eager loading
         $recentActivities = StockMovement::whereIn('warehouse_id', $warehouseIds)
-            ->with(['item:id,name'])
+            ->with(['item:id,name', 'user:id,name'])
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();
@@ -327,11 +342,11 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        // Critical items (very low stock - below 25% of threshold)
+        // Critical items (out of stock)
         $criticalItems = Item::join('stocks', 'items.id', '=', 'stocks.item_id')
             ->whereIn('stocks.warehouse_id', $warehouseIds)
-            ->whereRaw('stocks.quantity <= (items.min_threshold * 0.25)')
-            ->select('items.id as item_id', 'items.name as item_name', 'stocks.quantity', 'items.min_threshold')
+            ->where('stocks.quantity', '=', 0)
+            ->select('items.id as item_id', 'items.name as item_name', 'stocks.quantity')
             ->limit(10)
             ->get();
 
@@ -349,7 +364,7 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        return view('dashboard.admin-gudang', compact(
+        return view('dashboard.admin-unit', compact(
             'warehouseName',
             'stats',
             'dailyMovements',
