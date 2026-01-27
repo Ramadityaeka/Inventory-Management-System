@@ -9,14 +9,44 @@
             <h4 class="mb-0">
                 <i class="bi bi-bell me-2"></i>Notifikasi
             </h4>
-            @if($notifications->where('is_read', false)->count() > 0)
-                <form action="{{ route('notifications.read-all') }}" method="POST">
-                    @csrf
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="bi bi-check-all me-1"></i>Tandai Semua Dibaca
-                    </button>
-                </form>
-            @endif
+            <div class="btn-group">
+                @if($notifications->where('is_read', false)->count() > 0)
+                    <form action="{{ route('notifications.read-all') }}" method="POST" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-check-all me-1"></i>Tandai Semua Dibaca
+                        </button>
+                    </form>
+                @endif
+                @if($notifications->count() > 0)
+                    <div class="btn-group ms-2" role="group">
+                        <button type="button" class="btn btn-outline-danger btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="bi bi-trash me-1"></i>Hapus
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            @if($notifications->where('is_read', true)->count() > 0)
+                                <li>
+                                    <form action="{{ route('notifications.delete-all-read') }}" method="POST" class="m-0">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item" onclick="return confirm('Hapus semua notifikasi yang sudah dibaca?')">
+                                            <i class="bi bi-check-circle me-2"></i>Hapus Yang Sudah Dibaca
+                                        </button>
+                                    </form>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                            @endif
+                            <li>
+                                <form action="{{ route('notifications.delete-all') }}" method="POST" class="m-0">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Hapus SEMUA notifikasi? Tindakan ini tidak dapat dibatalkan!')">
+                                        <i class="bi bi-trash me-2"></i>Hapus Semua Notifikasi
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                @endif
+            </div>
         </div>
     </div>
 </div>
@@ -55,7 +85,7 @@
                                     @endif
                                 </small>
                             </div>
-                            <div class="ms-3">
+                            <div class="ms-3 d-flex gap-2">
                                 @if(!$notification->is_read)
                                     <button type="button" 
                                             class="btn btn-sm btn-outline-primary mark-read-btn" 
@@ -68,6 +98,12 @@
                                         <i class="bi bi-check-circle"></i>
                                     </span>
                                 @endif
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-danger delete-btn" 
+                                        data-notification-id="{{ $notification->id }}"
+                                        title="Hapus notifikasi">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -206,6 +242,59 @@
                         
                         // Show toast notification (optional)
                         showToast('Notifikasi ditandai sebagai dibaca');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Terjadi kesalahan', 'error');
+                });
+            });
+        });
+
+        // Delete single notification
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                if (!confirm('Hapus notifikasi ini?')) {
+                    return;
+                }
+
+                const notificationId = this.dataset.notificationId;
+                const listItem = this.closest('.list-group-item');
+                
+                fetch(`/notifications/${notificationId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Animate and remove the notification
+                        listItem.style.transition = 'opacity 0.3s ease';
+                        listItem.style.opacity = '0';
+                        
+                        setTimeout(() => {
+                            listItem.remove();
+                            
+                            // Update total count
+                            const totalCard = document.querySelector('.col-md-6:first-child h4');
+                            if (totalCard) {
+                                const currentTotal = parseInt(totalCard.textContent);
+                                if (currentTotal > 0) {
+                                    totalCard.textContent = currentTotal - 1;
+                                }
+                            }
+                            
+                            // Check if no notifications left
+                            if (document.querySelectorAll('.list-group-item').length === 0) {
+                                location.reload(); // Reload to show "no notifications" message
+                            }
+                        }, 300);
+                        
+                        showToast('Notifikasi berhasil dihapus');
                     }
                 })
                 .catch(error => {

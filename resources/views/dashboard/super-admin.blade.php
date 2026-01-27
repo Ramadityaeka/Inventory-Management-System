@@ -456,8 +456,8 @@
                 <h6 class="mb-0">
                     <i class="bi bi-activity text-primary me-2"></i>Aktivitas Terbaru
                 </h6>
-                <a href="{{ route('gudang.reports.monthly') }}" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-list me-1"></i>Lihat Semua
+                <a href="{{ route('super-admin.reports.stock-values.index') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-list me-1"></i>Lihat Laporan
                 </a>
             </div>
             <div class="card-body">

@@ -67,6 +67,11 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
             $query->where('warehouse_id', $this->filters['warehouse_id']);
         }
 
+        // Support for multiple warehouse IDs (for admin gudang)
+        if (isset($this->filters['warehouse_ids']) && !empty($this->filters['warehouse_ids'])) {
+            $query->whereIn('warehouse_id', $this->filters['warehouse_ids']);
+        }
+
         if (isset($this->filters['processed_by']) && !empty($this->filters['processed_by'])) {
             $query->whereHas('approvals', function($q) {
                 $q->where('admin_id', $this->filters['processed_by']);
@@ -114,9 +119,9 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
             $statusText = 'Ditolak';
         }
 
-        // Format tanggal dengan aman tanpa koma
+        // Format tanggal dengan timezone Asia/Jakarta (WIB)
         $submittedDate = $transaction->submitted_at ? 
-            $transaction->submitted_at->format('d-m-Y H:i') : '-';
+            $transaction->submitted_at->timezone('Asia/Jakarta')->format('d-m-Y H:i') : '-';
 
         // Clean keterangan dari karakter bermasalah
         $keterangan = $transaction->notes ?: ('Penerimaan dari ' . ($transaction->supplier->name ?? '-'));

@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('page-title', 'Laporan Bulanan Semua Gudang')
+@section('page-title', 'Laporan Bulanan Semua Unit')
 
 @section('content')
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="mb-0">Laporan Bulanan Semua Gudang</h4>
+            <h4 class="mb-0">Laporan Bulanan Semua Unit</h4>
         </div>
     </div>
 </div>
@@ -20,7 +20,7 @@
         <form method="POST" action="{{ route('admin.reports.monthly.generate') }}" class="row g-3">
             @csrf
             <div class="col-md-4">
-                <label class="form-label">Gudang <span class="text-danger">*</span></label>
+                <label class="form-label">Unit <span class="text-danger">*</span></label>
                 <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
                     <div class="form-check mb-2">
                         <input class="form-check-input" type="checkbox" id="select_all_warehouses">
@@ -90,7 +90,7 @@
             <div>
                 <h5 class="mb-1">
                     @if($reportData['warehouse_count'] > 1)
-                        {{ $reportData['warehouse_count'] }} Gudang Terpilih
+                        {{ $reportData['warehouse_count'] }} Unit Terpilih
                     @else
                         {{ $reportData['warehouses'] }}
                     @endif
@@ -162,7 +162,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th width="4%">No</th>
-                                    <th width="10%">Gudang</th>
+                                    <th width="10%">Unit</th>
                                     <th width="14%">Nama Barang</th>
                                     <th width="8%" class="text-center">Jumlah</th>
                                     <th width="8%" class="text-center">Sisa Stok</th>
@@ -276,7 +276,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th width="4%">No</th>
-                                    <th width="12%">Gudang</th>
+                                    <th width="12%">Unit</th>
                                     <th width="8%">Kode Barang</th>
                                     <th width="18%">Nama Barang</th>
                                     <th width="10%">Kategori</th>
@@ -413,7 +413,7 @@
     <div class="card-body text-center py-5">
         <i class="bi bi-file-earmark-bar-graph text-muted" style="font-size: 5rem;"></i>
         <h5 class="text-muted mt-3">Belum Ada Laporan</h5>
-        <p class="text-muted">Pilih gudang, bulan, dan tahun di atas, lalu klik "Generate" untuk membuat laporan bulanan.</p>
+        <p class="text-muted">Pilih unit, bulan, dan tahun di atas, lalu klik "Generate" untuk membuat laporan bulanan.</p>
     </div>
 </div>
 @endif

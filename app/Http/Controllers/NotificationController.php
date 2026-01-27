@@ -65,4 +65,48 @@ class NotificationController extends Controller
 
         return response()->json(['count' => $count]);
     }
+
+    /**
+     * Delete single notification
+     */
+    public function destroy(Request $request, $id)
+    {
+        $notification = Notification::where('id', $id)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        $notification->delete();
+
+        // If AJAX request, return JSON
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Notifikasi berhasil dihapus.',
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Notifikasi berhasil dihapus.');
+    }
+
+    /**
+     * Delete all read notifications
+     */
+    public function deleteAllRead(Request $request)
+    {
+        $count = auth()->user()->notifications()
+            ->where('is_read', true)
+            ->delete();
+
+        return redirect()->back()->with('success', "Berhasil menghapus {$count} notifikasi yang sudah dibaca.");
+    }
+
+    /**
+     * Delete all notifications
+     */
+    public function deleteAll(Request $request)
+    {
+        $count = auth()->user()->notifications()->delete();
+
+        return redirect()->back()->with('success', "Berhasil menghapus {$count} notifikasi.");
+    }
 }

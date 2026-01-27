@@ -11,8 +11,8 @@
                 <p class="text-muted mb-0">Pantau dan kelola aktivitas gudang dengan mudah</p>
             </div>
             <div class="d-flex gap-2">
-                <a href="{{ route('gudang.reports.monthly') }}" class="btn btn-outline-primary">
-                    <i class="bi bi-graph-up me-1"></i>Laporan
+                <a href="{{ route('gudang.reports.index') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-file-earmark-text me-1"></i>Laporan
                 </a>
                 <a href="{{ route('gudang.stocks.index') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-gear me-1"></i>Pengaturan
@@ -209,7 +209,7 @@
                         </a>
                     </div>
                     <div class="col-6 col-md-3">
-                        <a href="{{ route('gudang.reports.monthly') }}" class="btn btn-outline-info w-100 d-flex align-items-center justify-content-center p-3">
+                        <a href="{{ route('gudang.reports.index') }}" class="btn btn-outline-info w-100 d-flex align-items-center justify-content-center p-3">
                             <div class="text-center">
                                 <i class="bi bi-graph-up fs-4 mb-2"></i>
                                 <div class="small">Laporan</div>
@@ -410,8 +410,8 @@
                 <h6 class="mb-0">
                     <i class="bi bi-activity text-primary me-2"></i>Aktivitas Terbaru
                 </h6>
-                <a href="{{ route('gudang.reports.monthly') }}" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-list me-1"></i>Lihat Semua
+                <a href="{{ route('gudang.reports.transactions') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-file-earmark-text me-1"></i>Lihat Laporan
                 </a>
             </div>
             <div class="card-body">

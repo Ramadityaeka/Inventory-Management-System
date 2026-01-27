@@ -106,15 +106,24 @@
         </li>
         
         <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('gudang.reports.movements') ? 'active' : '' }}" href="{{ route('gudang.reports.movements') }}">
-                <i class="bi bi-arrow-left-right me-2"></i>Perpindahan Barang
+            <a class="nav-link {{ request()->routeIs('gudang.reports.*') ? 'active' : '' }}" data-bs-toggle="collapse" href="#reportsMenuGudang" role="button" aria-expanded="{{ request()->routeIs('gudang.reports.*') ? 'true' : 'false' }}">
+                <i class="bi bi-file-earmark-bar-graph me-2"></i>Laporan
+                <i class="bi bi-chevron-down ms-auto"></i>
             </a>
-        </li>
-        
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('gudang.reports.in-out') ? 'active' : '' }}" href="{{ route('gudang.reports.in-out') }}">
-                <i class="bi bi-arrow-down-up me-2"></i>Barang Masuk & Keluar
-            </a>
+            <div class="collapse {{ request()->routeIs('gudang.reports.*') ? 'show' : '' }}" id="reportsMenuGudang">
+                <ul class="nav flex-column ms-3">
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('gudang.reports.transactions') ? 'active' : '' }}" href="{{ route('gudang.reports.transactions') }}">
+                            <i class="bi bi-arrow-left-right me-2"></i>Laporan Transaksi
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('gudang.reports.stock-values') ? 'active' : '' }}" href="{{ route('gudang.reports.stock-values') }}">
+                            <i class="bi bi-currency-dollar me-2"></i>Laporan Stok & Nilai
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </li>
         
     @elseif(auth()->user()->isStaffGudang())

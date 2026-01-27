@@ -7,9 +7,7 @@ use App\Models\Notification;
 use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\Submission;
-use App\Models\Transfer;
 use App\Models\Warehouse;
-use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -77,7 +75,7 @@ class DashboardController extends Controller
                 'total_warehouses' => $warehouseModel::count(), // Alias untuk backward compatibility
                 'total_items' => Item::count(),
                 'total_stock' => Stock::sum('quantity') ?? 0,
-                'pending_transfers' => Transfer::where('status', 'waiting_approval')->count() ?? 0,
+                'pending_transfers' => 0, // Feature disabled - no transfers table
                 'total_users' => User::count(),
                 'active_units' => $warehouseModel::whereHas('stocks', function($q) {
                     $q->where('quantity', '>', 0);
@@ -88,13 +86,13 @@ class DashboardController extends Controller
                 // Today's stats
                 'today_total_stock_in' => StockMovement::whereDate('created_at', today())->where('quantity', '>', 0)->sum('quantity') ?? 0,
                 'today_total_stock_out' => abs(StockMovement::whereDate('created_at', today())->where('quantity', '<', 0)->sum('quantity')) ?? 0,
-                'today_transfers_approved' => Transfer::whereDate('approved_at', today())->count() ?? 0,
+                'today_transfers_approved' => 0, // Feature disabled - no transfers table
                 'today_new_alerts' => Item::join('stocks', 'items.id', '=', 'stocks.item_id')
                     ->where('stocks.quantity', '=', 0)
                     ->distinct('items.id')
                     ->count() ?? 0,
                 // Monthly progress targets (these could be configurable)
-                'monthly_transfers_current' => Transfer::whereYear('created_at', now()->year)->whereMonth('created_at', now()->month)->count() ?? 0,
+                'monthly_transfers_current' => 0, // Feature disabled - no transfers table
                 'monthly_transfers_target' => 50,
                 'monthly_movements_current' => StockMovement::whereYear('created_at', now()->year)->whereMonth('created_at', now()->month)->sum(DB::raw('ABS(quantity)')) ?? 0,
                 'monthly_movements_target' => 1000,
@@ -137,12 +135,8 @@ class DashboardController extends Controller
                 ->limit(20)
                 ->get();
 
-            // Pending transfers with relationships
-            $pendingTransfers = Transfer::where('status', 'waiting_approval')
-                ->with(['fromWarehouse:id,name', 'toWarehouse:id,name', 'item:id,name,unit', 'requestedBy:id,name'])
-                ->orderBy('created_at', 'desc')
-                ->limit(10)
-                ->get();
+            // Pending transfers with relationships - Feature disabled
+            $pendingTransfers = collect(); // Empty collection - no transfers table
 
             // Warehouse list with stats
             $warehouses = $warehouseModel::withCount(['stocks'])
@@ -236,9 +230,7 @@ class DashboardController extends Controller
             'pending_submissions' => Submission::whereIn('warehouse_id', $warehouseIds)
                 ->where('status', 'pending')
                 ->count(),
-            'incoming_transfers' => Transfer::whereIn('to_warehouse_id', $warehouseIds)
-                ->where('status', 'approved')
-                ->count(),
+            'incoming_transfers' => 0, // Feature disabled - no transfers table
             'low_stock_items' => Stock::whereIn('stocks.warehouse_id', $warehouseIds)
                 ->where('stocks.quantity', '=', 0)
                 ->count(),

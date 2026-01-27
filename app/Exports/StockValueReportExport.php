@@ -54,6 +54,11 @@ class StockValueReportExport implements FromCollection, WithHeadings, WithMappin
             $query->where('warehouse_id', $this->filters['warehouse_id']);
         }
 
+        // Support for multiple warehouse IDs (for admin gudang)
+        if (isset($this->filters['warehouse_ids']) && !empty($this->filters['warehouse_ids'])) {
+            $query->whereIn('warehouse_id', $this->filters['warehouse_ids']);
+        }
+
         return $query->orderBy('updated_at', 'desc')->get();
     }
 

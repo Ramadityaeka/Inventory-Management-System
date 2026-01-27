@@ -128,6 +128,11 @@ class ReceiveItemController extends Controller
                 }
             }
 
+            // Dispatch event untuk notifikasi admin gudang jika bukan draft
+            if (!$submission->is_draft) {
+                event(new \App\Events\SubmissionCreated($submission));
+            }
+
             DB::commit();
 
             $message = $submission->is_draft 
@@ -204,6 +209,9 @@ class ReceiveItemController extends Controller
                 $invoicePhotoPath = $request->file('invoice_photo')->store('invoice-photos', 'public');
             }
 
+            // Check if submission was draft before update
+            $wasDraft = $submission->is_draft;
+
             $submission->update([
                 'item_id' => $validated['item_id'] ?? null,
                 'item_name' => $validated['item_name'],
@@ -229,6 +237,11 @@ class ReceiveItemController extends Controller
                         'photo_path' => $path,
                     ]);
                 }
+            }
+
+            // Dispatch event untuk notifikasi admin gudang jika diubah dari draft ke submitted
+            if ($wasDraft && !$submission->is_draft) {
+                event(new \App\Events\SubmissionCreated($submission));
             }
 
             DB::commit();
@@ -331,6 +344,11 @@ class ReceiveItemController extends Controller
         
         try {
             DB::transaction(function () use ($submission) {
+                // Check if already submitted (safeguard against double submission)
+                if ($submission->submitted_at !== null) {
+                    return;
+                }
+
                 $submission->update([
                     'is_draft' => false,
                     'submitted_at' => now(),

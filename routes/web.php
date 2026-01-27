@@ -2,9 +2,9 @@
 
 use App\Http\Controllers\AdminUnit\AlertController;
 use App\Http\Controllers\AdminUnit\StockController;
-use App\Http\Controllers\AdminUnit\StockReportController;
 use App\Http\Controllers\AdminUnit\StockRequestManagementController;
 use App\Http\Controllers\AdminUnit\SubmissionController;
+use App\Http\Controllers\AdminUnit\GudangReportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Staff\DraftController;
@@ -51,6 +51,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications/count', [NotificationController::class, 'count'])->name('notifications.count');
     Route::match(['get', 'post'], '/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
+    Route::post('/notifications/delete-all-read', [NotificationController::class, 'deleteAllRead'])->name('notifications.delete-all-read');
+    Route::post('/notifications/delete-all', [NotificationController::class, 'deleteAll'])->name('notifications.delete-all');
 
     // Super Admin Routes
     Route::middleware('role:super_admin')->prefix('admin')->name('admin.')->group(function () {
@@ -116,11 +119,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/alerts/{alert}/read', [AlertController::class, 'markAsRead'])->name('alerts.markAsRead');
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
         
-        // Stock Reports
-        Route::get('/reports/movements', [StockReportController::class, 'movements'])->name('reports.movements');
-        Route::get('/reports/in-out', [StockReportController::class, 'inOut'])->name('reports.in-out');
-        Route::get('/reports/stock-status', [StockReportController::class, 'stockStatus'])->name('reports.stock-status');
-        Route::post('/reports/movements/export-pdf', [StockReportController::class, 'exportMovementsPdf'])->name('reports.movements.exportPdf');
+        // Gudang Reports (Transactions & Stock Values) - Same as Super Admin
+        Route::get('/reports', [GudangReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/transactions', [GudangReportController::class, 'transactions'])->name('reports.transactions');
+        Route::get('/reports/stock-values', [GudangReportController::class, 'stockValues'])->name('reports.stock-values');
+        Route::get('/reports/transactions/export', [GudangReportController::class, 'exportTransactions'])->name('reports.transactions.export');
+        Route::get('/reports/stock-values/export', [GudangReportController::class, 'exportStockValues'])->name('reports.stock-values.export');
+        Route::post('/reports/transactions/export-pdf', [GudangReportController::class, 'exportTransactionsPdf'])->name('reports.transactions.exportPdf');
+        Route::post('/reports/stock-values/export-pdf', [GudangReportController::class, 'exportStockValuesPdf'])->name('reports.stock-values.exportPdf');
     });
 
     // Staff Gudang Routes

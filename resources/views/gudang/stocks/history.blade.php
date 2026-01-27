@@ -164,8 +164,8 @@
                             <th class="text-end">Jumlah</th>
                             <th>Supplier</th>
                             <th>Diajukan Oleh</th>
-                            <th>Disetujui Oleh</th>
                             <th>Catatan</th>
+                            <th class="text-center" width="80">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -234,39 +234,148 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if($movement->creator)
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar-initial rounded-circle me-2 d-flex align-items-center justify-content-center" 
-                                                 style="width: 32px; height: 32px; background-color: #007bff; color: white; font-size: 0.8rem; font-weight: bold;">
-                                                {{ strtoupper(substr($movement->creator->name, 0, 1)) }}
-                                            </div>
-                                            <div>
-                                                <strong>{{ $movement->creator->name }}</strong>
-                                                <br><small class="text-muted">
-                                                    @if($movement->creator->role === 'super_admin')
-                                                        Super Admin
-                                                    @elseif($movement->creator->role === 'admin_gudang')
-                                                        Admin Unit
-                                                    @elseif($movement->creator->role === 'staff_gudang')
-                                                        Staff Unit
-                                                    @else
-                                                        {{ ucfirst($movement->creator->role) }}
-                                                    @endif
-                                                </small>
-                                            </div>
-                                        </div>
-                                    @else
-                                        <small class="text-muted">System</small>
-                                    @endif
-                                </td>
-                                <td>
                                     @if($movement->notes)
-                                        <small>{{ $movement->notes }}</small>
+                                        <small class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ $movement->notes }}">
+                                            {{ Str::limit($movement->notes, 50) }}
+                                        </small>
                                     @else
                                         <small class="text-muted">-</small>
                                     @endif
                                 </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#detailModal{{ $movement->id }}">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </td>
                             </tr>
+
+                            <!-- Detail Modal -->
+                            <div class="modal fade" id="detailModal{{ $movement->id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Detail Pergerakan Stok</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <label class="form-label text-muted small">Tanggal & Waktu</label>
+                                                    <p class="fw-bold">{{ $movement->created_at->format('d M Y, H:i:s') }}</p>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label text-muted small">Unit/Gudang</label>
+                                                    <p class="fw-bold">{{ $movement->warehouse->name }}</p>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label text-muted small">Tipe Pergerakan</label>
+                                                    <p>
+                                                        @switch($movement->movement_type)
+                                                            @case('in')
+                                                                <span class="badge bg-success">
+                                                                    <i class="bi bi-arrow-up-circle me-1"></i>Barang Masuk
+                                                                </span>
+                                                                @break
+                                                            @case('out')
+                                                                <span class="badge bg-danger">
+                                                                    <i class="bi bi-arrow-down-circle me-1"></i>Barang Keluar
+                                                                </span>
+                                                                @break
+                                                            @case('adjustment')
+                                                                <span class="badge bg-warning text-dark">
+                                                                    <i class="bi bi-gear me-1"></i>Penyesuaian
+                                                                </span>
+                                                                @break
+                                                        @endswitch
+                                                    </p>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label text-muted small">Jumlah</label>
+                                                    <p class="fw-bold fs-4 {{ $movement->quantity > 0 ? 'text-success' : 'text-danger' }}">
+                                                        {{ number_format($movement->quantity) }} {{ $movement->item->unit }}
+                                                    </p>
+                                                </div>
+                                                @if($movement->submission && $movement->submission->supplier)
+                                                    <div class="col-12">
+                                                        <label class="form-label text-muted small">Supplier</label>
+                                                        <div class="card bg-light">
+                                                            <div class="card-body">
+                                                                <h6 class="mb-2">{{ $movement->submission->supplier->name }}</h6>
+                                                                @if($movement->submission->supplier->phone)
+                                                                    <p class="mb-1"><i class="bi bi-telephone me-2"></i>{{ $movement->submission->supplier->phone }}</p>
+                                                                @endif
+                                                                @if($movement->submission->supplier->email)
+                                                                    <p class="mb-1"><i class="bi bi-envelope me-2"></i>{{ $movement->submission->supplier->email }}</p>
+                                                                @endif
+                                                                @if($movement->submission->supplier->address)
+                                                                    <p class="mb-0"><i class="bi bi-geo-alt me-2"></i>{{ $movement->submission->supplier->address }}</p>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @endif
+                                                @if($movement->submission && $movement->submission->staff)
+                                                    <div class="col-md-6">
+                                                        <label class="form-label text-muted small">Diajukan Oleh</label>
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="avatar-initial rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                                                                 style="width: 40px; height: 40px; background-color: #28a745; color: white; font-weight: bold;">
+                                                                {{ strtoupper(substr($movement->submission->staff->name, 0, 1)) }}
+                                                            </div>
+                                                            <div>
+                                                                <p class="mb-0 fw-bold">{{ $movement->submission->staff->name }}</p>
+                                                                <small class="text-muted">Staff Unit</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @endif
+                                                @if($movement->creator)
+                                                    <div class="col-md-6">
+                                                        <label class="form-label text-muted small">Disetujui Oleh</label>
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="avatar-initial rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                                                                 style="width: 40px; height: 40px; background-color: #007bff; color: white; font-weight: bold;">
+                                                                {{ strtoupper(substr($movement->creator->name, 0, 1)) }}
+                                                            </div>
+                                                            <div>
+                                                                <p class="mb-0 fw-bold">{{ $movement->creator->name }}</p>
+                                                                <small class="text-muted">
+                                                                    @if($movement->creator->role === 'super_admin')
+                                                                        Super Admin
+                                                                    @elseif($movement->creator->role === 'admin_gudang')
+                                                                        Admin Unit
+                                                                    @elseif($movement->creator->role === 'staff_gudang')
+                                                                        Staff Unit
+                                                                    @else
+                                                                        {{ ucfirst($movement->creator->role) }}
+                                                                    @endif
+                                                                </small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @endif
+                                                <div class="col-12">
+                                                    <label class="form-label text-muted small">Catatan</label>
+                                                    <div class="card bg-light">
+                                                        <div class="card-body">
+                                                            @if($movement->notes)
+                                                                <p class="mb-0">{{ $movement->notes }}</p>
+                                                            @else
+                                                                <p class="mb-0 text-muted">Tidak ada catatan</p>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         @endforeach
                     </tbody>
                 </table>
