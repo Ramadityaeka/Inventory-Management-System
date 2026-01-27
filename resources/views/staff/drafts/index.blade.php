@@ -43,7 +43,7 @@
                                 @foreach($drafts as $draft)
                                     <tr>
                                         <td>#{{ $draft->id }}</td>
-                                        <td>{{ $draft->created_at->format('d/m/Y H:i') }}</td>
+                                        <td>{{ formatDateIndo($draft->created_at) }} WIB</td>
                                         <td>{{ $draft->item->name }}</td>
                                         <td>{{ number_format($draft->quantity) }}</td>
                                         <td>{{ $draft->supplier->name }}</td>

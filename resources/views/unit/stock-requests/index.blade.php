@@ -110,7 +110,7 @@
                                 @foreach($requests as $request)
                                     <tr>
                                         <td><strong>#{{ $request->id }}</strong></td>
-                                        <td>{{ $request->created_at ? $request->created_at->format('d M Y') : 'N/A' }}</td>
+                                        <td>{{ $request->created_at ? $request->created_at->translatedFormat('d M Y') : 'N/A' }}</td>
                                         <td>{{ $request->staff ? $request->staff->name : 'Staff Deleted' }}</td>
                                         <td>
                                             <strong>{{ $request->item ? $request->item->name : 'Item Deleted' }}</strong><br>

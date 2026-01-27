@@ -1,6 +1,6 @@
 # 📦 Inventory Management System (IMS) dengan Approval System
 
-Sistem Manajemen Inventori berbasis web untuk ESDM yang dilengkapi dengan sistem approval bertingkat, multi-warehouse management, dan role-based access control.
+Sistem Manajemen Inventori berbasis web yang dilengkapi dengan sistem approval bertingkat, multi-warehouse management, dan role-based access control.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Laravel-11-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel">
@@ -12,8 +12,8 @@ Sistem Manajemen Inventori berbasis web untuk ESDM yang dilengkapi dengan sistem
 ## ✨ Fitur Utama
 
 ### 🔐 Multi-Role Authentication System
-- **Super Admin**: Manajemen penuh sistem, user management, approval transfer
-- **Admin Gudang**: Kelola stock, submission, transfer antar gudang
+- **Super Admin**: Manajemen penuh sistem, user management,
+- **Admin Gudang**: Kelola stock, submission
 - **Staff**: Pengajuan barang, tracking submission status
 
 ### 📊 Stock & Warehouse Management
@@ -25,17 +25,15 @@ Sistem Manajemen Inventori berbasis web untuk ESDM yang dilengkapi dengan sistem
 
 ### 📝 Approval Workflow System
 - Multi-level approval untuk submission barang
-- Transfer approval dengan review system
 - Tracking status real-time
 - Rejection dengan reason tracking
-- Email/in-app notifications
+- in-app notifications
 
 ### 📈 Reporting & Analytics
 - Stock overview & summary reports
 - Monthly warehouse reports
 - Transfer summary & history
 - Export to Excel & PDF
-- Audit log untuk semua aktivitas
 
 ### 🔔 Notification System
 - Real-time in-app notifications
@@ -58,7 +56,6 @@ Sistem Manajemen Inventori berbasis web untuk ESDM yang dilengkapi dengan sistem
 - PHP >= 8.2
 - Composer
 - MySQL >= 8.0
-- Node.js & NPM (untuk asset compilation)
 - Git
 
 ## 🚀 Instalasi
@@ -172,4 +169,7 @@ Sistem ini sudah dilengkapi dengan perbaikan session management untuk mengatasi 
 - Proper CSRF token handling
 - Optimized session configuration
 - Custom exception handling untuk session errors
+<<<<<<< HEAD
 
+=======
+>>>>>>> 68065b8e0fc92b81dd245c6b2498800571d7d630

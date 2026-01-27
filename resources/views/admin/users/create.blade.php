@@ -81,7 +81,7 @@
                         <option value="">Pilih Role</option>
                         <option value="super_admin" {{ old('role') === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
                         <option value="admin_unit" {{ old('role') === 'admin_unit' ? 'selected' : '' }}>Admin Unit</option>
-                        <option value="staff_gudang" {{ old('role') === 'staff_gudang' ? 'selected' : '' }}>Staff Gudang</option>
+                        <option value="staff_gudang" {{ old('role') === 'staff_gudang' ? 'selected' : '' }}>Staff Unit</option>
                     </select>
                     @error('role')
                         <div class="invalid-feedback">{{ $message }}</div>
@@ -91,20 +91,20 @@
         </div>
     </div>
 
-    <!-- Assign Gudang Card -->
+    <!-- Assign Unit Card -->
     <div class="card mb-4" id="warehouseCard" style="display: none;">
         <div class="card-header">
-            <h6 class="mb-0">Assign Gudang</h6>
+            <h6 class="mb-0">Assign Unit</h6>
         </div>
         <div class="card-body">
             <div id="adminGudangSection" style="display: none;">
-                <p class="text-muted mb-3">Pilih <strong>satu</strong> gudang untuk admin gudang:</p>
+                <p class="text-muted mb-3">Pilih <strong>satu</strong> gudang untuk admin Unit:</p>
                 @if($warehouses->count() > 0)
                     <div class="mb-3">
                         <label for="warehouse_select" class="form-label">Gudang <span class="text-danger">*</span></label>
                         <select class="form-select @error('warehouse') is-invalid @enderror"
                                 id="warehouse_select" name="warehouse">
-                            <option value="">Pilih Gudang</option>
+                            <option value="">Pilih Unit</option>
                             @foreach($warehouses as $warehouse)
                                 <option value="{{ $warehouse->id }}" {{ old('warehouse') == $warehouse->id ? 'selected' : '' }}>
                                     {{ $warehouse->name }} - {{ $warehouse->location }}
@@ -118,13 +118,13 @@
                 @else
                     <div class="text-center py-4">
                         <i class="bi bi-building text-muted fs-1 mb-3"></i>
-                        <p class="text-muted mb-0">Tidak ada gudang yang tersedia.</p>
+                        <p class="text-muted mb-0">Tidak ada Unit yang tersedia.</p>
                     </div>
                 @endif
             </div>
             
             <div id="staffGudangSection" style="display: none;">
-                <p class="text-muted mb-3">Pilih gudang yang akan di-assign ke staff gudang:</p>
+                <p class="text-muted mb-3">Pilih Unit yang akan di-assign ke staff Unit:</p>
                 @if($warehouses->count() > 0)
                     <div class="row">
                         @foreach($warehouses as $warehouse)
@@ -148,7 +148,7 @@
             @else
                 <div class="text-center py-4">
                     <i class="bi bi-building text-muted fs-1 mb-3"></i>
-                    <p class="text-muted mb-0">Tidak ada gudang yang tersedia.</p>
+                    <p class="text-muted mb-0">Tidak Unit yang tersedia.</p>
                 </div>
             @endif
         </div>
@@ -196,18 +196,18 @@
         document.getElementById('userForm').addEventListener('submit', function(e) {
             const role = document.getElementById('role').value;
             
-            if (role === 'admin_unit') {
+            if (role === 'admin_gudang') {
                 const warehouseSelect = document.getElementById('warehouse_select');
                 if (warehouseSelect && !warehouseSelect.value) {
                     e.preventDefault();
-                    alert('Pilih satu gudang untuk admin gudang.');
+                    alert('Pilih satu Unit untuk admin Unit.');
                     return false;
                 }
             } else if (role === 'staff_gudang') {
                 const warehouseCheckboxes = document.querySelectorAll('.warehouse-checkbox:checked');
                 if (warehouseCheckboxes.length === 0) {
                     e.preventDefault();
-                    alert('Pilih setidaknya satu gudang untuk staff gudang.');
+                    alert('Pilih setidaknya satu Unit untuk staff Unit.');
                     return false;
                 }
             }

@@ -76,6 +76,7 @@ class DetailedStockExport implements FromCollection, WithHeadings, WithMapping, 
             'Status',
             'Harga Terakhir (Rp)',
             'Nilai Stok (Rp)',
+            'Diajukan Oleh',
             'Item Aktif',
             'Terakhir Update'
         ];
@@ -86,8 +87,9 @@ class DetailedStockExport implements FromCollection, WithHeadings, WithMapping, 
         static $no = 0;
         $no++;
 
-        // Get latest price from submissions
-        $latestSubmission = \App\Models\Submission::where('item_id', $stock->item_id)
+        // Get latest submission with staff info
+        $latestSubmission = \App\Models\Submission::with('staff')
+            ->where('item_id', $stock->item_id)
             ->where('warehouse_id', $stock->warehouse_id)
             ->where('status', 'approved')
             ->whereNotNull('unit_price')
@@ -96,6 +98,7 @@ class DetailedStockExport implements FromCollection, WithHeadings, WithMapping, 
 
         $unitPrice = $latestSubmission ? $latestSubmission->unit_price : 0;
         $stockValue = $stock->quantity * $unitPrice;
+        $staffName = $latestSubmission && $latestSubmission->staff ? $latestSubmission->staff->name : '-';
 
         return [
             $no,
@@ -110,6 +113,7 @@ class DetailedStockExport implements FromCollection, WithHeadings, WithMapping, 
             $this->getStatus($stock->quantity),
             $unitPrice,
             $stockValue,
+            $staffName,
             $stock->item->is_active ? 'Ya' : 'Tidak',
             $stock->last_updated ? $stock->last_updated->format('d/m/Y H:i') : '-'
         ];

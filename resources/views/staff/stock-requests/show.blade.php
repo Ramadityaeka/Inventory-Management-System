@@ -29,15 +29,15 @@
                     <h5 class="mb-0">Request Information</h5>
                     @if($stockRequest->status === 'pending')
                         <span class="badge bg-warning">
-                            <i class="bi bi-clock me-1"></i>Pending
+                            <i class="bi bi-clock me-1"></i>Tertunda
                         </span>
                     @elseif($stockRequest->status === 'approved')
                         <span class="badge bg-success">
-                            <i class="bi bi-check-circle me-1"></i>Approved
+                            <i class="bi bi-check-circle me-1"></i>Diterima
                         </span>
                     @else
                         <span class="badge bg-danger">
-                            <i class="bi bi-x-circle me-1"></i>Rejected
+                            <i class="bi bi-x-circle me-1"></i>Ditolak
                         </span>
                     @endif
                 </div>
@@ -45,8 +45,8 @@
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <label class="text-muted small">Request Date</label>
-                        <p class="mb-0">{{ $stockRequest->created_at->format('d F Y, H:i') }}</p>
+                        <label class="text-muted small">Tanggal</label>
+                        <p class="mb-0">{{ formatDateIndoLong($stockRequest->created_at) }} WIB</p>
                     </div>
                     <div class="col-md-6">
                         <label class="text-muted small">Request ID</label>
@@ -58,35 +58,35 @@
 
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <label class="text-muted small">Item Name</label>
+                        <label class="text-muted small">Nama barang</label>
                         <p class="mb-0"><strong>{{ $stockRequest->item->name }}</strong></p>
                     </div>
                     <div class="col-md-6">
-                        <label class="text-muted small">Item Code</label>
+                        <label class="text-muted small">Code barang</label>
                         <p class="mb-0">{{ $stockRequest->item->code }}</p>
                     </div>
                 </div>
 
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <label class="text-muted small">Category</label>
+                        <label class="text-muted small">Kategori barang</label>
                         <p class="mb-0">
                             <span class="badge bg-secondary">{{ $stockRequest->item->category->name }}</span>
                         </p>
                     </div>
                     <div class="col-md-6">
-                        <label class="text-muted small">Warehouse</label>
+                        <label class="text-muted small">Unit</label>
                         <p class="mb-0">{{ $stockRequest->warehouse->name }}</p>
                     </div>
                 </div>
 
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <label class="text-muted small">Requested Quantity</label>
+                        <label class="text-muted small">jumlah permintaan</label>
                         <p class="mb-0"><strong>{{ $stockRequest->quantity }} {{ $stockRequest->item->unit }}</strong></p>
                     </div>
                     <div class="col-md-6">
-                        <label class="text-muted small">Current Stock</label>
+                        <label class="text-muted small">jumlah stok saat ini</label>
                         <p class="mb-0">
                             @php
                                 $currentStock = \App\Models\Stock::where('item_id', $stockRequest->item_id)
@@ -101,7 +101,7 @@
                 <hr>
 
                 <div class="mb-3">
-                    <label class="text-muted small">Purpose/Reason</label>
+                    <label class="text-muted small">alasan atau keterangan</label>
                     <p class="mb-0">{{ $stockRequest->purpose }}</p>
                 </div>
 
@@ -117,18 +117,18 @@
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="text-muted small">Processed By</label>
+                            <label class="text-muted small">Diproses oleh</label>
                             <p class="mb-0">{{ $stockRequest->approver->name }}</p>
                         </div>
                         <div class="col-md-6">
-                            <label class="text-muted small">Processed Date</label>
-                            <p class="mb-0">{{ $stockRequest->approved_at->format('d F Y, H:i') }}</p>
+                            <label class="text-muted small">Tanggal proses</label>
+                            <p class="mb-0">{{ formatDateIndoLong($stockRequest->approved_at) }} WIB</p>
                         </div>
                     </div>
 
                     @if($stockRequest->status === 'rejected' && $stockRequest->rejection_reason)
                         <div class="alert alert-danger">
-                            <strong>Rejection Reason:</strong><br>
+                            <strong>Alasan ditolak:</strong><br>
                             {{ $stockRequest->rejection_reason }}
                         </div>
                     @endif
@@ -136,7 +136,7 @@
                     @if($stockRequest->status === 'approved')
                         <div class="alert alert-success">
                             <i class="bi bi-check-circle me-2"></i>
-                            This request has been approved and the stock has been deducted.
+                            permintaan ini sudah di terima, stok barang akan berubah.
                         </div>
                     @endif
                 @endif
@@ -186,8 +186,8 @@
                         <div class="timeline-item">
                             <div class="timeline-marker bg-warning"></div>
                             <div class="timeline-content">
-                                <p class="mb-0"><strong>Waiting for Approval</strong></p>
-                                <p class="mb-0 small">Admin Gudang will review your request</p>
+                                <p class="mb-0"><strong>Tunggu untuk di terima</strong></p>
+                                <p class="mb-0 small">Admin Unit akan memeriksa permintaannya</p>
                             </div>
                         </div>
                     @endif

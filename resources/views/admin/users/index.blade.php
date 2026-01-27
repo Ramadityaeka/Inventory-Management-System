@@ -30,8 +30,8 @@
                 <select class="form-select" id="role" name="role">
                     <option value="">Semua Role</option>
                     <option value="super_admin" {{ request('role') === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
-                    <option value="admin_gudang" {{ request('role') === 'admin_gudang' ? 'selected' : '' }}>Admin Gudang</option>
-                    <option value="staff_gudang" {{ request('role') === 'staff_gudang' ? 'selected' : '' }}>Staff Gudang</option>
+                    <option value="admin_gudang" {{ request('role') === 'admin_gudang' ? 'selected' : '' }}>Admin Unit/select></option>
+                    <option value="staff_gudang" {{ request('role') === 'staff_gudang' ? 'selected' : '' }}>Staff Unit</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -60,7 +60,7 @@
                         <th>Nama</th>
                         <th>Email</th>
                         <th>Role</th>
-                        <th>Gudang</th>
+                        <th>Unit</th>
                         <th>Status</th>
                         <th>Aksi</th>
                     </tr>
@@ -74,9 +74,9 @@
                                 @if($user->role === 'super_admin')
                                     <span class="badge bg-danger">Super Admin</span>
                                 @elseif($user->role === 'admin_gudang')
-                                    <span class="badge bg-primary">Admin Gudang</span>
+                                    <span class="badge bg-primary">Admin Unit</span>
                                 @elseif($user->role === 'staff_gudang')
-                                    <span class="badge bg-success">Staff Gudang</span>
+                                    <span class="badge bg-success">Staff Unit</span>
                                 @else
                                     <span class="badge bg-secondary">{{ $user->role }}</span>
                                 @endif

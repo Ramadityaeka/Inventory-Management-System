@@ -92,13 +92,26 @@
                     <label for="unit" class="form-label">Satuan <span class="text-danger">*</span></label>
                     <select class="form-select @error('unit') is-invalid @enderror" 
                             id="unit" name="unit" required>
-                        <option value="pcs" {{ old('unit', 'pcs') == 'pcs' ? 'selected' : '' }}>Pcs</option>
-                        <option value="box" {{ old('unit') == 'box' ? 'selected' : '' }}>Box</option>
-                        <option value="unit" {{ old('unit') == 'unit' ? 'selected' : '' }}>Unit</option>
-                        <option value="pak" {{ old('unit') == 'pak' ? 'selected' : '' }}>Pak</option>
-                        <option value="lusin" {{ old('unit') == 'lusin' ? 'selected' : '' }}>Lusin</option>
-                        <option value="kg" {{ old('unit') == 'kg' ? 'selected' : '' }}>Kg</option>
-                        <option value="liter" {{ old('unit') == 'liter' ? 'selected' : '' }}>Liter</option>
+                        <option value="">Pilih Satuan</option>
+                        <option value="Botol" {{ old('unit') == 'Botol' ? 'selected' : '' }}>Botol</option>
+                        <option value="Buah" {{ old('unit') == 'Buah' ? 'selected' : '' }}>Buah</option>
+                        <option value="Box" {{ old('unit') == 'Box' ? 'selected' : '' }}>Box</option>
+                        <option value="Dus" {{ old('unit') == 'Dus' ? 'selected' : '' }}>Dus</option>
+                        <option value="Dus Besar" {{ old('unit') == 'Dus Besar' ? 'selected' : '' }}>Dus Besar</option>
+                        <option value="Karton" {{ old('unit') == 'Karton' ? 'selected' : '' }}>Karton</option>
+                        <option value="Kg" {{ old('unit') == 'Kg' ? 'selected' : '' }}>Kg</option>
+                        <option value="Liter" {{ old('unit') == 'Liter' ? 'selected' : '' }}>Liter</option>
+                        <option value="Lusin" {{ old('unit') == 'Lusin' ? 'selected' : '' }}>Lusin</option>
+                        <option value="Meter" {{ old('unit') == 'Meter' ? 'selected' : '' }}>Meter</option>
+                        <option value="Pack" {{ old('unit') == 'Pack' ? 'selected' : '' }}>Pack</option>
+                        <option value="Pad" {{ old('unit') == 'Pad' ? 'selected' : '' }}>Pad</option>
+                        <option value="Pasang" {{ old('unit') == 'Pasang' ? 'selected' : '' }}>Pasang</option>
+                        <option value="Pcs" {{ old('unit', 'Pcs') == 'Pcs' ? 'selected' : '' }}>Pcs</option>
+                        <option value="Rim" {{ old('unit') == 'Rim' ? 'selected' : '' }}>Rim</option>
+                        <option value="Roll" {{ old('unit') == 'Roll' ? 'selected' : '' }}>Roll</option>
+                        <option value="Sak" {{ old('unit') == 'Sak' ? 'selected' : '' }}>Sak</option>
+                        <option value="Set" {{ old('unit') == 'Set' ? 'selected' : '' }}>Set</option>
+                        <option value="Unit" {{ old('unit') == 'Unit' ? 'selected' : '' }}>Unit</option>
                     </select>
                     @error('unit')
                         <div class="invalid-feedback">{{ $message }}</div>
@@ -164,10 +177,10 @@
                 </div>
 
                 <div class="col-md-6 mb-3">
-                    <label for="warehouse_id" class="form-label">Gudang <span class="text-danger">*</span></label>
+                    <label for="warehouse_id" class="form-label">Unit <span class="text-danger">*</span></label>
                     <select class="form-select @error('warehouse_id') is-invalid @enderror" 
                             id="warehouse_id" name="warehouse_id" required>
-                        <option value="">Pilih Gudang</option>
+                        <option value="">Pilih Unit</option>
                         @foreach($warehouses as $warehouse)
                             <option value="{{ $warehouse->id }}" {{ old('warehouse_id') == $warehouse->id ? 'selected' : '' }}>
                                 {{ $warehouse->name }}
@@ -175,6 +188,39 @@
                         @endforeach
                     </select>
                     @error('warehouse_id')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="nota_number" class="form-label">
+                        <i class="bi bi-receipt text-primary"></i> Nomor Nota
+                    </label>
+                    <input type="text" class="form-control @error('nota_number') is-invalid @enderror" 
+                           id="nota_number" name="nota_number" value="{{ old('nota_number') }}" 
+                           placeholder="Contoh: INV-2026-001">
+                    <div class="form-text">
+                        <i class="bi bi-info-circle"></i> Nomor nota/invoice dari supplier (opsional)
+                    </div>
+                    @error('nota_number')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="receive_date" class="form-label">
+                        <i class="bi bi-calendar-check text-success"></i> Tanggal Terima
+                    </label>
+                    <input type="date" class="form-control @error('receive_date') is-invalid @enderror" 
+                           id="receive_date" name="receive_date" 
+                           value="{{ old('receive_date', date('Y-m-d')) }}" 
+                           max="{{ date('Y-m-d') }}">
+                    <div class="form-text">
+                        <i class="bi bi-info-circle"></i> Tanggal barang diterima (default: hari ini)
+                    </div>
+                    @error('receive_date')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>

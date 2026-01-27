@@ -177,7 +177,7 @@
                                         </td>
                                         <td>
                                             <small class="text-muted">
-                                                {{ $stock->last_updated ? $stock->last_updated->format('d/m/Y H:i') : '-' }}
+                                                {{ $stock->last_updated ? formatDateIndo($stock->last_updated) . ' WIB' : '-' }}
                                             </small>
                                         </td>
                                         <td>

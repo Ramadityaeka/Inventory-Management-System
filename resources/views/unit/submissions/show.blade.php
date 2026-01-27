@@ -142,7 +142,7 @@
                     <div class="col-12">
                         <label class="form-label text-muted small">Waktu Submit</label>
                         <div class="fw-medium">
-                            {{ $submission->submitted_at ? $submission->submitted_at->format('d M Y, H:i:s') : 'N/A' }}
+                            {{ $submission->submitted_at ? formatDateIndoLong($submission->submitted_at) . ' WIB' : 'N/A' }}
                             @if($submission->submitted_at)
                                 <small class="text-muted ms-2">({{ $submission->submitted_at->diffForHumans() }})</small>
                             @endif
@@ -188,7 +188,7 @@
                         <div class="col-md-6">
                             <label class="form-label text-muted small">Waktu {{ $approval->action == 'approved' ? 'Approve' : 'Reject' }}</label>
                             <div class="fw-medium">
-                                {{ $approval->created_at ? $approval->created_at->format('d M Y, H:i:s') : 'N/A' }}
+                                {{ $approval->created_at ? formatDateIndoLong($approval->created_at) . ' WIB' : 'N/A' }}
                             </div>
                         </div>
 
@@ -334,11 +334,11 @@
                 <div class="d-flex justify-content-center gap-3">
                     <button type="button" class="btn btn-success btn-lg px-4" 
                             data-bs-toggle="modal" data-bs-target="#approveModal">
-                        <i class="bi bi-check-circle me-2"></i>Approve
+                        <i class="bi bi-check-circle me-2"></i>Disetujui
                     </button>
                     <button type="button" class="btn btn-danger btn-lg px-4" 
                             data-bs-toggle="modal" data-bs-target="#rejectModal">
-                        <i class="bi bi-x-circle me-2"></i>Reject
+                        <i class="bi bi-x-circle me-2"></i>Ditolak
                     </button>
                 </div>
             </div>
@@ -369,7 +369,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title text-success">
-                    <i class="bi bi-check-circle me-2"></i>Approve Submission
+                    <i class="bi bi-check-circle me-2"></i>d
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>

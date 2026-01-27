@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('page-title', 'Stock Requests Management')
+@section('page-title', 'Manajemen Permintaan barang')
 
 @section('content')
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="mb-0">Stock Requests Management</h4>
+            <h4 class="mb-0">   </h4>
         </div>
     </div>
 </div>
@@ -32,7 +32,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-white">Pending Requests</h6>
+                        <h6 class="text-white">Permintaan tertunda</h6>
                         <h3 class="mb-0">{{ $stats['pending'] }}</h3>
                     </div>
                     <i class="bi bi-clock-history display-4 opacity-50"></i>
@@ -45,7 +45,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-white">Approved</h6>
+                        <h6 class="text-white">Permintaan Diterima</h6>
                         <h3 class="mb-0">{{ $stats['approved'] }}</h3>
                     </div>
                     <i class="bi bi-check-circle display-4 opacity-50"></i>
@@ -58,7 +58,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-white">Rejected</h6>
+                        <h6 class="text-white">Permintaan Ditolak</h6>
                         <h3 class="mb-0">{{ $stats['rejected'] }}</h3>
                     </div>
                     <i class="bi bi-x-circle display-4 opacity-50"></i>
@@ -77,9 +77,9 @@
                         <label class="form-label">Status</label>
                         <select name="status" class="form-select">
                             <option value="">All Status</option>
-                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
-                            <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
-                            <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Rejected</option>
+                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Permintaan tertunda</option>
+                            <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Permintaan Diterima</option>
+                            <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Permintaan Ditolak</option>
                         </select>
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
@@ -96,14 +96,14 @@
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>Date</th>
+                                    <th>Tanggal</th>
                                     <th>Staff</th>
-                                    <th>Item</th>
-                                    <th>Quantity</th>
-                                    <th>Warehouse</th>
-                                    <th>Purpose</th>
+                                    <th>Barang</th>
+                                    <th>Kuantitas Barang</th>
+                                    <th>Unit</th>
+                                    <th>Alasan</th>
                                     <th>Status</th>
-                                    <th>Action</th>
+                                    <th>aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -126,21 +126,21 @@
                                         <td>
                                             @if($request->status === 'pending')
                                                 <span class="badge bg-warning">
-                                                    <i class="bi bi-clock me-1"></i>Pending
+                                                    <i class="bi bi-clock me-1"></i>Tertunda
                                                 </span>
                                             @elseif($request->status === 'approved')
                                                 <span class="badge bg-success">
-                                                    <i class="bi bi-check-circle me-1"></i>Approved
+                                                    <i class="bi bi-check-circle me-1"></i>Diterima
                                                 </span>
                                             @else
                                                 <span class="badge bg-danger">
-                                                    <i class="bi bi-x-circle me-1"></i>Rejected
+                                                    <i class="bi bi-x-circle me-1"></i>Ditolak
                                                 </span>
                                             @endif
                                         </td>
                                         <td>
                                             <a href="{{ route('gudang.stock-requests.show', $request) }}" class="btn btn-sm btn-info">
-                                                <i class="bi bi-eye"></i>View
+                                                <i class="bi bi-eye"></i>Lihat
                                             </a>
                                         </td>
                                     </tr>
@@ -155,7 +155,7 @@
                 @else
                     <div class="text-center py-5">
                         <i class="bi bi-inbox display-1 text-muted"></i>
-                        <p class="text-muted mt-3">No stock requests found.</p>
+                        <p class="text-muted mt-3">Tidak ada permintaan barang.</p>
                     </div>
                 @endif
             </div>

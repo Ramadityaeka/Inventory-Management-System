@@ -57,7 +57,7 @@
                     @error('code')
                         <div class="text-danger small">{{ $message }}</div>
                     @enderror
-                </div>
+                </div>n
 
                 <!-- Name -->
                 <div class="col-md-6 mb-3">
@@ -109,16 +109,31 @@
             </div>
 
             <div class="row">
-                <!-- Unit -->
-                <div class="col-md-12 mb-3">
-                    <label for="unit" class="form-label">Unit <span class="text-danger">*</span></label>
+                <!-- Satuan -->
+                <div class="col-md-6 mb-3">
+                    <label for="unit" class="form-label">Satuan <span class="text-danger">*</span></label>
                     <select class="form-select @error('unit') is-invalid @enderror"
                             id="unit" name="unit" required>
-                        <option value="">Pilih Unit</option>
-                        <option value="pcs" {{ old('unit', $item->unit) == 'pcs' ? 'selected' : '' }}>pcs</option>
-                        <option value="box" {{ old('unit', $item->unit) == 'box' ? 'selected' : '' }}>box</option>
-                        <option value="unit" {{ old('unit', $item->unit) == 'unit' ? 'selected' : '' }}>unit</option>
-                        <option value="rim" {{ old('unit', $item->unit) == 'rim' ? 'selected' : '' }}>rim</option>
+                        <option value="">Pilih Satuan</option>
+                        <option value="Botol" {{ old('unit', $item->unit) == 'Botol' ? 'selected' : '' }}>Botol</option>
+                        <option value="Buah" {{ old('unit', $item->unit) == 'Buah' ? 'selected' : '' }}>Buah</option>
+                        <option value="Box" {{ old('unit', $item->unit) == 'Box' ? 'selected' : '' }}>Box</option>
+                        <option value="Dus" {{ old('unit', $item->unit) == 'Dus' ? 'selected' : '' }}>Dus</option>
+                        <option value="Dus Besar" {{ old('unit', $item->unit) == 'Dus Besar' ? 'selected' : '' }}>Dus Besar</option>
+                        <option value="Karton" {{ old('unit', $item->unit) == 'Karton' ? 'selected' : '' }}>Karton</option>
+                        <option value="Kg" {{ old('unit', $item->unit) == 'Kg' ? 'selected' : '' }}>Kg</option>
+                        <option value="Liter" {{ old('unit', $item->unit) == 'Liter' ? 'selected' : '' }}>Liter</option>
+                        <option value="Lusin" {{ old('unit', $item->unit) == 'Lusin' ? 'selected' : '' }}>Lusin</option>
+                        <option value="Meter" {{ old('unit', $item->unit) == 'Meter' ? 'selected' : '' }}>Meter</option>
+                        <option value="Pack" {{ old('unit', $item->unit) == 'Pack' ? 'selected' : '' }}>Pack</option>
+                        <option value="Pad" {{ old('unit', $item->unit) == 'Pad' ? 'selected' : '' }}>Pad</option>
+                        <option value="Pasang" {{ old('unit', $item->unit) == 'Pasang' ? 'selected' : '' }}>Pasang</option>
+                        <option value="Pcs" {{ old('unit', $item->unit) == 'Pcs' ? 'selected' : '' }}>Pcs</option>
+                        <option value="Rim" {{ old('unit', $item->unit) == 'Rim' ? 'selected' : '' }}>Rim</option>
+                        <option value="Roll" {{ old('unit', $item->unit) == 'Roll' ? 'selected' : '' }}>Roll</option>
+                        <option value="Sak" {{ old('unit', $item->unit) == 'Sak' ? 'selected' : '' }}>Sak</option>
+                        <option value="Set" {{ old('unit', $item->unit) == 'Set' ? 'selected' : '' }}>Set</option>
+                        <option value="Unit" {{ old('unit', $item->unit) == 'Unit' ? 'selected' : '' }}>Unit</option>
                     </select>
                     @error('unit')
                         <div class="invalid-feedback">{{ $message }}</div>
@@ -202,7 +217,7 @@
                         @if($item->deactivated_at)
                             <div class="alert alert-info mb-0">
                                 <small>
-                                    <strong>Dinonaktifkan:</strong> {{ $item->deactivated_at->format('d/m/Y H:i') }}<br>
+                                    <strong>Dinonaktifkan:</strong> {{ formatDateIndoLong($item->deactivated_at) }} WIB<br>
                                     @if($item->deactivatedBy)
                                         <strong>Oleh:</strong> {{ $item->deactivatedBy->name }}
                                     @endif

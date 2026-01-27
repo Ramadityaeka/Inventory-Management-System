@@ -53,6 +53,16 @@ class StockMovement extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function reference()
+    {
+        return $this->morphTo();
+    }
+
+    public function submission(): BelongsTo
+    {
+        return $this->belongsTo(Submission::class, 'reference_id');
+    }
+
     // Scopes
     public function scopeIn($query)
     {

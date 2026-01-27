@@ -68,13 +68,13 @@
                                         <td>
                                             @switch($submission->status)
                                                 @case('pending')
-                                                    <span class="badge bg-warning">Pending</span>
+                                                    <span class="badge bg-warning">Menunggu</span>
                                                     @break
                                                 @case('approved')
-                                                    <span class="badge bg-success">Approved</span>
+                                                    <span class="badge bg-success">Diterima</span>
                                                     @break
                                                 @case('rejected')
-                                                    <span class="badge bg-danger">Rejected</span>
+                                                    <span class="badge bg-danger">Ditolak</span>
                                                     @break
                                             @endswitch
                                         </td>

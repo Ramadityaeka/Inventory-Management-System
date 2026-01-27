@@ -88,12 +88,12 @@
                 <div class="row">
                     <div class="col-md-3">
                         <p><strong>Code:</strong> <code>{{ $item->code }}</code></p>
-                        <p><strong>Name:</strong> {{ $item->name }}</p>
-                        <p><strong>Category:</strong> {{ $item->category->name ?? '-' }}</p>
+                        <p><strong>Nama:</strong> {{ $item->name }}</p>
+                        <p><strong>Kategori:</strong> {{ $item->category->name ?? '-' }}</p>
                     </div>
                     <div class="col-md-3">
                         <p><strong>Supplier:</strong> {{ $item->supplier->name ?? '-' }}</p>
-                        <p><strong>Unit:</strong> {{ $item->unit }}</p>
+                        <p><strong>Satuan:</strong> {{ $item->unit }}</p>
                     </div>
                     <div class="col-md-3">
                         <p><strong>Total Stock:</strong> {{ number_format($totalStock) }}</p>
@@ -124,8 +124,8 @@
                         </p>
                     </div>
                     <div class="col-md-3">
-                        <p><strong>Created:</strong> {{ $item->created_at->format('d/m/Y H:i') }}</p>
-                        <p><strong>Updated:</strong> {{ $item->updated_at->format('d/m/Y H:i') }}</p>
+                        <p><strong>Created:</strong> {{ formatDateIndoLong($item->created_at) }} WIB</p>
+                        <p><strong>Updated:</strong> {{ formatDateIndoLong($item->updated_at) }} WIB</p>
                     </div>
                 </div>
                 
@@ -148,7 +148,7 @@
                             <p class="mb-1"><strong>Notes:</strong> {{ $item->inactive_notes }}</p>
                         @endif
                         @if($item->deactivated_at)
-                            <p class="mb-0"><small><strong>Deactivated:</strong> {{ $item->deactivated_at->format('d/m/Y H:i') }}
+                            <p class="mb-0"><small><strong>Deactivated:</strong> {{ formatDateIndoLong($item->deactivated_at) }} WIB
                             @if($item->deactivatedBy)
                                 by {{ $item->deactivatedBy->name }}
                             @endif
@@ -181,9 +181,9 @@
                         <table class="table table-hover">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Warehouse Name</th>
-                                    <th>Quantity</th>
-                                    <th>Unit</th>
+                                    <th>Nama Unit</th>
+                                    <th>Jumlah</th>
+                                    <th>Satuan</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -253,10 +253,10 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Tanggal</th>
-                                    <th>Gudang</th>
+                                    <th>Unit</th>
                                     <th>Supplier</th>
-                                    <th>Quantity</th>
-                                    <th>Harga/Unit</th>
+                                    <th>Jumlah Stok</th>
+                                    <th>Harga/Satuan</th>
                                     <th>Total Harga</th>
                                     <th>Staff</th>
                                 </tr>
@@ -300,7 +300,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h6 class="mb-0">Recent Movements</h6>
+                <h6 class="mb-0">Riwayat perpindahan barang</h6>
             </div>
             <div class="card-body">
                 @if($item->stockMovements->count() > 0)
@@ -340,7 +340,7 @@
                                                         {{ ucfirst($movement->movement_type) }}
                                                 @endswitch
                                             </h6>
-                                            <p class="text-muted mb-1">{{ $movement->warehouse->name ?? 'Unit Tidak Diketahui' }}</p>
+                                            <p class="text-muted mb-1">{{ $movement->warehouse->name ?? 'Satuan Tidak Diketahui' }}</p>
                                             @if($movement->notes)
                                                 <p class="text-muted small mb-0">{{ $movement->notes }}</p>
                                             @endif
@@ -349,7 +349,7 @@
                                             <div class="fw-bold {{ $movement->movement_type === 'out' ? 'text-danger' : 'text-success' }}">
                                                 {{ $movement->movement_type === 'out' ? '-' : '+' }}{{ number_format($movement->quantity) }}
                                             </div>
-                                            <small class="text-muted">{{ $movement->created_at->format('d/m/Y H:i') }}</small>
+                                            <small class="text-muted">{{ formatDateIndo($movement->created_at) }} WIB</small>
                                             <br>
                                             <small class="text-muted">{{ $movement->creator->name ?? 'System' }}</small>
                                         </div>

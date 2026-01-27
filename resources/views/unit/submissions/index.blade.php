@@ -135,7 +135,7 @@
                                             <span class="small" 
                                                   data-bs-toggle="tooltip" 
                                                   data-bs-placement="top" 
-                                                  title="{{ $submission->submitted_at ? $submission->submitted_at->format('d M Y, H:i:s') : 'N/A' }}">
+                                                  title="{{ $submission->submitted_at ? formatDateIndoLong($submission->submitted_at) . ' WIB' : 'N/A' }}">
                                                 {{ $submission->submitted_at ? $submission->submitted_at->diffForHumans() : 'N/A' }}
                                             </span>
                                         </td>
@@ -143,7 +143,7 @@
                                             @switch($submission->status)
                                                 @case('pending')
                                                     <span class="badge bg-warning text-dark">
-                                                        <i class="bi bi-clock me-1"></i>Pending
+                                                        <i class="bi bi-clock me-1"></i>Menunggu
                                                     </span>
                                                     @break
                                                 @case('approved')

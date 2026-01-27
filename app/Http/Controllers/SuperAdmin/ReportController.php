@@ -495,14 +495,4 @@ class ReportController extends Controller
         
         return Excel::download(new DetailedStockExport($filters), $filename);
     }
-
-    // View for custom reports
-    public function customReports()
-    {
-        $warehouses = Warehouse::orderBy('name')->get();
-        $categories = Category::orderBy('name')->get();
-        $suppliers = Supplier::orderBy('name')->get();
-
-        return view('admin.reports.custom-reports', compact('warehouses', 'categories', 'suppliers'));
-    }
 }

@@ -78,9 +78,19 @@
                     <div class="col-md-6">
                         <label class="form-label text-muted small">Supplier</label>
                         <div>
-                            <div class="fw-medium">{{ $submission->supplier->name ?? 'N/A' }}</div>
-                            @if($submission->supplier && $submission->supplier->phone)
-                                <small class="text-muted">{{ $submission->supplier->phone }}</small>
+                            @if($submission->supplier)
+                                <div class="fw-medium"><i class="bi bi-building me-2 text-primary"></i>{{ $submission->supplier->name }}</div>
+                                @if($submission->supplier->phone)
+                                    <small class="text-muted"><i class="bi bi-telephone me-1"></i>{{ $submission->supplier->phone }}</small>
+                                @endif
+                                @if($submission->supplier->email)
+                                    <br><small class="text-muted"><i class="bi bi-envelope me-1"></i>{{ $submission->supplier->email }}</small>
+                                @endif
+                                @if($submission->supplier->address)
+                                    <br><small class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ $submission->supplier->address }}</small>
+                                @endif
+                            @else
+                                <span class="text-muted">Tidak ada data supplier</span>
                             @endif
                         </div>
                     </div>
@@ -111,8 +121,8 @@
 
                     <!-- Submitted By -->
                     <div class="col-12">
-                        <label class="form-label text-muted small">Disubmit Oleh</label>
-                        <div class="card bg-light">
+                        <label class="form-label text-muted small">Diajukan Oleh (Staff Unit)</label>
+                        <div class="card bg-light border-primary">
                             <div class="card-body py-3">
                                 <div class="d-flex align-items-center">
                                     @if($submission->staff && $submission->staff->avatar)
@@ -126,12 +136,18 @@
                                             {{ strtoupper(substr($submission->staff->name ?? 'U', 0, 1)) }}
                                         </div>
                                     @endif
-                                    <div>
+                                    <div class="flex-grow-1">
                                         <div class="fw-medium">{{ $submission->staff->name ?? 'Unknown User' }}</div>
-                                        <small class="text-muted">{{ $submission->staff->role ?? 'Staff' }}</small>
-                                        @if($submission->staff && $submission->staff->phone)
-                                            <br><small class="text-muted">{{ $submission->staff->phone }}</small>
+                                        <small class="text-muted">Staff Unit</small>
+                                        @if($submission->staff && $submission->staff->email)
+                                            <br><small class="text-muted"><i class="bi bi-envelope me-1"></i>{{ $submission->staff->email }}</small>
                                         @endif
+                                        @if($submission->staff && $submission->staff->phone)
+                                            <br><small class="text-muted"><i class="bi bi-telephone me-1"></i>{{ $submission->staff->phone }}</small>
+                                        @endif
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-primary">Request Barang</span>
                                     </div>
                                 </div>
                             </div>
@@ -142,7 +158,7 @@
                     <div class="col-12">
                         <label class="form-label text-muted small">Waktu Submit</label>
                         <div class="fw-medium">
-                            {{ $submission->submitted_at ? $submission->submitted_at->format('d M Y, H:i:s') : 'N/A' }}
+                            {{ $submission->submitted_at ? formatDateIndoLong($submission->submitted_at) . ' WIB' : 'N/A' }}
                             @if($submission->submitted_at)
                                 <small class="text-muted ms-2">({{ $submission->submitted_at->diffForHumans() }})</small>
                             @endif
@@ -158,37 +174,60 @@
                 $approval = $submission->approvals->first();
             @endphp
             <div class="card mt-4">
-                <div class="card-header">
+                <div class="card-header {{ $approval->action == 'approved' ? 'bg-success' : 'bg-danger' }} text-white">
                     <h6 class="mb-0">
                         <i class="bi bi-clipboard-check me-2"></i>Informasi Verifikasi
                     </h6>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small">Aksi</label>
-                            <div>
-                                @if($approval->action == 'approved')
-                                    <span class="badge bg-success">
-                                        <i class="bi bi-check-circle me-1"></i>Disetujui
-                                    </span>
-                                @else
-                                    <span class="badge bg-danger">
-                                        <i class="bi bi-x-circle me-1"></i>Ditolak
-                                    </span>
-                                @endif
+                        <!-- Verified By -->
+                        <div class="col-12">
+                            <label class="form-label text-muted small">Diverifikasi Oleh</label>
+                            <div class="card bg-light">
+                                <div class="card-body py-3">
+                                    <div class="d-flex align-items-center">
+                                        @if($approval->admin && $approval->admin->avatar)
+                                            <img src="{{ Storage::url($approval->admin->avatar) }}" 
+                                                 alt="{{ $approval->admin->name }}" 
+                                                 class="rounded-circle me-3" 
+                                                 style="width: 48px; height: 48px; object-fit: cover;">
+                                        @else
+                                            <div class="avatar-initial rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                                                 style="width: 48px; height: 48px; background-color: {{ $approval->action == 'approved' ? '#28a745' : '#dc3545' }}; color: white; font-size: 1.1rem; font-weight: bold;">
+                                                {{ strtoupper(substr($approval->admin->name ?? 'A', 0, 1)) }}
+                                            </div>
+                                        @endif
+                                        <div class="flex-grow-1">
+                                            <div class="fw-medium">{{ $approval->admin->name ?? 'N/A' }}</div>
+                                            <small class="text-muted">Admin Unit</small>
+                                            @if($approval->admin && $approval->admin->email)
+                                                <br><small class="text-muted"><i class="bi bi-envelope me-1"></i>{{ $approval->admin->email }}</small>
+                                            @endif
+                                        </div>
+                                        <div class="text-end">
+                                            @if($approval->action == 'approved')
+                                                <span class="badge bg-success fs-6 px-3 py-2">
+                                                    <i class="bi bi-check-circle me-1"></i>DISETUJUI
+                                                </span>
+                                            @else
+                                                <span class="badge bg-danger fs-6 px-3 py-2">
+                                                    <i class="bi bi-x-circle me-1"></i>DITOLAK
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small">Admin</label>
-                            <div class="fw-medium">{{ $approval->admin->name ?? 'N/A' }}</div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small">Waktu {{ $approval->action == 'approved' ? 'Approve' : 'Reject' }}</label>
+                        <div class="col-md-12">
+                            <label class="form-label text-muted small">Waktu Verifikasi</label>
                             <div class="fw-medium">
-                                {{ $approval->created_at ? $approval->created_at->format('d M Y, H:i:s') : 'N/A' }}
+                                <i class="bi bi-calendar-check me-2 text-primary"></i>{{ $approval->created_at ? formatDateIndoLong($approval->created_at) . ' WIB' : 'N/A' }}
+                                @if($approval->created_at)
+                                    <small class="text-muted ms-2">({{ $approval->created_at->diffForHumans() }})</small>
+                                @endif
                             </div>
                         </div>
 

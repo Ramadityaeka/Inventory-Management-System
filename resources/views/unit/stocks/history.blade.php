@@ -37,7 +37,27 @@
                     </tr>
                     <tr>
                         <th>Supplier:</th>
-                        <td>{{ $item->supplier->name ?? '-' }}</td>
+                        <td>
+                            @php
+                                // Get latest supplier from submissions
+                                $latestSubmission = $item->submissions()
+                                    ->with('supplier')
+                                    ->where('status', 'approved')
+                                    ->latest('submitted_at')
+                                    ->first();
+                            @endphp
+                            @if($latestSubmission && $latestSubmission->supplier)
+                                <strong>{{ $latestSubmission->supplier->name }}</strong>
+                                @if($latestSubmission->supplier->phone)
+                                    <br><small class="text-muted"><i class="bi bi-telephone me-1"></i>{{ $latestSubmission->supplier->phone }}</small>
+                                @endif
+                                @if($latestSubmission->supplier->email)
+                                    <br><small class="text-muted"><i class="bi bi-envelope me-1"></i>{{ $latestSubmission->supplier->email }}</small>
+                                @endif
+                            @else
+                                <span class="text-muted">Belum ada data supplier</span>
+                            @endif
+                        </td>
                     </tr>
                 </table>
             </div>
@@ -85,9 +105,9 @@
     <div class="card-body">
         <form method="GET" action="{{ route('unit.stocks.history', $item) }}" class="row g-3">
             <div class="col-md-3">
-                <label for="warehouse_id" class="form-label">Warehouse</label>
+                <label for="warehouse_id" class="form-label">Unit</label>
                 <select class="form-select" id="warehouse_id" name="warehouse_id">
-                    <option value="">All Warehouses</option>
+                    <option value="">Semua Unit</option>
                     @foreach($warehouses as $warehouse)
                         <option value="{{ $warehouse->id }}" {{ request('warehouse_id') == $warehouse->id ? 'selected' : '' }}>
                             {{ $warehouse->name }}
@@ -99,13 +119,13 @@
                 <label for="type" class="form-label">Type</label>
                 <select class="form-select" id="type" name="type">
                     <option value="">All Types</option>
-                    <option value="in" {{ request('type') == 'in' ? 'selected' : '' }}>Stock In (Barang Masuk)</option>
-                    <option value="out" {{ request('type') == 'out' ? 'selected' : '' }}>Stock Out (Barang Keluar)</option>
-                    <option value="adjustment" {{ request('type') == 'adjustment' ? 'selected' : '' }}>Adjustment</option>
+                    <option value="in" {{ request('type') == 'in' ? 'selected' : '' }}>Barang Masuk</option>
+                    <option value="out" {{ request('type') == 'out' ? 'selected' : '' }}>Barang Keluar</option>
+                    <option value="adjustment" {{ request('type') == 'adjustment' ? 'selected' : '' }}>perubahan</option>
                 </select>
             </div>
             <div class="col-md-2">
-                <label for="start_date" class="form-label">Start Date</label>
+                <label for="start_date" class="form-label">Waktu </label>
                 <input type="date" class="form-control" id="start_date" name="start_date" 
                        value="{{ request('start_date') }}">
             </div>
@@ -151,8 +171,8 @@
                         @foreach($movements as $movement)
                             <tr>
                                 <td>
-                                    <div>{{ $movement->created_at->format('d M Y') }}</div>
-                                    <small class="text-muted">{{ $movement->created_at->format('H:i:s') }}</small>
+                                    <div>{{ $movement->created_at->translatedFormat('d M Y') }}</div>
+                                    <small class="text-muted">{{ $movement->created_at->format('H:i') }} WIB</small>
                                 </td>
                                 <td>
                                     <span class="badge bg-info">{{ $movement->warehouse->name }}</span>

@@ -83,22 +83,60 @@
                                 <tr>
                                     <th>Tanggal</th>
                                     <th>Barang</th>
-                                    <th>Gudang</th>
+                                    <th>Unit</th>
+                                    <th>Supplier</th>
+                                    <th>Diajukan Oleh</th>
                                     <th>Tipe</th>
                                     <th>Jumlah</th>
                                     <th>Catatan</th>
-                                    <th>Oleh</th>
+                                    <th>Disetujui Oleh</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($movements as $movement)
                                     <tr>
-                                        <td>{{ $movement->created_at->format('d/m/Y H:i') }}</td>
+                                        <td>
+                                            <div>{{ $movement->created_at->format('d/m/Y') }}</div>
+                                            <small class="text-muted">{{ $movement->created_at->format('H:i') }}</small>
+                                        </td>
                                         <td>
                                             <strong>{{ $movement->item->name }}</strong><br>
                                             <small class="text-muted">{{ $movement->item->code }}</small>
+                                            @if($movement->item->category)
+                                                <br><span class="badge bg-info bg-opacity-10 text-info">{{ $movement->item->category->name }}</span>
+                                            @endif
                                         </td>
-                                        <td>{{ $movement->warehouse->name }}</td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ $movement->warehouse->name }}</span>
+                                        </td>
+                                        <td>
+                                            @if($movement->submission && $movement->submission->supplier)
+                                                <small>
+                                                    <strong>{{ $movement->submission->supplier->name }}</strong>
+                                                    @if($movement->submission->supplier->phone)
+                                                        <br><span class="text-muted"><i class="bi bi-telephone me-1"></i>{{ $movement->submission->supplier->phone }}</span>
+                                                    @endif
+                                                </small>
+                                            @else
+                                                <small class="text-muted">-</small>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($movement->submission && $movement->submission->staff)
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-initial rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                                                         style="width: 28px; height: 28px; background-color: #28a745; color: white; font-size: 0.75rem; font-weight: bold;">
+                                                        {{ strtoupper(substr($movement->submission->staff->name, 0, 1)) }}
+                                                    </div>
+                                                    <div>
+                                                        <small><strong>{{ $movement->submission->staff->name }}</strong></small>
+                                                        <br><small class="text-muted" style="font-size: 0.7rem;">Staff Unit</small>
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <small class="text-muted">-</small>
+                                            @endif
+                                        </td>
                                         <td>
                                             @if($movement->movement_type == \App\Models\StockMovement::MOVEMENT_TYPE_IN)
                                                 <span class="badge bg-success">Masuk</span>
@@ -116,13 +154,38 @@
                                             </span>
                                         </td>
                                         <td>
-                                            <small>{{ Str::limit($movement->notes, 50) }}</small>
+                                            <small>{{ Str::limit($movement->notes ?? '-', 50) }}</small>
                                         </td>
-                                        <td>{{ $movement->creator->name ?? 'System' }}</td>
+                                        <td>
+                                            @if($movement->creator)
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-initial rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                                                         style="width: 28px; height: 28px; background-color: #007bff; color: white; font-size: 0.75rem; font-weight: bold;">
+                                                        {{ strtoupper(substr($movement->creator->name, 0, 1)) }}
+                                                    </div>
+                                                    <div>
+                                                        <small><strong>{{ $movement->creator->name }}</strong></small>
+                                                        <br><small class="text-muted" style="font-size: 0.7rem;">
+                                                            @if($movement->creator->role === 'super_admin')
+                                                                Super Admin
+                                                            @elseif($movement->creator->role === 'admin_gudang')
+                                                                Admin Unit
+                                                            @elseif($movement->creator->role === 'staff_gudang')
+                                                                Staff Unit
+                                                            @else
+                                                                {{ ucfirst($movement->creator->role) }}
+                                                            @endif
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <small class="text-muted">System</small>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center py-4">
+                                        <td colspan="9" class="text-center py-4">
                                             <i class="bi bi-info-circle fs-1 text-muted mb-2"></i>
                                             <p class="text-muted mb-0">Tidak ada data pergerakan stok</p>
                                         </td>

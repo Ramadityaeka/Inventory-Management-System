@@ -19,7 +19,7 @@
 
         <li class="nav-item">
             <a class="nav-link {{ request()->routeIs('admin.warehouses.*') ? 'active' : '' }}" href="{{ route('admin.warehouses.index') }}">
-                <i class="bi bi-shop me-2"></i>Gudang
+                <i class="bi bi-shop me-2"></i>Unit
             </a>
         </li>
 
@@ -58,13 +58,18 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.reports.custom') ? 'active' : '' }}" href="{{ route('admin.reports.custom') }}">
-                            <i class="bi bi-file-earmark-excel me-2"></i>Laporan Custom
+                        <a class="nav-link {{ request()->routeIs('admin.reports.monthly') ? 'active' : '' }}" href="{{ route('admin.reports.monthly') }}">
+                            <i class="bi bi-calendar-month me-2"></i>Laporan Bulanan
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.reports.monthly') ? 'active' : '' }}" href="{{ route('admin.reports.monthly') }}">
-                            <i class="bi bi-calendar-month me-2"></i>Laporan Bulanan
+                        <a class="nav-link {{ request()->routeIs('admin.reports.transactions') ? 'active' : '' }}" href="{{ route('admin.reports.transactions') }}">
+                            <i class="bi bi-arrow-left-right me-2"></i>Laporan Transaksi
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.reports.stock-values') ? 'active' : '' }}" href="{{ route('admin.reports.stock-values') }}">
+                            <i class="bi bi-currency-dollar me-2"></i>Laporan Stok & Nilai
                         </a>
                     </li>
                 </ul>
@@ -93,7 +98,7 @@
 
         <li class="nav-item">
             <a class="nav-link {{ request()->routeIs('gudang.stock-requests.*') ? 'active' : '' }}" href="{{ route('gudang.stock-requests.index') }}">
-                <i class="bi bi-box-arrow-right me-2"></i>Approve Barang Keluar
+                <i class="bi bi-box-arrow-right me-2"></i>Verifikasi Barang Keluar
                 @if(isset($pendingStockRequests) && $pendingStockRequests > 0)
                     <span class="badge bg-warning rounded-pill float-end">{{ $pendingStockRequests }}</span>
                 @endif
@@ -102,16 +107,7 @@
 
         <li class="nav-item">
             <a class="nav-link {{ request()->routeIs('gudang.stocks.*') ? 'active' : '' }}" href="{{ route('gudang.stocks.index') }}">
-                <i class="bi bi-boxes me-2"></i>Stok Gudang
-            </a>
-        </li>
-
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('gudang.alerts.*') ? 'active' : '' }}" href="{{ route('gudang.alerts') }}">
-                <i class="bi bi-exclamation-triangle me-2"></i>Alert Stok
-                @if(isset($lowStockAlerts) && $lowStockAlerts > 0)
-                    <span class="badge bg-warning rounded-pill float-end">{{ $lowStockAlerts }}</span>
-                @endif
+                <i class="bi bi-boxes me-2"></i>Stok Unit
             </a>
         </li>
 
@@ -137,11 +133,6 @@
             </a>
         </li>
         
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('gudang.reports.stock-status') ? 'active' : '' }}" href="{{ route('gudang.reports.stock-status') }}">
-                <i class="bi bi-clipboard-data me-2"></i>Status Stok
-            </a>
-        </li>
     @elseif(auth()->user()->isStaffGudang())
         <!-- Staff Gudang Menu -->
         <li class="nav-item">

@@ -33,6 +33,7 @@ class Item extends Model
         'code',
         'name',
         'category_id',
+        'supplier_id',
         'unit',
         'description',
         'is_active',

@@ -37,7 +37,27 @@
                     </tr>
                     <tr>
                         <th>Supplier:</th>
-                        <td>{{ $item->supplier->name ?? '-' }}</td>
+                        <td>
+                            @php
+                                // Get latest supplier from submissions
+                                $latestSubmission = $item->submissions()
+                                    ->with('supplier')
+                                    ->where('status', 'approved')
+                                    ->latest('submitted_at')
+                                    ->first();
+                            @endphp
+                            @if($latestSubmission && $latestSubmission->supplier)
+                                <strong>{{ $latestSubmission->supplier->name }}</strong>
+                                @if($latestSubmission->supplier->phone)
+                                    <br><small class="text-muted"><i class="bi bi-telephone me-1"></i>{{ $latestSubmission->supplier->phone }}</small>
+                                @endif
+                                @if($latestSubmission->supplier->email)
+                                    <br><small class="text-muted"><i class="bi bi-envelope me-1"></i>{{ $latestSubmission->supplier->email }}</small>
+                                @endif
+                            @else
+                                <span class="text-muted">Belum ada data supplier</span>
+                            @endif
+                        </td>
                     </tr>
                 </table>
             </div>
@@ -142,8 +162,9 @@
                             <th>Unit</th>
                             <th>Tipe</th>
                             <th class="text-end">Jumlah</th>
-                            <th>Referensi</th>
-                            <th>Pengguna</th>
+                            <th>Supplier</th>
+                            <th>Diajukan Oleh</th>
+                            <th>Disetujui Oleh</th>
                             <th>Catatan</th>
                         </tr>
                     </thead>
@@ -185,15 +206,11 @@
                                     <br><small class="text-muted">{{ $movement->item->unit }}</small>
                                 </td>
                                 <td>
-                                    @if($movement->reference_type && $movement->reference_id)
+                                    @if($movement->submission && $movement->submission->supplier)
                                         <small>
-                                            @if(str_contains($movement->reference_type, 'App\\Models\\'))
-                                                {{ ucfirst(str_replace('App\\Models\\', '', $movement->reference_type)) }}
-                                            @else
-                                                {{ $movement->reference_type }}
-                                            @endif
-                                            @if(is_numeric($movement->reference_id))
-                                                #{{ $movement->reference_id }}
+                                            <strong>{{ $movement->submission->supplier->name }}</strong>
+                                            @if($movement->submission->supplier->phone)
+                                                <br><span class="text-muted">{{ $movement->submission->supplier->phone }}</span>
                                             @endif
                                         </small>
                                     @else
@@ -201,21 +218,43 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if($movement->creator)
-                                        <div>
-                                            <strong>{{ $movement->creator->name }}</strong>
+                                    @if($movement->submission && $movement->submission->staff)
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-initial rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                                                 style="width: 28px; height: 28px; background-color: #28a745; color: white; font-size: 0.7rem; font-weight: bold;">
+                                                {{ strtoupper(substr($movement->submission->staff->name, 0, 1)) }}
+                                            </div>
+                                            <div>
+                                                <small><strong>{{ $movement->submission->staff->name }}</strong></small>
+                                                <br><small class="text-muted">Staff Unit</small>
+                                            </div>
                                         </div>
-                                        <small class="text-muted">
-                                            @if($movement->creator->role === 'super_admin')
-                                                Super Admin
-                                            @elseif($movement->creator->role === 'admin_unit')
-                                                Admin Gudang
-                                            @elseif($movement->creator->role === 'staff_gudang')
-                                                Staff Gudang
-                                            @else
-                                                {{ ucfirst($movement->creator->role) }}
-                                            @endif
-                                        </small>
+                                    @else
+                                        <small class="text-muted">-</small>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($movement->creator)
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-initial rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                                                 style="width: 32px; height: 32px; background-color: #007bff; color: white; font-size: 0.8rem; font-weight: bold;">
+                                                {{ strtoupper(substr($movement->creator->name, 0, 1)) }}
+                                            </div>
+                                            <div>
+                                                <strong>{{ $movement->creator->name }}</strong>
+                                                <br><small class="text-muted">
+                                                    @if($movement->creator->role === 'super_admin')
+                                                        Super Admin
+                                                    @elseif($movement->creator->role === 'admin_gudang')
+                                                        Admin Unit
+                                                    @elseif($movement->creator->role === 'staff_gudang')
+                                                        Staff Unit
+                                                    @else
+                                                        {{ ucfirst($movement->creator->role) }}
+                                                    @endif
+                                                </small>
+                                            </div>
+                                        </div>
                                     @else
                                         <small class="text-muted">System</small>
                                     @endif

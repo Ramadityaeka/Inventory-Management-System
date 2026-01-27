@@ -9,6 +9,27 @@
     </div>
 </div>
 
+@php
+    $itemsWithoutSupplier = $items->filter(function($item) {
+        return is_null($item->supplier_id);
+    })->count();
+@endphp
+
+@if($itemsWithoutSupplier > 0)
+<div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+    <div class="d-flex align-items-start">
+        <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+        <div>
+            <strong>Info:</strong> Ada {{ $itemsWithoutSupplier }} item yang belum memiliki supplier. 
+            Anda dapat mengedit item dan memilih supplier melalui tombol edit <i class="bi bi-pencil"></i>.
+            <br>
+            <small>Untuk mengelola supplier, kunjungi <a href="{{ route('admin.suppliers.index') }}" class="alert-link">halaman Supplier</a>.</small>
+        </div>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+@endif
+
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h6 class="mb-0">Daftar Barang</h6>

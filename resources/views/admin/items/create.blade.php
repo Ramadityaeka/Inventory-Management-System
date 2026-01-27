@@ -86,12 +86,25 @@
                     <select class="form-select @error('unit') is-invalid @enderror"
                             id="unit" name="unit" required>
                         <option value="">Pilih Satuan</option>
-                        <option value="pcs" {{ old('unit') == 'pcs' ? 'selected' : '' }}>pcs</option>
-                        <option value="box" {{ old('unit') == 'box' ? 'selected' : '' }}>box</option>
-                        <option value="unit" {{ old('unit') == 'unit' ? 'selected' : '' }}>unit</option>
-                        <option value="rim" {{ old('unit') == 'rim' ? 'selected' : '' }}>rim</option>
-                        <option value="pak" {{ old('unit') == 'pak' ? 'selected' : '' }}>pak</option>
-                        <option value="lusin" {{ old('unit') == 'lusin' ? 'selected' : '' }}>lusin</option>
+                        <option value="Botol" {{ old('unit') == 'Botol' ? 'selected' : '' }}>Botol</option>
+                        <option value="Buah" {{ old('unit') == 'Buah' ? 'selected' : '' }}>Buah</option>
+                        <option value="Box" {{ old('unit') == 'Box' ? 'selected' : '' }}>Box</option>
+                        <option value="Dus" {{ old('unit') == 'Dus' ? 'selected' : '' }}>Dus</option>
+                        <option value="Dus Besar" {{ old('unit') == 'Dus Besar' ? 'selected' : '' }}>Dus Besar</option>
+                        <option value="Karton" {{ old('unit') == 'Karton' ? 'selected' : '' }}>Karton</option>
+                        <option value="Kg" {{ old('unit') == 'Kg' ? 'selected' : '' }}>Kg</option>
+                        <option value="Liter" {{ old('unit') == 'Liter' ? 'selected' : '' }}>Liter</option>
+                        <option value="Lusin" {{ old('unit') == 'Lusin' ? 'selected' : '' }}>Lusin</option>
+                        <option value="Meter" {{ old('unit') == 'Meter' ? 'selected' : '' }}>Meter</option>
+                        <option value="Pack" {{ old('unit') == 'Pack' ? 'selected' : '' }}>Pack</option>
+                        <option value="Pad" {{ old('unit') == 'Pad' ? 'selected' : '' }}>Pad</option>
+                        <option value="Pasang" {{ old('unit') == 'Pasang' ? 'selected' : '' }}>Pasang</option>
+                        <option value="Pcs" {{ old('unit', 'Pcs') == 'Pcs' ? 'selected' : '' }}>Pcs</option>
+                        <option value="Rim" {{ old('unit') == 'Rim' ? 'selected' : '' }}>Rim</option>
+                        <option value="Roll" {{ old('unit') == 'Roll' ? 'selected' : '' }}>Roll</option>
+                        <option value="Sak" {{ old('unit') == 'Sak' ? 'selected' : '' }}>Sak</option>
+                        <option value="Set" {{ old('unit') == 'Set' ? 'selected' : '' }}>Set</option>
+                        <option value="Unit" {{ old('unit') == 'Unit' ? 'selected' : '' }}>Unit</option>
                     </select>
                     @error('unit')
                         <div class="invalid-feedback">{{ $message }}</div>

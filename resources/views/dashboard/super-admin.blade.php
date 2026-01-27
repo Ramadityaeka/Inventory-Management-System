@@ -8,7 +8,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h4 class="mb-1">Dashboard Super Admin</h4>
-                <p class="text-muted mb-0">Ringkasan sistem inventory per {{ now()->format('d F Y') }}</p>
+                <p class="text-muted mb-0">Ringkasan sistem inventory per {{ formatDateIndoLong(now()) }} WIB</p>
             </div>
             <div class="d-flex gap-2">
                 <a href="{{ route('admin.reports.stock-overview') }}" class="btn btn-outline-primary">
@@ -177,7 +177,7 @@
 
 <!-- Additional Metrics Row -->
 <div class="row mb-4 g-3">
-    <div class="col-12 col-md-4">
+    <div class="col-12 col-sm-6 col-lg-4">
         <div class="card h-100 border-0 shadow-sm hover-card">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -200,7 +200,7 @@
         </div>
     </div>
 
-    <div class="col-12 col-md-4">
+    <div class="col-12 col-sm-6 col-lg-4">
         <div class="card h-100 border-0 shadow-sm hover-card">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -223,7 +223,7 @@
         </div>
     </div>
 
-    <div class="col-12 col-md-4">
+    <div class="col-12 col-sm-6 col-lg-4">
         <div class="card h-100 border-0 shadow-sm hover-card">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -292,12 +292,12 @@
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-light">
                 <h6 class="mb-0">
-                    <i class="bi bi-calendar-day text-info me-2"></i>Ringkasan Hari Ini - {{ now()->format('l, d F Y') }}
+                    <i class="bi bi-calendar-day text-info me-2"></i>Ringkasan Hari Ini - {{ \Carbon\Carbon::now()->translatedFormat('l, d F Y') }}
                 </h6>
             </div>
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-6 col-md-3">
+                    <div class="col-6 col-sm-6 col-md-3">
                         <div class="text-center">
                             <div class="bg-success bg-opacity-10 rounded-3 p-3 mb-2">
                                 <i class="bi bi-plus-circle fs-3 text-success"></i>
@@ -339,44 +339,6 @@
     </div>
 </div>
 
-<!-- Monthly Progress -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-light">
-                <h6 class="mb-0">
-                    <i class="bi bi-bar-chart-line text-success me-2"></i>Progress Bulan Ini
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-12 col-md-6">
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="fw-bold">Target Transfer Bulanan</span>
-                                <span class="text-muted small">{{ $stats['monthly_transfers_current'] ?? 0 }} / {{ $stats['monthly_transfers_target'] ?? 50 }}</span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar bg-primary" role="progressbar" style="width: {{ min(100, (($stats['monthly_transfers_current'] ?? 0) / max(1, $stats['monthly_transfers_target'] ?? 50)) * 100) }}%"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-6">
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="fw-bold">Target Stock Movement</span>
-                                <span class="text-muted small">{{ $stats['monthly_movements_current'] ?? 0 }} / {{ $stats['monthly_movements_target'] ?? 1000 }}</span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ min(100, (($stats['monthly_movements_current'] ?? 0) / max(1, $stats['monthly_movements_target'] ?? 1000)) * 100) }}%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Warehouse Status Overview -->
 <div class="row mb-4">
@@ -442,34 +404,9 @@
     </div>
 </div>
 
-<!-- Charts and Analytics Row -->
-<div class="row mb-4 g-3">
-    <div class="col-12 col-lg-8">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-light">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">
-                        <i class="bi bi-graph-up text-primary me-2"></i>Pergerakan Stok 6 Bulan Terakhir
-                    </h6>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-filter me-1"></i>Filter
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">Semua Gudang</a></li>
-                            <li><a class="dropdown-item" href="#">Gudang A</a></li>
-                            <li><a class="dropdown-item" href="#">Gudang B</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body">
-                <canvas id="monthlyChart" height="300"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-12 col-lg-4">
+<!-- Top Items Section -->
+<div class="row mb-4">
+    <div class="col-12">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-light">
                 <h6 class="mb-0">
@@ -511,160 +448,50 @@
     </div>
 </div>
 
-<!-- Alerts and Pending Items Row -->
-<div class="row g-3">
-    <div class="col-12 col-lg-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">
-                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>Persetujuan Menunggu
-                </h6>
-                @if($pendingTransfers->count() > 0)
-                    <span class="badge bg-warning">{{ $pendingTransfers->count() }}</span>
-                @endif
-            </div>
-            <div class="card-body">
-                @if($pendingTransfers->count() > 0)
-                    <div class="list-group list-group-flush">
-                        @foreach($pendingTransfers->take(5) as $transfer)
-                            <div class="list-group-item px-0 py-3">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-shrink-0 me-3">
-                                        <div class="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                            <i class="bi bi-arrow-left-right text-warning"></i>
-                                        </div>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <h6 class="mb-1">{{ $transfer->transfer_number }}</h6>
-                                                <small class="text-muted">{{ $transfer->fromWarehouse->name }} → {{ $transfer->toWarehouse->name }}</small>
-                                                <div class="mt-1">
-                                                    <small class="text-muted">{{ $transfer->quantity }} {{ $transfer->item->unit }}</small>
-                                                </div>
-                                            </div>
-                                            <a href="{{ route('admin.reports.stock-overview') }}" class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                    <div class="text-center mt-3">
-                        <a href="{{ route('admin.reports.stock-overview') }}" class="btn btn-primary">
-                            <i class="bi bi-list me-1"></i>Lihat Semua
-                        </a>
-                    </div>
-                @else
-                    <div class="text-center py-5">
-                        <i class="bi bi-check-circle text-success fs-1 mb-3"></i>
-                        <p class="text-muted mb-0">Tidak ada pending approval</p>
-                    </div>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    <div class="col-12 col-lg-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">
-                    <i class="bi bi-exclamation-circle text-danger me-2"></i>Low Stock Alerts
-                </h6>
-                @if($lowStockItems->count() > 0)
-                    <span class="badge bg-danger">{{ $lowStockItems->count() }}</span>
-                @endif
-            </div>
-            <div class="card-body">
-                @if($lowStockItems->count() > 0)
-                    <div class="list-group list-group-flush">
-                        @foreach($lowStockItems->take(5) as $item)
-                            <div class="list-group-item px-0 py-3">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-shrink-0 me-3">
-                                        <div class="bg-danger bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                            <i class="bi bi-exclamation-triangle text-danger"></i>
-                                        </div>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <h6 class="mb-1">{{ $item->item_name }}</h6>
-                                                <small class="text-muted">{{ $item->warehouse_name }}</small>
-                                                <div class="mt-1">
-                                                    <span class="badge bg-danger me-2">Stok: {{ $item->current_stock }}</span>
-                                                    <span class="badge bg-warning">Habis</span>
-                                                </div>
-                                            </div>
-                                            <a href="{{ route('admin.reports.stock-overview') }}" class="btn btn-sm btn-outline-danger">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                    <div class="text-center mt-3">
-                        <a href="{{ route('admin.reports.stock-overview') }}" class="btn btn-danger">
-                            <i class="bi bi-bell me-1"></i>Lihat Semua Alerts
-                        </a>
-                    </div>
-                @else
-                    <div class="text-center py-5">
-                        <i class="bi bi-graph-up text-success fs-1 mb-3"></i>
-                        <p class="text-muted mb-0">Semua stok dalam kondisi baik</p>
-                    </div>
-                @endif
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Recent Activities -->
-<div class="row mt-4">
+<div class="row">
     <div class="col-12">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">
                     <i class="bi bi-activity text-primary me-2"></i>Aktivitas Terbaru
                 </h6>
-                <a href="{{ route('admin.reports.stock-overview') }}" class="btn btn-sm btn-outline-primary">
+                <a href="{{ route('gudang.reports.monthly') }}" class="btn btn-sm btn-outline-primary">
                     <i class="bi bi-list me-1"></i>Lihat Semua
                 </a>
             </div>
             <div class="card-body">
                 @if($recentActivities->count() > 0)
                     <div class="timeline">
-                        @foreach($recentActivities->take(10) as $activity)
+                        @foreach($recentActivities->take(6) as $activity)
                             <div class="timeline-item mb-3">
                                 <div class="d-flex align-items-start">
-                                    <div class="flex-shrink-0 me-3">
-                                        <div class="timeline-icon bg-{{ $activity->quantity > 0 ? 'success' : 'danger' }} bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                            <i class="bi bi-{{ $activity->quantity > 0 ? 'arrow-up' : 'arrow-down' }} text-{{ $activity->quantity > 0 ? 'success' : 'danger' }}"></i>
-                                        </div>
+                                    <div class="timeline-icon me-3">
+                                        @if($activity->quantity > 0)
+                                            <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                                                <i class="bi bi-arrow-up-circle-fill text-success fs-5"></i>
+                                            </div>
+                                        @else
+                                            <div class="bg-danger bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                                                <i class="bi bi-arrow-down-circle-fill text-danger fs-5"></i>
+                                            </div>
+                                        @endif
                                     </div>
                                     <div class="flex-grow-1">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <h6 class="mb-1">{{ $activity->item->name ?? 'Item' }}</h6>
-                                                <p class="text-muted small mb-1">
-                                                    <i class="bi bi-building me-1"></i>{{ $activity->warehouse->name ?? 'N/A' }}
-                                                    @if($activity->user)
-                                                        <span class="mx-2">•</span>
-                                                        <i class="bi bi-person me-1"></i>{{ $activity->user->name }}
-                                                    @endif
-                                                </p>
-                                                <small class="text-muted">
-                                                    <i class="bi bi-clock me-1"></i>{{ $activity->created_at->diffForHumans() }}
-                                                </small>
-                                            </div>
-                                            <span class="badge bg-{{ $activity->quantity > 0 ? 'success' : 'danger' }}">
+                                        <div class="d-flex justify-content-between align-items-start mb-1">
+                                            <h6 class="mb-1">{{ $activity->item->name ?? 'Unknown Item' }}</h6>
+                                            <span class="badge bg-{{ $activity->quantity > 0 ? 'success' : 'danger' }} fs-6 px-3 py-2">
                                                 {{ $activity->quantity > 0 ? '+' : '' }}{{ number_format($activity->quantity) }}
                                             </span>
                                         </div>
+                                        <p class="text-muted small mb-1">
+                                            <i class="bi bi-person-circle me-1"></i>{{ $activity->user->name ?? 'System' }}
+                                            <span class="mx-2">•</span>
+                                            <i class="bi bi-clock me-1"></i>{{ $activity->created_at->diffForHumans() }}
+                                        </p>
+                                        @if($activity->description)
+                                            <small class="text-muted">{{ Str::limit($activity->description, 50) }}</small>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -681,13 +508,38 @@
     </div>
 </div>
 
+
+
 @endsection
 
 @push('styles')
 <style>
+    /* Ensure consistent card heights and prevent shifting */
+    .row {
+        margin-left: -0.75rem;
+        margin-right: -0.75rem;
+    }
+    
+    .g-3 > * {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    
+    .card {
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+    }
+    
+    .card-body {
+        flex: 1 1 auto;
+    }
+    
     .hover-card {
         transition: all 0.3s ease;
     }
+    
     .hover-card:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
@@ -719,10 +571,6 @@
     .timeline-icon {
         position: relative;
         z-index: 1;
-    }
-
-    .card {
-        transition: all 0.3s ease;
     }
 
     .card:hover {
@@ -769,6 +617,69 @@
     .list-group-item:hover {
         background-color: #f8f9fa;
         transition: background-color 0.2s ease;
+    }
+    
+    /* Responsive improvements */
+    @media (max-width: 767.98px) {
+        .card-body h5 {
+            font-size: 1.1rem;
+        }
+        
+        .card-body .small {
+            font-size: 0.75rem;
+        }
+        
+        .alert {
+            font-size: 0.875rem;
+        }
+        
+        .btn {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+        }
+    }
+    
+    @media (max-width: 575.98px) {
+        .card-body h5 {
+            font-size: 1rem;
+        }
+        
+        h6 {
+            font-size: 0.95rem;
+        }
+        
+        .bg-primary.bg-opacity-10,
+        .bg-success.bg-opacity-10,
+        .bg-info.bg-opacity-10,
+        .bg-warning.bg-opacity-10,
+        .bg-danger.bg-opacity-10,
+        .bg-purple.bg-opacity-10 {
+            padding: 0.75rem !important;
+        }
+        
+        .fs-4 {
+            font-size: 1.25rem !important;
+        }
+    }
+    
+    /* Fix flex items */
+    .d-flex.align-items-center {
+        flex-wrap: nowrap;
+    }
+    
+    /* Ensure equal height cards in rows */
+    .row.g-3 {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    
+    .row.g-3 > [class*="col-"] {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .h-100 {
+        height: 100% !important;
     }
 </style>
 @endpush

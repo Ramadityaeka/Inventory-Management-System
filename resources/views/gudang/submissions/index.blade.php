@@ -85,6 +85,7 @@
                                     <th width="150">Supplier</th>
                                     <th width="140">Waktu Pengajuan</th>
                                     <th width="100">Status</th>
+                                    <th width="180">Diverifikasi Oleh</th>
                                     <th width="120">Aksi</th>
                                 </tr>
                             </thead>
@@ -126,16 +127,20 @@
                                             <small class="text-muted">{{ $submission->unit }}</small>
                                         </td>
                                         <td>
-                                            <div class="small">{{ $submission->supplier->name ?? 'N/A' }}</div>
-                                            @if($submission->supplier && $submission->supplier->phone)
-                                                <small class="text-muted">{{ $submission->supplier->phone }}</small>
+                                            @if($submission->supplier)
+                                                <div class="small fw-medium">{{ $submission->supplier->name }}</div>
+                                                @if($submission->supplier->phone)
+                                                    <small class="text-muted"><i class="bi bi-telephone me-1"></i>{{ $submission->supplier->phone }}</small>
+                                                @endif
+                                            @else
+                                                <span class="text-muted small">-</span>
                                             @endif
                                         </td>
                                         <td>
                                             <span class="small" 
                                                   data-bs-toggle="tooltip" 
                                                   data-bs-placement="top" 
-                                                  title="{{ $submission->submitted_at ? $submission->submitted_at->format('d M Y, H:i:s') : 'N/A' }}">
+                                                  title="{{ $submission->submitted_at ? formatDateIndoLong($submission->submitted_at) . ' WIB' : 'N/A' }}">
                                                 {{ $submission->submitted_at ? $submission->submitted_at->diffForHumans() : 'N/A' }}
                                             </span>
                                         </td>
@@ -159,6 +164,21 @@
                                                 @default
                                                     <span class="badge bg-secondary">{{ ucfirst($submission->status) }}</span>
                                             @endswitch
+                                        </td>
+                                        <td>
+                                            @php
+                                                $latestApproval = $submission->approvals->last();
+                                            @endphp
+                                            @if($latestApproval && $latestApproval->admin)
+                                                <div class="small">
+                                                    <i class="bi bi-person-check me-1"></i>{{ $latestApproval->admin->name }}
+                                                </div>
+                                                <small class="text-muted" style="font-size: 0.7rem;">
+                                                    {{ $latestApproval->created_at->diffForHumans() }}
+                                                </small>
+                                            @else
+                                                <span class="text-muted small">-</span>
+                                            @endif
                                         </td>
                                         <td>
                                             <a href="{{ route('gudang.submissions.show', $submission) }}" 

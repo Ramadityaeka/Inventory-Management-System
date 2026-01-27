@@ -10,8 +10,10 @@ use App\Models\Submission;
 use App\Models\Transfer;
 use App\Models\Warehouse;
 use App\Models\Unit;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -28,139 +30,176 @@ class DashboardController extends Controller
         try {
             $user = auth()->user();
 
+            // Log untuk debugging
+            Log::info('Dashboard access', [
+                'user_id' => $user->id,
+                'user_role' => $user->role,
+                'user_name' => $user->name
+            ]);
+
             if ($user->isSuperAdmin()) {
+                Log::info('Redirecting to Super Admin Dashboard');
                 return $this->superAdminDashboard();
             } elseif ($user->isAdminGudang()) {
+                Log::info('Redirecting to Admin Gudang Dashboard');
                 return $this->adminGudangDashboard();
             } elseif ($user->isStaffGudang()) {
+                Log::info('Redirecting to Staff Gudang Dashboard');
                 return $this->staffGudangDashboard();
             }
 
-            // Default fallback - redirect to staff dashboard for users without specific role
-            return $this->staffGudangDashboard();
+            // Default fallback - abort with 403 for unknown roles
+            Log::error('Unknown role accessing dashboard', [
+                'user_id' => $user->id,
+                'role' => $user->role
+            ]);
+            abort(403, 'Unauthorized: Invalid user role');
+            
         } catch (\Exception $e) {
             // Log the error and show a friendly message
-            \Log::error('Dashboard error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            Log::error('Dashboard error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
             
-            return view('dashboard.staff', [
-                'user' => auth()->user(),
-                'error' => 'Dashboard temporarily unavailable: ' . $e->getMessage(),
-                'stats' => [
-                    'total_submissions' => 0,
-                    'pending_approval' => 0,
-                    'approved_this_month' => 0,
-                    'rejected' => 0,
-                ],
-                'draftCount' => 0,
-                'recentSubmissions' => collect(),
-                'recentNotifications' => collect(),
-                'unreadNotifications' => 0,
-            ]);
+            // Redirect back to login with error message
+            auth()->logout();
+            return redirect()->route('login')->with('error', 'Terjadi kesalahan saat mengakses dashboard. Silakan login kembali.');
         }
     }
 
     private function superAdminDashboard()
     {
-        // Optimize queries with caching where possible
-        // Support both Warehouse and Unit models
-        $warehouseModel = class_exists('App\\Models\\Unit') ? Unit::class : Warehouse::class;
-        
-        $stats = [
-            'total_units' => $warehouseModel::count(),
-            'total_warehouses' => $warehouseModel::count(), // Alias untuk backward compatibility
-            'total_items' => Item::count(),
-            'total_stock' => Stock::sum('quantity') ?? 0,
-            'pending_transfers' => Transfer::where('status', 'waiting_approval')->count(),
-            'total_users' => \App\Models\User::count(),
-            'active_units' => $warehouseModel::whereHas('stocks', function($q) {
-                $q->where('quantity', '>', 0);
-            })->count(),
-            'active_warehouses' => $warehouseModel::whereHas('stocks', function($q) {
-                $q->where('quantity', '>', 0);
-            })->count(), // Alias untuk backward compatibility
-            // Today's stats
-            'today_total_stock_in' => StockMovement::whereDate('created_at', today())->where('quantity', '>', 0)->sum('quantity') ?? 0,
-            'today_total_stock_out' => abs(StockMovement::whereDate('created_at', today())->where('quantity', '<', 0)->sum('quantity')) ?? 0,
-            'today_transfers_approved' => Transfer::whereDate('approved_at', today())->count() ?? 0,
-            'today_new_alerts' => Item::join('stocks', 'items.id', '=', 'stocks.item_id')
+        try {
+            // Use Warehouse model (units table doesn't exist)
+            $warehouseModel = Warehouse::class;
+            
+            $stats = [
+                'total_units' => $warehouseModel::count(),
+                'total_warehouses' => $warehouseModel::count(), // Alias untuk backward compatibility
+                'total_items' => Item::count(),
+                'total_stock' => Stock::sum('quantity') ?? 0,
+                'pending_transfers' => Transfer::where('status', 'waiting_approval')->count() ?? 0,
+                'total_users' => User::count(),
+                'active_units' => $warehouseModel::whereHas('stocks', function($q) {
+                    $q->where('quantity', '>', 0);
+                })->count(),
+                'active_warehouses' => $warehouseModel::whereHas('stocks', function($q) {
+                    $q->where('quantity', '>', 0);
+                })->count(), // Alias untuk backward compatibility
+                // Today's stats
+                'today_total_stock_in' => StockMovement::whereDate('created_at', today())->where('quantity', '>', 0)->sum('quantity') ?? 0,
+                'today_total_stock_out' => abs(StockMovement::whereDate('created_at', today())->where('quantity', '<', 0)->sum('quantity')) ?? 0,
+                'today_transfers_approved' => Transfer::whereDate('approved_at', today())->count() ?? 0,
+                'today_new_alerts' => Item::join('stocks', 'items.id', '=', 'stocks.item_id')
+                    ->where('stocks.quantity', '=', 0)
+                    ->distinct('items.id')
+                    ->count() ?? 0,
+                // Monthly progress targets (these could be configurable)
+                'monthly_transfers_current' => Transfer::whereYear('created_at', now()->year)->whereMonth('created_at', now()->month)->count() ?? 0,
+                'monthly_transfers_target' => 50,
+                'monthly_movements_current' => StockMovement::whereYear('created_at', now()->year)->whereMonth('created_at', now()->month)->sum(DB::raw('ABS(quantity)')) ?? 0,
+                'monthly_movements_target' => 1000,
+            ];
+
+            // Optimized monthly movements - last 6 months only
+            $monthlyMovements = StockMovement::select(
+                DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
+                DB::raw("SUM(CASE WHEN quantity > 0 THEN quantity ELSE 0 END) as stock_in"),
+                DB::raw("SUM(CASE WHEN quantity < 0 THEN ABS(quantity) ELSE 0 END) as stock_out")
+            )
+            ->where('created_at', '>=', now()->subMonths(6))
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
+
+            // Optimized top items with limit
+            $topItems = Stock::join('items', 'stocks.item_id', '=', 'items.id')
+                ->leftJoin('categories', 'items.category_id', '=', 'categories.id')
+                ->select(
+                    'items.name as item_name',
+                    DB::raw('COALESCE(categories.name, "Tanpa Kategori") as category_name'),
+                    DB::raw('SUM(stocks.quantity) as total_stock')
+                )
+                ->groupBy('items.id', 'items.name', 'categories.name')
+                ->orderBy('total_stock', 'desc')
+                ->limit(10)
+                ->get();
+
+            // Out of stock items
+            $lowStockItems = Item::join('stocks', 'items.id', '=', 'stocks.item_id')
+                ->join('warehouses', 'stocks.warehouse_id', '=', 'warehouses.id')
                 ->where('stocks.quantity', '=', 0)
-                ->distinct('items.id')
-                ->count(),
-            // Monthly progress targets (these could be configurable)
-            'monthly_transfers_current' => Transfer::whereYear('created_at', now()->year)->whereMonth('created_at', now()->month)->count(),
-            'monthly_transfers_target' => 50,
-            'monthly_movements_current' => StockMovement::whereYear('created_at', now()->year)->whereMonth('created_at', now()->month)->sum(DB::raw('ABS(quantity)')),
-            'monthly_movements_target' => 1000,
-        ];
+                ->select(
+                    'items.id as item_id',
+                    'items.name as item_name',
+                    'warehouses.name as warehouse_name',
+                    'stocks.quantity as current_stock'
+                )
+                ->limit(20)
+                ->get();
 
-        // Optimized monthly movements - last 6 months only
-        $monthlyMovements = StockMovement::select(
-            DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
-            DB::raw("SUM(CASE WHEN quantity > 0 THEN quantity ELSE 0 END) as stock_in"),
-            DB::raw("SUM(CASE WHEN quantity < 0 THEN ABS(quantity) ELSE 0 END) as stock_out")
-        )
-        ->where('created_at', '>=', now()->subMonths(6))
-        ->groupBy('month')
-        ->orderBy('month')
-        ->get();
+            // Pending transfers with relationships
+            $pendingTransfers = Transfer::where('status', 'waiting_approval')
+                ->with(['fromWarehouse:id,name', 'toWarehouse:id,name', 'item:id,name,unit', 'requestedBy:id,name'])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
 
-        // Optimized top items with limit
-        $topItems = Stock::join('items', 'stocks.item_id', '=', 'items.id')
-            ->join('categories', 'items.category_id', '=', 'categories.id')
-            ->select(
-                'items.name as item_name',
-                'categories.name as category_name',
-                DB::raw('SUM(stocks.quantity) as total_stock')
-            )
-            ->groupBy('items.id', 'items.name', 'categories.name')
-            ->orderBy('total_stock', 'desc')
-            ->limit(10)
-            ->get();
+            // Warehouse list with stats
+            $warehouses = $warehouseModel::withCount(['stocks'])
+                ->get()
+                ->map(function($warehouse) {
+                    $warehouse->total_quantity = $warehouse->stocks()->sum('quantity') ?? 0;
+                    return $warehouse;
+                });
 
-        // Out of stock items
-        $lowStockItems = Item::join('stocks', 'items.id', '=', 'stocks.item_id')
-            ->join('warehouses', 'stocks.warehouse_id', '=', 'warehouses.id')
-            ->where('stocks.quantity', '=', 0)
-            ->select(
-                'items.id as item_id',
-                'items.name as item_name',
-                'warehouses.name as warehouse_name',
-                'stocks.quantity as current_stock'
-            )
-            ->limit(20)
-            ->get();
+            // Recent activities across all warehouses
+            $recentActivities = StockMovement::with(['item:id,name,unit', 'warehouse:id,name', 'creator:id,name'])
+                ->orderBy('created_at', 'desc')
+                ->limit(15)
+                ->get();
 
-        // Pending transfers with relationships
-        $pendingTransfers = Transfer::where('status', 'waiting_approval')
-            ->with(['fromWarehouse:id,name', 'toWarehouse:id,name', 'item:id,name', 'requestedBy:id,name'])
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
-
-        // Warehouse list with stats
-        $warehouses = Warehouse::withCount(['stocks'])
-            ->with(['stocks' => function($q) {
-                $q->select('warehouse_id', DB::raw('SUM(quantity) as total_quantity'))
-                  ->groupBy('warehouse_id');
-            }])
-            ->get();
-
-        // Recent activities across all warehouses
-        $recentActivities = StockMovement::with(['item:id,name', 'warehouse:id,name', 'user:id,name'])
-            ->orderBy('created_at', 'desc')
-            ->limit(15)
-            ->get();
-
-        return view('dashboard.super-admin', compact(
-            'stats',
-            'monthlyMovements',
-            'topItems',
-            'lowStockItems',
-            'pendingTransfers',
-            'warehouses',
-            'recentActivities'
-        ));
+            return view('dashboard.super-admin', compact(
+                'stats',
+                'monthlyMovements',
+                'topItems',
+                'lowStockItems',
+                'pendingTransfers',
+                'warehouses',
+                'recentActivities'
+            ));
+        } catch (\Exception $e) {
+            Log::error('Super Admin Dashboard Error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            // Return view with empty data instead of throwing error
+            return view('dashboard.super-admin', [
+                'stats' => [
+                    'total_units' => 0,
+                    'total_warehouses' => 0,
+                    'total_items' => 0,
+                    'total_stock' => 0,
+                    'pending_transfers' => 0,
+                    'total_users' => 0,
+                    'active_units' => 0,
+                    'active_warehouses' => 0,
+                    'today_total_stock_in' => 0,
+                    'today_total_stock_out' => 0,
+                    'today_transfers_approved' => 0,
+                    'today_new_alerts' => 0,
+                    'monthly_transfers_current' => 0,
+                    'monthly_transfers_target' => 50,
+                    'monthly_movements_current' => 0,
+                    'monthly_movements_target' => 1000,
+                ],
+                'monthlyMovements' => collect(),
+                'topItems' => collect(),
+                'lowStockItems' => collect(),
+                'pendingTransfers' => collect(),
+                'warehouses' => collect(),
+                'recentActivities' => collect(),
+                'error' => 'Some data could not be loaded. Please try again later.'
+            ]);
+        }
     }
 
     private function adminGudangDashboard()
@@ -308,7 +347,7 @@ class DashboardController extends Controller
 
         // Optimized recent activities with eager loading
         $recentActivities = StockMovement::whereIn('warehouse_id', $warehouseIds)
-            ->with(['item:id,name', 'user:id,name'])
+            ->with(['item:id,name,unit', 'creator:id,name'])
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();

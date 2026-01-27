@@ -70,7 +70,7 @@
             </div>
             <div class="text-end">
                 <small class="text-muted d-block">Generated on:</small>
-                <strong>{{ now()->format('d M Y H:i') }}</strong>
+                <strong>{{ formatDateIndoLong(now()) }} WIB</strong>
             </div>
         </div>
     </div>

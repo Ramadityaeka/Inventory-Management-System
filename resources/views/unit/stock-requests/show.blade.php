@@ -53,7 +53,7 @@
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <label class="text-muted small">Request Date</label>
-                        <p class="mb-0">{{ $stockRequest->created_at->format('d F Y, H:i') }}</p>
+                        <p class="mb-0">{{ formatDateIndoLong($stockRequest->created_at) }} WIB</p>
                     </div>
                     <div class="col-md-6">
                         <label class="text-muted small">Requested By</label>
@@ -132,7 +132,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="text-muted small">Processed Date</label>
-                            <p class="mb-0">{{ $stockRequest->approved_at->format('d F Y, H:i') }}</p>
+                            <p class="mb-0">{{ formatDateIndoLong($stockRequest->approved_at) }} WIB</p>
                         </div>
                     </div>
 

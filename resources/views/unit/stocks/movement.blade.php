@@ -93,7 +93,7 @@
                             <tbody>
                                 @forelse($movements as $movement)
                                     <tr>
-                                        <td>{{ $movement->created_at->format('d/m/Y H:i') }}</td>
+                                        <td>{{ formatDateIndo($movement->created_at) }} WIB</td>
                                         <td>
                                             <strong>{{ $movement->item->name }}</strong><br>
                                             <small class="text-muted">{{ $movement->item->code }}</small>

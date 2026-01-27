@@ -44,7 +44,7 @@ class SubmissionController extends Controller
 
             // Load relationships and order
             $submissions = $query
-                ->with(['item', 'staff', 'supplier', 'warehouse'])
+                ->with(['item', 'staff', 'supplier', 'warehouse', 'approvals.admin'])
                 ->orderBy('submitted_at', 'desc')
                 ->paginate(20);
 

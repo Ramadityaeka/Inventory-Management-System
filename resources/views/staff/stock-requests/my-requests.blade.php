@@ -117,7 +117,7 @@
                                 @foreach($requests as $request)
                                     <tr>
                                         <td><strong>#{{ $request->id }}</strong></td>
-                                        <td>{{ $request->created_at->format('d M Y H:i') }}</td>
+                                        <td>{{ formatDateIndo($request->created_at) }} WIB</td>
                                         <td>
                                             <strong>{{ $request->item->name }}</strong><br>
                                             <small class="text-muted">{{ $request->item->code }}</small>
@@ -132,15 +132,15 @@
                                         <td>
                                             @if($request->status === 'pending')
                                                 <span class="badge bg-warning">
-                                                    <i class="bi bi-clock me-1"></i>Pending
+                                                    <i class="bi bi-clock me-1"></i>Menunggu
                                                 </span>
                                             @elseif($request->status === 'approved')
                                                 <span class="badge bg-success">
-                                                    <i class="bi bi-check-circle me-1"></i>Approved
+                                                    <i class="bi bi-check-circle me-1"></i>Diterima
                                                 </span>
                                             @else
                                                 <span class="badge bg-danger">
-                                                    <i class="bi bi-x-circle me-1"></i>Rejected
+                                                    <i class="bi bi-x-circle me-1"></i>Ditolak
                                                 </span>
                                             @endif
                                         </td>

@@ -80,11 +80,13 @@ class ItemController extends Controller
 
     public function store(Request $request)
     {
+        $unitOptions = array_keys(getUnitOptions());
+        
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
-            'unit' => 'required|string|max:50',
+            'unit' => ['required', 'string', 'in:' . implode(',', $unitOptions)],
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
         ]);
@@ -131,11 +133,13 @@ class ItemController extends Controller
 
     public function update(Request $request, Item $item)
     {
+        $unitOptions = array_keys(getUnitOptions());
+        
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
-            'unit' => 'required|string|max:50',
+            'unit' => ['required', 'string', 'in:' . implode(',', $unitOptions)],
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
             'inactive_reason' => 'nullable|in:discontinued,wrong_input,seasonal',

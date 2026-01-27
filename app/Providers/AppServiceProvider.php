@@ -18,6 +18,7 @@ use App\Listeners\NotifyUserStatusChange;
 use App\Listeners\NotifyUserWarehouseAssignment;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Carbon\Carbon;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -34,6 +35,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Set Carbon locale to Indonesian
+        Carbon::setLocale('id');
+        setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'Indonesian');
+        
+        // Register Blade directives for date formatting
+        \Blade::directive('dateIndo', function ($expression) {
+            return "<?php echo formatDateIndo($expression); ?>";
+        });
+        
+        \Blade::directive('dateIndoLong', function ($expression) {
+            return "<?php echo formatDateIndoLong($expression); ?>";
+        });
+        
         // Register observers
         \App\Models\Stock::observe(\App\Observers\StockObserver::class);
         

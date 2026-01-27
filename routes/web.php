@@ -74,18 +74,23 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/stock-overview/export-excel', [ReportController::class, 'exportStockOverviewExcel'])->name('reports.stock-overview.export-excel');
         Route::get('reports/stock-overview/export-pdf', [ReportController::class, 'exportStockOverviewPdf'])->name('reports.stock-overview.export-pdf');
         
-        // Custom Reports
-        Route::get('reports/custom', [ReportController::class, 'customReports'])->name('reports.custom');
-        Route::get('reports/export-by-category', [ReportController::class, 'exportByCategory'])->name('reports.export-by-category');
-        Route::get('reports/export-by-warehouse', [ReportController::class, 'exportByWarehouse'])->name('reports.export-by-warehouse');
-        Route::get('reports/export-by-supplier', [ReportController::class, 'exportBySupplier'])->name('reports.export-by-supplier');
-        Route::get('reports/export-detailed', [ReportController::class, 'exportDetailed'])->name('reports.export-detailed');
-        
         Route::get('reports/monthly', [\App\Http\Controllers\Admin\MonthlyReportController::class, 'index'])->name('reports.monthly');
         Route::post('reports/monthly/generate', [\App\Http\Controllers\Admin\MonthlyReportController::class, 'generate'])->name('reports.monthly.generate');
         Route::post('reports/monthly/export-pdf', [\App\Http\Controllers\Admin\MonthlyReportController::class, 'exportPdf'])->name('reports.monthly.exportPdf');
         Route::post('reports/export-excel', [ReportController::class, 'exportExcel'])->name('reports.export-excel');
         Route::post('reports/export-pdf', [ReportController::class, 'exportPdf'])->name('reports.export-pdf');
+        
+        // Transaction Report Routes
+        Route::get('reports/transactions', [\App\Http\Controllers\SuperAdmin\TransactionReportController::class, 'index'])->name('reports.transactions');
+        Route::get('reports/transactions/pdf', [\App\Http\Controllers\SuperAdmin\TransactionReportController::class, 'exportPdf'])->name('reports.transactions.pdf');
+        Route::get('reports/transactions/excel', [\App\Http\Controllers\SuperAdmin\TransactionReportController::class, 'exportExcel'])->name('reports.transactions.excel');
+        Route::get('reports/transactions/search-items', [\App\Http\Controllers\SuperAdmin\TransactionReportController::class, 'searchItems'])->name('reports.transactions.search-items');
+        
+        // Stock Value Report Routes
+        Route::get('reports/stock-values', [\App\Http\Controllers\SuperAdmin\StockValueReportController::class, 'index'])->name('reports.stock-values');
+        Route::get('reports/stock-values/pdf', [\App\Http\Controllers\SuperAdmin\StockValueReportController::class, 'exportPdf'])->name('reports.stock-values.pdf');
+        Route::get('reports/stock-values/excel', [\App\Http\Controllers\SuperAdmin\StockValueReportController::class, 'exportExcel'])->name('reports.stock-values.excel');
+        Route::get('reports/stock-values/search-items', [\App\Http\Controllers\SuperAdmin\StockValueReportController::class, 'searchItems'])->name('reports.stock-values.search-items');
     });
 
     // Admin Gudang Routes

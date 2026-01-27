@@ -170,7 +170,7 @@ class StockController extends Controller
         }
         
         // Get stock movements for user warehouses
-        $query = StockMovement::with(['creator', 'warehouse', 'item'])
+        $query = StockMovement::with(['creator', 'warehouse', 'item.category', 'submission.supplier', 'submission.staff'])
             ->whereIn('warehouse_id', $userWarehouses);
         
         // Apply filters
@@ -219,6 +219,9 @@ class StockController extends Controller
 
     public function history(Item $item, Request $request)
     {
+        // Load item relationships
+        $item->load(['category', 'supplier']);
+        
         // Get user warehouse IDs
         $userWarehouses = auth()->user()->warehouses()->pluck('warehouses.id');
         
@@ -236,7 +239,7 @@ class StockController extends Controller
         }
         
         // Get stock movements for this item
-        $query = StockMovement::with(['creator', 'warehouse', 'item'])
+        $query = StockMovement::with(['creator', 'warehouse', 'item', 'submission.supplier', 'submission.staff'])
             ->where('item_id', $item->id)
             ->whereIn('warehouse_id', $userWarehouses);
         
@@ -332,7 +335,7 @@ class StockController extends Controller
             DB::commit();
 
             $actionText = $validated['adjustment_type'] === 'add' ? 'ditambahkan' : 'dikurangi';
-            return redirect()->route('gudang.stocks')->with('success', 
+            return redirect()->route('gudang.stocks.index')->with('success', 
                 "Stock {$stock->item->name} berhasil {$actionText}. Stock sebelumnya: {$oldQuantity}, Stock sekarang: {$stock->quantity}");
 
         } catch (\Exception $e) {

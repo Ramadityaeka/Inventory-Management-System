@@ -60,13 +60,26 @@
                     <label for="unit" class="form-label">Satuan <span class="text-danger">*</span></label>
                     <select class="form-select @error('unit') is-invalid @enderror" 
                             id="unit" name="unit" required>
-                        <option value="pcs" {{ old('unit', $submission->unit ?? 'pcs') == 'pcs' ? 'selected' : '' }}>Pcs</option>
-                        <option value="box" {{ old('unit', $submission->unit) == 'box' ? 'selected' : '' }}>Box</option>
-                        <option value="unit" {{ old('unit', $submission->unit) == 'unit' ? 'selected' : '' }}>Unit</option>
-                        <option value="pak" {{ old('unit', $submission->unit) == 'pak' ? 'selected' : '' }}>Pak</option>
-                        <option value="lusin" {{ old('unit', $submission->unit) == 'lusin' ? 'selected' : '' }}>Lusin</option>
-                        <option value="kg" {{ old('unit', $submission->unit) == 'kg' ? 'selected' : '' }}>Kg</option>
-                        <option value="liter" {{ old('unit', $submission->unit) == 'liter' ? 'selected' : '' }}>Liter</option>
+                        <option value="">Pilih Satuan</option>
+                        <option value="Botol" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Botol' ? 'selected' : '' }}>Botol</option>
+                        <option value="Buah" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Buah' ? 'selected' : '' }}>Buah</option>
+                        <option value="Box" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Box' ? 'selected' : '' }}>Box</option>
+                        <option value="Dus" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Dus' ? 'selected' : '' }}>Dus</option>
+                        <option value="Dus Besar" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Dus Besar' ? 'selected' : '' }}>Dus Besar</option>
+                        <option value="Karton" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Karton' ? 'selected' : '' }}>Karton</option>
+                        <option value="Kg" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Kg' ? 'selected' : '' }}>Kg</option>
+                        <option value="Liter" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Liter' ? 'selected' : '' }}>Liter</option>
+                        <option value="Lusin" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Lusin' ? 'selected' : '' }}>Lusin</option>
+                        <option value="Meter" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Meter' ? 'selected' : '' }}>Meter</option>
+                        <option value="Pack" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Pack' ? 'selected' : '' }}>Pack</option>
+                        <option value="Pad" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Pad' ? 'selected' : '' }}>Pad</option>
+                        <option value="Pasang" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Pasang' ? 'selected' : '' }}>Pasang</option>
+                        <option value="Pcs" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Pcs' ? 'selected' : '' }}>Pcs</option>
+                        <option value="Rim" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Rim' ? 'selected' : '' }}>Rim</option>
+                        <option value="Roll" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Roll' ? 'selected' : '' }}>Roll</option>
+                        <option value="Sak" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Sak' ? 'selected' : '' }}>Sak</option>
+                        <option value="Set" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Set' ? 'selected' : '' }}>Set</option>
+                        <option value="Unit" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Unit' ? 'selected' : '' }}>Unit</option>
                     </select>
                     @error('unit')
                         <div class="invalid-feedback">{{ $message }}</div>
