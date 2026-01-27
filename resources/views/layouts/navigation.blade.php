@@ -53,16 +53,6 @@
             <div class="collapse {{ request()->routeIs('admin.reports.*') ? 'show' : '' }}" id="reportsMenu">
                 <ul class="nav flex-column ms-3">
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.reports.stock-overview') ? 'active' : '' }}" href="{{ route('admin.reports.stock-overview') }}">
-                            <i class="bi bi-box me-2"></i>Stok Overview
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.reports.monthly') ? 'active' : '' }}" href="{{ route('admin.reports.monthly') }}">
-                            <i class="bi bi-calendar-month me-2"></i>Laporan Bulanan
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('admin.reports.transactions') ? 'active' : '' }}" href="{{ route('admin.reports.transactions') }}">
                             <i class="bi bi-arrow-left-right me-2"></i>Laporan Transaksi
                         </a>
@@ -113,12 +103,6 @@
 
         <li class="nav-item mt-3">
             <small class="text-muted px-3 text-uppercase fw-bold">Laporan</small>
-        </li>
-
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('gudang.reports.monthly') ? 'active' : '' }}" href="{{ route('gudang.reports.monthly') }}">
-                <i class="bi bi-calendar-month me-2"></i>Laporan Bulanan
-            </a>
         </li>
         
         <li class="nav-item">

@@ -228,7 +228,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-light">
                 <h6 class="mb-0">
-                    <i class="bi bi-calendar-day text-info me-2"></i>Ringkasan Hari Ini - {{ now()->format('l, d F Y') }}
+                    <i class="bi bi-calendar-day text-info me-2"></i>Ringkasan Hari Ini - {{ formatDateIndo(now(), 'l, d F Y') }}
                 </h6>
             </div>
             <div class="card-body">

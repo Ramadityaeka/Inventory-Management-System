@@ -5,7 +5,7 @@
     <div class="row">
         <div class="col-6">
             <h2>Stock Overview Report</h2>
-            <p class="mb-1"><strong>Generated:</strong> {{ now()->format('d M Y H:i') }}</p>
+            <p class="mb-1"><strong>Generated:</strong> {{ formatDateIndoLong(now()) }} WIB</p>
             @if($warehouse)
                 <p class="mb-1"><strong>Warehouse:</strong> {{ $warehouse->name }}</p>
             @else

@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\AdminUnit\AlertController;
-use App\Http\Controllers\AdminUnit\MonthlyReportController;
 use App\Http\Controllers\AdminUnit\StockController;
 use App\Http\Controllers\AdminUnit\StockReportController;
 use App\Http\Controllers\AdminUnit\StockRequestManagementController;
@@ -70,13 +69,6 @@ Route::middleware('auth')->group(function () {
         Route::post('items/{item}/set-threshold', [ItemController::class, 'setThreshold']);
 
         // Reports
-        Route::get('reports/stock-overview', [ReportController::class, 'stockOverview'])->name('reports.stock-overview');
-        Route::get('reports/stock-overview/export-excel', [ReportController::class, 'exportStockOverviewExcel'])->name('reports.stock-overview.export-excel');
-        Route::get('reports/stock-overview/export-pdf', [ReportController::class, 'exportStockOverviewPdf'])->name('reports.stock-overview.export-pdf');
-        
-        Route::get('reports/monthly', [\App\Http\Controllers\Admin\MonthlyReportController::class, 'index'])->name('reports.monthly');
-        Route::post('reports/monthly/generate', [\App\Http\Controllers\Admin\MonthlyReportController::class, 'generate'])->name('reports.monthly.generate');
-        Route::post('reports/monthly/export-pdf', [\App\Http\Controllers\Admin\MonthlyReportController::class, 'exportPdf'])->name('reports.monthly.exportPdf');
         Route::post('reports/export-excel', [ReportController::class, 'exportExcel'])->name('reports.export-excel');
         Route::post('reports/export-pdf', [ReportController::class, 'exportPdf'])->name('reports.export-pdf');
         
@@ -123,11 +115,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/alerts', [AlertController::class, 'index'])->name('alerts');
         Route::post('/alerts/{alert}/read', [AlertController::class, 'markAsRead'])->name('alerts.markAsRead');
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-        
-        // Reports
-        Route::get('/reports/monthly', [MonthlyReportController::class, 'index'])->name('reports.monthly');
-        Route::post('/reports/monthly/generate', [MonthlyReportController::class, 'generate'])->name('reports.monthly.generate');
-        Route::post('/reports/monthly/export-pdf', [MonthlyReportController::class, 'exportPdf'])->name('reports.monthly.exportPdf');
         
         // Stock Reports
         Route::get('/reports/movements', [StockReportController::class, 'movements'])->name('reports.movements');

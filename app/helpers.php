@@ -128,15 +128,15 @@ if (!function_exists('formatDateIndoLong')) {
             return '-';
         }
         
-        // Create Carbon instance and force Asia/Jakarta timezone
+        // Create Carbon instance and ensure Asia/Jakarta timezone
         if (is_string($date)) {
-            $date = \Carbon\Carbon::parse($date, 'UTC');
-        } else {
-            $date = \Carbon\Carbon::parse($date->toDateTimeString(), 'UTC');
+            $date = \Carbon\Carbon::parse($date);
         }
         
-        // Convert to Jakarta timezone
-        $date = $date->timezone('Asia/Jakarta');
+        // Ensure the date is in Asia/Jakarta timezone
+        if ($date->getTimezone()->getName() !== 'Asia/Jakarta') {
+            $date = $date->timezone('Asia/Jakarta');
+        }
         
         $months = [
             1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',

@@ -155,7 +155,7 @@
     <div class="header-info">
         <p><strong>Report Period:</strong> {{ $reportData['period'] }}</p>
         <p><strong>Warehouse Location:</strong> {{ $reportData['warehouse']->location }}</p>
-        <p><strong>Generated on:</strong> {{ now()->format('d F Y H:i') }}</p>
+        <p><strong>Generated on:</strong> {{ formatDateIndoLong(now()) }} WIB</p>
     </div>
 
     <div class="summary-cards">

@@ -8,9 +8,16 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class StockValueReportExport implements FromCollection, WithHeadings, WithMapping, WithTitle, WithStyles
+class StockValueReportExport implements FromCollection, WithHeadings, WithMapping, WithTitle, WithStyles, ShouldAutoSize, WithStrictNullComparison, WithEvents
 {
     protected $filters;
 
@@ -78,17 +85,17 @@ class StockValueReportExport implements FromCollection, WithHeadings, WithMappin
             ->orderBy('submitted_at', 'desc')
             ->first();
 
-        $unitPrice = $latestSubmission ? $latestSubmission->unit_price : 0;
+        $unitPrice = $latestSubmission ? (float) $latestSubmission->unit_price : 0;
         $totalValue = $stock->quantity * $unitPrice;
 
         return [
             $index,
-            $stock->warehouse->name,
-            $stock->item->code,
-            $stock->item->name,
-            $stock->item->category->name,
-            $stock->quantity,
-            $stock->item->unit,
+            $stock->warehouse->name ?? '-',
+            $stock->item->code ?? '-',
+            $stock->item->name ?? '-',
+            $stock->item->category->name ?? '-',
+            (int) $stock->quantity,
+            $stock->item->unit ?? '-',
             $unitPrice,
             $totalValue
         ];
@@ -101,8 +108,106 @@ class StockValueReportExport implements FromCollection, WithHeadings, WithMappin
 
     public function styles(Worksheet $sheet)
     {
+        // Style header row
+        $sheet->getStyle('A1:I1')->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'],
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '4F81BD'],
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000'],
+                ],
+            ],
+        ]);
+
+        // Style data rows
+        $lastRow = $sheet->getHighestRow();
+        if ($lastRow > 1) {
+            $sheet->getStyle('A2:I' . $lastRow)->applyFromArray([
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => '000000'],
+                    ],
+                ],
+            ]);
+        }
+
+        return [];
+    }
+
+    public function registerEvents(): array
+    {
         return [
-            1 => ['font' => ['bold' => true]],
+            AfterSheet::class => function(AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+                $lastRow = $sheet->getHighestRow();
+                
+                // Get all data to calculate totals
+                $stocks = $this->collection();
+                $totalQuantity = 0;
+                $totalValue = 0;
+                
+                foreach ($stocks as $stock) {
+                    $latestSubmission = \App\Models\Submission::where('item_id', $stock->item_id)
+                        ->where('warehouse_id', $stock->warehouse_id)
+                        ->where('status', 'approved')
+                        ->whereNotNull('unit_price')
+                        ->orderBy('submitted_at', 'desc')
+                        ->first();
+                    
+                    $unitPrice = $latestSubmission ? (float) $latestSubmission->unit_price : 0;
+                    $totalQuantity += $stock->quantity;
+                    $totalValue += $stock->quantity * $unitPrice;
+                }
+                
+                // Add empty row
+                $totalRow = $lastRow + 1;
+                
+                // Add TOTAL KESELURUHAN row
+                $sheet->setCellValue('A' . $totalRow, '');
+                $sheet->setCellValue('B' . $totalRow, '');
+                $sheet->setCellValue('C' . $totalRow, '');
+                $sheet->setCellValue('D' . $totalRow, '');
+                $sheet->setCellValue('E' . $totalRow, 'TOTAL KESELURUHAN:');
+                $sheet->setCellValue('F' . $totalRow, $totalQuantity);
+                $sheet->setCellValue('G' . $totalRow, 'item');
+                $sheet->setCellValue('H' . $totalRow, '');
+                $sheet->setCellValue('I' . $totalRow, $totalValue);
+                
+                // Style total row
+                $sheet->getStyle('A' . $totalRow . ':I' . $totalRow)->applyFromArray([
+                    'font' => [
+                        'bold' => true,
+                        'size' => 11,
+                    ],
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'FFEB9C'],
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000'],
+                        ],
+                    ],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_RIGHT,
+                    ],
+                ]);
+                
+                // Format currency for total value
+                $sheet->getStyle('I' . $totalRow)->getNumberFormat()->setFormatCode('#,##0');
+            },
         ];
     }
 }

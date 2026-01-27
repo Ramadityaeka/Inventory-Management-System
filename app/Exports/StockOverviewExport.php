@@ -8,12 +8,13 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
-class StockOverviewExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class StockOverviewExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize, WithStrictNullComparison
 {
     protected $stocks;
 
@@ -30,23 +31,37 @@ class StockOverviewExport implements FromCollection, WithHeadings, WithMapping, 
     public function headings(): array
     {
         return [
-            'Kode Item',
-            'Nama Item',
-            'Kategori',
-            'Gudang',
-            'Stok Saat Ini',
+            'Item Code',
+            'Item Name',
+            'Category',
+            'Warehouse',
+            'Quantity',
+            'Unit',
+            'Harga Terakhir',
             'Status'
         ];
     }
 
     public function map($stock): array
     {
+        // Get latest approved submission for unit price
+        $latestSubmission = \App\Models\Submission::where('item_id', $stock->item_id)
+            ->where('warehouse_id', $stock->warehouse_id)
+            ->where('status', 'approved')
+            ->whereNotNull('unit_price')
+            ->orderBy('submitted_at', 'desc')
+            ->first();
+
+        $unitPrice = $latestSubmission ? (float) $latestSubmission->unit_price : 0;
+
         return [
             $stock->item->code ?? '-',
             $stock->item->name ?? '-',
             $stock->item->category->name ?? '-',
             $stock->warehouse->name ?? '-',
-            $stock->quantity ?? 0,
+            (int) ($stock->quantity ?? 0),
+            $stock->item->unit ?? '-',
+            $unitPrice > 0 ? number_format($unitPrice, 0, ',', '.') : '-',
             $this->getStatus($stock)
         ];
     }
@@ -54,7 +69,7 @@ class StockOverviewExport implements FromCollection, WithHeadings, WithMapping, 
     public function styles(Worksheet $sheet)
     {
         // Style the header row
-        $sheet->getStyle('A1:F1')->applyFromArray([
+        $sheet->getStyle('A1:H1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF'],
@@ -76,7 +91,7 @@ class StockOverviewExport implements FromCollection, WithHeadings, WithMapping, 
 
         // Style data rows
         $lastRow = $sheet->getHighestRow();
-        $sheet->getStyle('A2:F' . $lastRow)->applyFromArray([
+        $sheet->getStyle('A2:H' . $lastRow)->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,
@@ -86,7 +101,7 @@ class StockOverviewExport implements FromCollection, WithHeadings, WithMapping, 
         ]);
 
         // Auto-size columns
-        foreach (range('A', 'F') as $column) {
+        foreach (range('A', 'H') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 

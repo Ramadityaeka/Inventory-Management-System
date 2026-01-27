@@ -11,7 +11,7 @@
                 <p class="text-muted mb-0">Ringkasan sistem inventory per {{ formatDateIndoLong(now()) }} WIB</p>
             </div>
             <div class="d-flex gap-2">
-                <a href="{{ route('admin.reports.stock-overview') }}" class="btn btn-outline-primary">
+                <a href="{{ route('admin.reports.transactions') }}" class="btn btn-outline-primary">
                     <i class="bi bi-graph-up me-1"></i>Laporan
                 </a>
                 <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary">
@@ -39,7 +39,7 @@
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-arrow-left-right text-warning me-2"></i>
                                 <span>{{ $stats['pending_transfers'] }} transfer menunggu approval</span>
-                                <a href="{{ route('admin.reports.stock-overview') }}" class="btn btn-sm btn-warning ms-auto">Tinjau</a>
+                                <a href="{{ route('admin.reports.transactions') }}" class="btn btn-sm btn-warning ms-auto">Tinjau</a>
                             </div>
                         </div>
                         @endif
@@ -48,7 +48,7 @@
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-exclamation-circle text-danger me-2"></i>
                                 <span>{{ $lowStockItems->count() }} item stok rendah di seluruh gudang</span>
-                                <a href="{{ route('admin.reports.stock-overview') }}" class="btn btn-sm btn-danger ms-auto">Periksa</a>
+                                <a href="{{ route('admin.reports.stock-values') }}" class="btn btn-sm btn-danger ms-auto">Periksa</a>
                             </div>
                         </div>
                         @endif
@@ -115,7 +115,7 @@
     </div>
 
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="card h-100 border-0 shadow-sm hover-card clickable-card" onclick="window.location='{{ route('admin.reports.stock-overview') }}'">
+        <div class="card h-100 border-0 shadow-sm hover-card clickable-card" onclick="window.location='{{ route('admin.reports.stock-values') }}'">
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
@@ -141,7 +141,7 @@
     </div>
 
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="card h-100 border-0 shadow-sm hover-card clickable-card {{ $stats['pending_transfers'] > 0 ? 'border-warning' : '' }}" onclick="window.location='{{ route('admin.reports.stock-overview') }}'" style="{{ $stats['pending_transfers'] > 0 ? 'border-width: 2px !important;' : '' }}">
+        <div class="card h-100 border-0 shadow-sm hover-card clickable-card {{ $stats['pending_transfers'] > 0 ? 'border-warning' : '' }}" onclick="window.location='{{ route('admin.reports.transactions') }}'" style="{{ $stats['pending_transfers'] > 0 ? 'border-width: 2px !important;' : '' }}">
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
@@ -269,9 +269,9 @@
                         </a>
                     </div>
                     <div class="col-6 col-md-3">
-                        <a href="{{ route('admin.reports.stock-overview') }}" class="btn btn-outline-warning w-100 d-flex align-items-center justify-content-center p-3">
+                        <a href="{{ route('admin.reports.transactions') }}" class="btn btn-outline-warning w-100 d-flex align-items-center justify-content-center p-3">
                             <i class="bi bi-arrow-left-right me-2"></i>
-                            <span>Laporan Transfer</span>
+                            <span>Laporan Transaksi</span>
                         </a>
                     </div>
                     <div class="col-6 col-md-3">

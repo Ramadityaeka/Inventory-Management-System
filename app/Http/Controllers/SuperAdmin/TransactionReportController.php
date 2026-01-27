@@ -11,6 +11,8 @@ use App\Models\User;
 use App\Models\Stock;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\TransactionReportExport;
 
 class TransactionReportController extends Controller
 {
@@ -167,175 +169,26 @@ class TransactionReportController extends Controller
 
     public function exportExcel(Request $request)
     {
-        // Get filtered data
-        $query = Submission::with([
-            'item.category',
-            'warehouse',
-            'supplier',
-            'approvals.admin'
-        ])->whereNotNull('submitted_at');
-
-        // Apply same filters as index method
-        if ($request->filled('category_id')) {
-            $query->whereHas('item', function($q) use ($request) {
-                $q->where('category_id', $request->category_id);
-            });
-        }
-
-        if ($request->filled('item_name')) {
-            $query->whereHas('item', function($q) use ($request) {
-                $q->where('name', 'LIKE', '%' . $request->item_name . '%');
-            });
-        }
-
-        if ($request->filled('item_code')) {
-            $query->whereHas('item', function($q) use ($request) {
-                $q->where('code', 'LIKE', '%' . $request->item_code . '%');
-            });
-        }
-
-        if ($request->filled('year')) {
-            $query->whereYear('submitted_at', $request->year);
-        }
-
-        if ($request->filled('month')) {
-            $query->whereMonth('submitted_at', $request->month);
-        }
-
-        if ($request->filled('warehouse_id')) {
-            $query->where('warehouse_id', $request->warehouse_id);
-        }
-
-        if ($request->filled('processed_by')) {
-            $query->whereHas('approvals', function($q) use ($request) {
-                $q->where('admin_id', $request->processed_by);
-            });
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $transactions = $query->orderBy('submitted_at', 'desc')->get();
-
-        // Generate CSV
-        $filename = 'laporan-transaksi-' . date('Y-m-d') . '.csv';
-        
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0'
+        // Collect filters
+        $filters = [
+            'category_id' => $request->input('category_id'),
+            'item_name' => $request->input('item_name'),
+            'item_code' => $request->input('item_code'),
+            'year' => $request->input('year'),
+            'month' => $request->input('month'),
+            'warehouse_id' => $request->input('warehouse_id'),
+            'processed_by' => $request->input('processed_by'),
+            'status' => $request->input('status'),
         ];
 
-        $callback = function() use ($transactions, $request) {
-            $file = fopen('php://output', 'w');
-            
-            // Add BOM for UTF-8
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
-            // Title rows
-            fputcsv($file, ['LAPORAN TRANSAKSI BARANG MASUK & KELUAR']);
-            
-            // Period info
-            if ($request->filled('month') && $request->filled('year')) {
-                $periodText = \Carbon\Carbon::create($request->year, $request->month)->locale('id')->translatedFormat('F Y');
-                fputcsv($file, [$periodText]);
-            } elseif ($request->filled('year')) {
-                fputcsv($file, ['Tahun ' . $request->year]);
-            } else {
-                fputcsv($file, ['Semua Periode']);
-            }
-            
-            fputcsv($file, []); // Empty row
-            
-            // Info rows
-            fputcsv($file, ['Tanggal Cetak:', date('d F Y H:i') . ' WIB']);
-            fputcsv($file, ['Dicetak oleh:', auth()->user()->name]);
-            
-            if ($request->filled('warehouse_id')) {
-                $warehouse = Warehouse::find($request->warehouse_id);
-                fputcsv($file, ['Gudang:', $warehouse ? $warehouse->name : '-']);
-            }
-            if ($request->filled('category_id')) {
-                $category = Category::find($request->category_id);
-                fputcsv($file, ['Kategori:', $category ? $category->name : '-']);
-            }
-            
-            fputcsv($file, []); // Empty row
-            
-            // Summary statistics
-            $approvedCount = $transactions->where('status', 'approved')->count();
-            $pendingCount = $transactions->where('status', 'pending')->count();
-            $rejectedCount = $transactions->where('status', 'rejected')->count();
-            
-            fputcsv($file, ['RINGKASAN']);
-            fputcsv($file, ['Total Transaksi:', $transactions->count()]);
-            fputcsv($file, ['Disetujui:', $approvedCount]);
-            fputcsv($file, ['Menunggu:', $pendingCount]);
-            fputcsv($file, ['Ditolak:', $rejectedCount]);
-            fputcsv($file, []); // Empty row
-            
-            // Table headers
-            fputcsv($file, [
-                'No',
-                'Gudang',
-                'Kode Barang',
-                'Nama Barang',
-                'Kategori',
-                'Jumlah',
-                'Satuan',
-                'Sisa Stok',
-                'Keterangan',
-                'Status',
-                'Diproses Oleh',
-                'Waktu Proses',
-                'Waktu Submit'
-            ]);
-
-            // Data rows
-            foreach ($transactions as $index => $transaction) {
-                $currentStock = Stock::where('warehouse_id', $transaction->warehouse_id)
-                    ->where('item_id', $transaction->item_id)
-                    ->first();
-                $remainingStock = $currentStock ? $currentStock->quantity : 0;
-                $approval = $transaction->approvals->first();
-
-                $statusText = match($transaction->status) {
-                    'approved' => 'Disetujui',
-                    'rejected' => 'Ditolak',
-                    default => 'Menunggu'
-                };
-
-                fputcsv($file, [
-                    $index + 1,
-                    $transaction->warehouse->name,
-                    $transaction->item->code,
-                    $transaction->item->name,
-                    $transaction->item->category->name,
-                    $transaction->quantity,
-                    $transaction->item->unit,
-                    $remainingStock,
-                    $transaction->notes ?? 'Penerimaan dari ' . ($transaction->supplier->name ?? '-'),
-                    $statusText,
-                    $approval ? $approval->admin->name : '-',
-                    $approval ? $approval->created_at->format('d/m/Y H:i') : '-',
-                    $transaction->submitted_at->format('d/m/Y H:i')
-                ]);
-            }
-            
-            fputcsv($file, []); // Empty row
-            fputcsv($file, []); // Empty row
-            
-            // Footer note
-            fputcsv($file, ['Catatan:']);
-            fputcsv($file, ['Laporan ini dibuat secara otomatis oleh sistem.']);
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        // Generate filename
+        $filename = 'laporan-transaksi-' . date('Y-m-d') . '.xlsx';
+        
+        // Download as XLSX using TransactionReportExport class
+        return Excel::download(
+            new TransactionReportExport($filters),
+            $filename
+        );
     }
 
     /**

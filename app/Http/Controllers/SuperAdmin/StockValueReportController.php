@@ -10,6 +10,8 @@ use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\StockValueReportExport;
 
 class StockValueReportController extends Controller
 {
@@ -159,159 +161,22 @@ class StockValueReportController extends Controller
 
     public function exportExcel(Request $request)
     {
-        // Get filtered data
-        $query = Stock::with(['item.category', 'warehouse'])
-            ->where('quantity', '>', 0);
-
-        // Apply same filters as index method
-        if ($request->filled('category_id')) {
-            $query->whereHas('item', function($q) use ($request) {
-                $q->where('category_id', $request->category_id);
-            });
-        }
-
-        if ($request->filled('item_name')) {
-            $query->whereHas('item', function($q) use ($request) {
-                $q->where('name', 'LIKE', '%' . $request->item_name . '%');
-            });
-        }
-
-        if ($request->filled('item_code')) {
-            $query->whereHas('item', function($q) use ($request) {
-                $q->where('code', 'LIKE', '%' . $request->item_code . '%');
-            });
-        }
-
-        if ($request->filled('warehouse_id')) {
-            $query->where('warehouse_id', $request->warehouse_id);
-        }
-
-        $stocks = $query->orderBy('updated_at', 'desc')->get();
-
-        // Calculate unit prices
-        $stocksData = $stocks->map(function ($stock) {
-            $latestSubmission = \App\Models\Submission::where('item_id', $stock->item_id)
-                ->where('warehouse_id', $stock->warehouse_id)
-                ->where('status', 'approved')
-                ->whereNotNull('submitted_at')
-                ->orderBy('submitted_at', 'desc')
-                ->first();
-
-            $unitPrice = $latestSubmission && $latestSubmission->quantity > 0
-                ? ($latestSubmission->total_price / $latestSubmission->quantity)
-                : 0;
-
-            $totalValue = $unitPrice * $stock->quantity;
-
-            return [
-                'item' => $stock->item,
-                'warehouse' => $stock->warehouse,
-                'quantity' => $stock->quantity,
-                'unit_price' => $unitPrice,
-                'total_value' => $totalValue,
-            ];
-        });
-
-        // Generate CSV
-        $filename = 'laporan-stok-nilai-' . date('Y-m-d') . '.csv';
-        
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0'
+        // Collect filters
+        $filters = [
+            'category_id' => $request->input('category_id'),
+            'item_name' => $request->input('item_name'),
+            'item_code' => $request->input('item_code'),
+            'warehouse_id' => $request->input('warehouse_id'),
         ];
 
-        $callback = function() use ($stocksData, $request) {
-            $file = fopen('php://output', 'w');
-            
-            // Add BOM for UTF-8
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
-            // Title rows
-            fputcsv($file, ['LAPORAN DAFTAR STOK BARANG & NILAI']);
-            fputcsv($file, ['Per Tanggal: ' . date('d F Y')]);
-            fputcsv($file, []); // Empty row
-            
-            // Info rows
-            fputcsv($file, ['Tanggal Cetak:', date('d F Y H:i') . ' WIB']);
-            fputcsv($file, ['Dicetak oleh:', auth()->user()->name]);
-            
-            if ($request->filled('warehouse_id')) {
-                $warehouse = Warehouse::find($request->warehouse_id);
-                fputcsv($file, ['Gudang:', $warehouse ? $warehouse->name : '-']);
-            }
-            if ($request->filled('category_id')) {
-                $category = Category::find($request->category_id);
-                fputcsv($file, ['Kategori:', $category ? $category->name : '-']);
-            }
-            
-            fputcsv($file, []); // Empty row
-            
-            // Summary cards
-            fputcsv($file, ['RINGKASAN']);
-            fputcsv($file, ['Total Jenis Barang:', $stocksData->count()]);
-            fputcsv($file, ['Total Jumlah Barang:', $stocksData->sum('quantity')]);
-            fputcsv($file, ['Total Nilai Keseluruhan:', $stocksData->sum('total_value')]);
-            fputcsv($file, []); // Empty row
-            
-            // Table headers
-            fputcsv($file, [
-                'No',
-                'Gudang',
-                'Kode Barang',
-                'Nama Barang',
-                'Kategori',
-                'Jumlah',
-                'Satuan',
-                'Harga/Satuan (Rp)',
-                'Harga Total (Rp)'
-            ]);
-
-            // Data rows
-            foreach ($stocksData as $index => $data) {
-                fputcsv($file, [
-                    $index + 1,
-                    $data['warehouse']->name,
-                    $data['item']->code,
-                    $data['item']->name,
-                    $data['item']->category->name,
-                    $data['quantity'],
-                    $data['item']->unit,
-                    $data['unit_price'] > 0 ? $data['unit_price'] : 0,
-                    $data['total_value'] > 0 ? $data['total_value'] : 0
-                ]);
-            }
-
-            // Empty row before total
-            fputcsv($file, []);
-            
-            // Total row
-            fputcsv($file, [
-                '',
-                '',
-                '',
-                '',
-                'TOTAL KESELURUHAN:',
-                $stocksData->sum('quantity'),
-                'item',
-                '',
-                $stocksData->sum('total_value')
-            ]);
-            
-            fputcsv($file, []); // Empty row
-            fputcsv($file, []); // Empty row
-            
-            // Footer note
-            fputcsv($file, ['Catatan:']);
-            fputcsv($file, ['Laporan ini dibuat secara otomatis oleh sistem.']);
-            fputcsv($file, ['Harga satuan dan total nilai diambil dari data submission terakhir yang disetujui untuk setiap barang.']);
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        // Generate filename
+        $filename = 'laporan-stok-nilai-' . date('Y-m-d') . '.xlsx';
+        
+        // Download as XLSX using StockValueReportExport class
+        return Excel::download(
+            new StockValueReportExport($filters),
+            $filename
+        );
     }
 
     /**

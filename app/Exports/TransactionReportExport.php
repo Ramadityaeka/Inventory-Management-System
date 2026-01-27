@@ -9,9 +9,16 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class TransactionReportExport implements FromCollection, WithHeadings, WithMapping, WithTitle, WithStyles
+class TransactionReportExport implements FromCollection, WithHeadings, WithMapping, WithTitle, WithStyles, ShouldAutoSize, WithStrictNullComparison, WithEvents
 {
     protected $filters;
 
@@ -78,17 +85,14 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
         return [
             'No',
             'Gudang',
-            'Kode Barang',
             'Nama Barang',
-            'Kategori',
             'Jumlah',
             'Satuan',
             'Sisa Stok',
             'Keterangan',
             'Status',
             'Diproses Oleh',
-            'Role',
-            'Waktu Transaksi'
+            'Waktu'
         ];
     }
 
@@ -110,20 +114,25 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
             $statusText = 'Ditolak';
         }
 
+        // Format tanggal dengan aman tanpa koma
+        $submittedDate = $transaction->submitted_at ? 
+            $transaction->submitted_at->format('d-m-Y H:i') : '-';
+
+        // Clean keterangan dari karakter bermasalah
+        $keterangan = $transaction->notes ?: ('Penerimaan dari ' . ($transaction->supplier->name ?? '-'));
+        $keterangan = str_replace([',', '"', "\n", "\r"], [' ', '', ' ', ' '], $keterangan);
+
         return [
             $index,
-            $transaction->warehouse->name,
-            $transaction->item->code,
-            $transaction->item->name,
-            $transaction->item->category->name,
-            $transaction->quantity,
-            $transaction->item->unit,
-            $remainingStock,
-            $transaction->notes ?: 'Penerimaan dari ' . ($transaction->supplier->name ?? '-'),
+            $transaction->warehouse->name ?? '-',
+            $transaction->item->name ?? '-',
+            (int) $transaction->quantity,
+            $transaction->item->unit ?? '-',
+            (int) $remainingStock,
+            $keterangan,
             $statusText,
             $approval ? $approval->admin->name : '-',
-            $approval ? $approval->admin->role : '-',
-            formatDateIndoLong($transaction->submitted_at) . ' WIB'
+            $submittedDate
         ];
     }
 
@@ -134,8 +143,93 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
 
     public function styles(Worksheet $sheet)
     {
+        // Style header row
+        $sheet->getStyle('A1:J1')->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'],
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '4F81BD'],
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000'],
+                ],
+            ],
+        ]);
+
+        // Style data rows
+        $lastRow = $sheet->getHighestRow();
+        if ($lastRow > 1) {
+            $sheet->getStyle('A2:J' . $lastRow)->applyFromArray([
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => '000000'],
+                    ],
+                ],
+            ]);
+        }
+
+        return [];
+    }
+
+    public function registerEvents(): array
+    {
         return [
-            1 => ['font' => ['bold' => true]],
+            AfterSheet::class => function(AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+                $lastRow = $sheet->getHighestRow();
+                
+                // Get all data to calculate totals
+                $transactions = $this->collection();
+                $totalQuantity = $transactions->sum('quantity');
+                
+                // Add empty row
+                $totalRow = $lastRow + 1;
+                
+                // Add TOTAL KESELURUHAN row
+                $sheet->setCellValue('A' . $totalRow, '');
+                $sheet->setCellValue('B' . $totalRow, '');
+                $sheet->setCellValue('C' . $totalRow, 'TOTAL KESELURUHAN:');
+                $sheet->setCellValue('D' . $totalRow, $totalQuantity);
+                $sheet->setCellValue('E' . $totalRow, 'item');
+                $sheet->setCellValue('F' . $totalRow, '');
+                $sheet->setCellValue('G' . $totalRow, '');
+                $sheet->setCellValue('H' . $totalRow, '');
+                $sheet->setCellValue('I' . $totalRow, '');
+                $sheet->setCellValue('J' . $totalRow, '');
+                
+                // Style total row
+                $sheet->getStyle('A' . $totalRow . ':J' . $totalRow)->applyFromArray([
+                    'font' => [
+                        'bold' => true,
+                        'size' => 11,
+                    ],
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'FFEB9C'],
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000'],
+                        ],
+                    ],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_RIGHT,
+                    ],
+                ]);
+                
+                // Format number for total quantity
+                $sheet->getStyle('D' . $totalRow)->getNumberFormat()->setFormatCode('#,##0');
+            },
         ];
     }
 }

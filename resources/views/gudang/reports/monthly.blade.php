@@ -81,7 +81,7 @@
             </div>
             <div class="text-end">
                 <small class="text-muted d-block">Dibuat pada:</small>
-                <strong>{{ now()->format('d M Y H:i') }}</strong>
+                <strong>{{ formatDateIndo(now(), 'd M Y H:i') }}</strong>
             </div>
         </div>
     </div>

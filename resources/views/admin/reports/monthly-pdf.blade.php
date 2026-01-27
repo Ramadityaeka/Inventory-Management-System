@@ -173,7 +173,7 @@
                 {{ $reportData['warehouses'] }}
             @endif
         </p>
-        <p><strong>Tanggal Cetak:</strong> {{ now()->format('d F Y H:i') }}</p>
+        <p><strong>Tanggal Cetak:</strong> {{ formatDateIndoLong(now()) }} WIB</p>
         <p><strong>Dicetak oleh:</strong> {{ auth()->user()->name }}</p>
     </div>
 
