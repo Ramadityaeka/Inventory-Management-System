@@ -11,14 +11,12 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
-use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class TransactionReportExport implements FromCollection, WithHeadings, WithMapping, WithTitle, WithStyles, ShouldAutoSize, WithStrictNullComparison, WithEvents
+class TransactionReportExport implements FromCollection, WithHeadings, WithMapping, WithTitle, WithStyles, ShouldAutoSize, WithStrictNullComparison
 {
     protected $filters;
 
@@ -183,58 +181,5 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
         }
 
         return [];
-    }
-
-    public function registerEvents(): array
-    {
-        return [
-            AfterSheet::class => function(AfterSheet $event) {
-                $sheet = $event->sheet->getDelegate();
-                $lastRow = $sheet->getHighestRow();
-                
-                // Get all data to calculate totals
-                $transactions = $this->collection();
-                $totalQuantity = $transactions->sum('quantity');
-                
-                // Add empty row
-                $totalRow = $lastRow + 1;
-                
-                // Add TOTAL KESELURUHAN row
-                $sheet->setCellValue('A' . $totalRow, '');
-                $sheet->setCellValue('B' . $totalRow, '');
-                $sheet->setCellValue('C' . $totalRow, 'TOTAL KESELURUHAN:');
-                $sheet->setCellValue('D' . $totalRow, $totalQuantity);
-                $sheet->setCellValue('E' . $totalRow, 'item');
-                $sheet->setCellValue('F' . $totalRow, '');
-                $sheet->setCellValue('G' . $totalRow, '');
-                $sheet->setCellValue('H' . $totalRow, '');
-                $sheet->setCellValue('I' . $totalRow, '');
-                $sheet->setCellValue('J' . $totalRow, '');
-                
-                // Style total row
-                $sheet->getStyle('A' . $totalRow . ':J' . $totalRow)->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                        'size' => 11,
-                    ],
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => 'FFEB9C'],
-                    ],
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000'],
-                        ],
-                    ],
-                    'alignment' => [
-                        'horizontal' => Alignment::HORIZONTAL_RIGHT,
-                    ],
-                ]);
-                
-                // Format number for total quantity
-                $sheet->getStyle('D' . $totalRow)->getNumberFormat()->setFormatCode('#,##0');
-            },
-        ];
     }
 }

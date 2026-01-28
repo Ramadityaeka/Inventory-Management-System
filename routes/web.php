@@ -123,6 +123,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports', [GudangReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/transactions', [GudangReportController::class, 'transactions'])->name('reports.transactions');
         Route::get('/reports/stock-values', [GudangReportController::class, 'stockValues'])->name('reports.stock-values');
+        Route::get('/reports/monthly', [GudangReportController::class, 'monthly'])->name('reports.monthly');
         Route::get('/reports/transactions/export', [GudangReportController::class, 'exportTransactions'])->name('reports.transactions.export');
         Route::get('/reports/stock-values/export', [GudangReportController::class, 'exportStockValues'])->name('reports.stock-values.export');
         Route::post('/reports/transactions/export-pdf', [GudangReportController::class, 'exportTransactionsPdf'])->name('reports.transactions.exportPdf');

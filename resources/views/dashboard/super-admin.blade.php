@@ -456,7 +456,7 @@
                 <h6 class="mb-0">
                     <i class="bi bi-activity text-primary me-2"></i>Aktivitas Terbaru
                 </h6>
-                <a href="{{ route('super-admin.reports.stock-values.index') }}" class="btn btn-sm btn-outline-primary">
+                <a href="{{ route('admin.reports.stock-values') }}" class="btn btn-sm btn-outline-primary">
                     <i class="bi bi-list me-1"></i>Lihat Laporan
                 </a>
             </div>

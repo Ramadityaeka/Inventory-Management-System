@@ -408,4 +408,90 @@ class GudangReportController extends Controller
 
         return $pdf->download('laporan-stok-nilai-gudang-' . date('Y-m-d') . '.pdf');
     }
+
+    /**
+     * Display monthly report
+     */
+    public function monthly(Request $request)
+    {
+        $user = auth()->user();
+        $warehouseIds = $user->warehouses()->pluck('warehouses.id');
+
+        if ($warehouseIds->isEmpty()) {
+            return redirect()->route('dashboard')
+                ->with('error', 'Anda belum ditugaskan ke gudang manapun.');
+        }
+
+        $query = Submission::with([
+            'item.category',
+            'warehouse',
+            'supplier',
+            'staff'
+        ])->whereIn('warehouse_id', $warehouseIds)
+          ->whereNotNull('submitted_at')
+          ->where('status', 'approved');
+
+        // Filter by Category
+        if ($request->filled('category_id')) {
+            $query->whereHas('item', function($q) use ($request) {
+                $q->where('category_id', $request->category_id);
+            });
+        }
+
+        // Filter by Item Name
+        if ($request->filled('item_name')) {
+            $query->whereHas('item', function($q) use ($request) {
+                $q->where('name', 'LIKE', '%' . $request->item_name . '%');
+            });
+        }
+
+        // Filter by Item Code
+        if ($request->filled('item_code')) {
+            $query->whereHas('item', function($q) use ($request) {
+                $q->where('code', 'LIKE', '%' . $request->item_code . '%');
+            });
+        }
+
+        // Filter by Year
+        if ($request->filled('year')) {
+            $query->whereYear('submitted_at', $request->year);
+        }
+
+        // Filter by Month
+        if ($request->filled('month')) {
+            $query->whereMonth('submitted_at', $request->month);
+        }
+
+        $transactions = $query->orderBy('submitted_at', 'desc')->paginate(50);
+
+        // Calculate monthly statistics
+        $stats = [
+            'total_transactions' => $transactions->count(),
+            'total_quantity' => $transactions->sum('quantity'),
+            'total_value' => $transactions->sum(function($transaction) {
+                return $transaction->quantity * $transaction->unit_price;
+            }),
+        ];
+
+        // Get filter options
+        $warehouses = $user->warehouses;
+        $categories = Category::orderBy('name')->get();
+        $items = Item::orderBy('name')->get();
+        
+        $years = Submission::whereIn('warehouse_id', $warehouseIds)
+            ->selectRaw('YEAR(submitted_at) as year')
+            ->whereNotNull('submitted_at')
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->pluck('year');
+
+        return view('gudang.reports.monthly', compact(
+            'transactions',
+            'warehouses',
+            'categories',
+            'items',
+            'years',
+            'stats'
+        ));
+    }
 }

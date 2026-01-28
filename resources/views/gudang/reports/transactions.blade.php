@@ -169,7 +169,7 @@
                             <th>Nama Barang</th>
                             <th>Kategori</th>
                             <th>Supplier</th>
-                            <th class="text-end">Jumlah</th>
+                            <th class="text-end">Stok</th>
                             <th class="text-end">Harga/Satuan</th>
                             <th class="text-end">Total Harga</th>
                             <th>Staff</th>
