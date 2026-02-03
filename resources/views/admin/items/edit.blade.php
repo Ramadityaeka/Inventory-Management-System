@@ -109,9 +109,9 @@
             </div>
 
             <div class="row">
-                <!-- Satuan -->
+                <!-- Satuan Dasar -->
                 <div class="col-md-6 mb-3">
-                    <label for="unit" class="form-label">Satuan <span class="text-danger">*</span></label>
+                    <label for="unit" class="form-label">Satuan Dasar <span class="text-danger">*</span></label>
                     <select class="form-select @error('unit') is-invalid @enderror"
                             id="unit" name="unit" required>
                         <option value="">Pilih Satuan</option>
@@ -135,9 +135,130 @@
                         <option value="Set" {{ old('unit', $item->unit) == 'Set' ? 'selected' : '' }}>Set</option>
                         <option value="Unit" {{ old('unit', $item->unit) == 'Unit' ? 'selected' : '' }}>Unit</option>
                     </select>
+                    <div class="form-text">Satuan terkecil untuk menghitung stok. Semua stok akan dikonversi ke satuan ini.</div>
                     @error('unit')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
+                </div>
+            </div>
+
+            <!-- Unit Management Section -->
+            <div class="card mb-3 border-info">
+                <div class="card-header bg-info bg-opacity-10">
+                    <h6 class="mb-0">
+                        <i class="bi bi-box-seam me-1"></i>Pengaturan Satuan Alternatif
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        <i class="bi bi-info-circle"></i> 
+                        Tambahkan satuan alternatif yang dapat digunakan saat input barang masuk. 
+                        Sistem akan otomatis mengkonversi ke satuan dasar saat menghitung stok.
+                    </p>
+
+                    <!-- Existing Units -->
+                    <div class="mb-3">
+                        <h6 class="mb-2">Satuan yang Tersedia:</h6>
+                        @if($item->units->count() > 0)
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Nama Satuan</th>
+                                            <th>Faktor Konversi</th>
+                                            <th>Keterangan</th>
+                                            <th width="120">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($item->units as $unit)
+                                            <tr id="unit-row-{{ $unit->id }}">
+                                                <td>
+                                                    <strong>{{ $unit->name }}</strong>
+                                                </td>
+                                                <td>
+                                                    <code>{{ $unit->conversion_factor }}</code>
+                                                </td>
+                                                <td>
+                                                    <small class="text-muted">
+                                                        1 {{ $unit->name }} = {{ $unit->conversion_factor }} {{ $item->unit }}
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                            onclick="editUnit({{ $unit->id }}, '{{ $unit->name }}', {{ $unit->conversion_factor }})">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <form action="{{ route('admin.items.units.destroy', [$item, $unit]) }}" 
+                                                          method="POST" class="d-inline" 
+                                                          onsubmit="return confirm('Yakin ingin menghapus satuan ini?');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <div class="alert alert-info mb-0">
+                                <small><i class="bi bi-info-circle"></i> Belum ada satuan alternatif. Tambahkan satuan di bawah.</small>
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- Add/Edit Unit Form -->
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="mb-3" id="unit-form-title">
+                                <i class="bi bi-plus-circle me-1"></i>Tambah Satuan Baru
+                            </h6>
+                            <form id="unit-form" method="POST" action="{{ route('admin.items.units.store', $item) }}">
+                                @csrf
+                                <input type="hidden" id="unit-id" name="unit_id">
+                                <input type="hidden" id="unit-method" name="_method" value="POST">
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-2">
+                                        <label for="unit-name" class="form-label small">Nama Satuan</label>
+                                        <input type="text" class="form-control form-control-sm" 
+                                               id="unit-name" name="name" 
+                                               placeholder="Contoh: Box, Pack, Dus" required>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label for="unit-factor" class="form-label small">Faktor Konversi</label>
+                                        <input type="number" class="form-control form-control-sm" 
+                                               id="unit-factor" name="conversion_factor" 
+                                               min="1" placeholder="Contoh: 12" required>
+                                        <small class="text-muted">Berapa {{ $item->unit }} dalam 1 satuan ini?</small>
+                                    </div>
+                                    <div class="col-md-4 mb-2 d-flex align-items-end">
+                                        <button type="submit" class="btn btn-primary btn-sm me-2" id="unit-submit-btn">
+                                            <i class="bi bi-check"></i> Simpan
+                                        </button>
+                                        <button type="button" class="btn btn-secondary btn-sm" id="unit-cancel-btn" 
+                                                onclick="resetUnitForm()" style="display: none;">
+                                            <i class="bi bi-x"></i> Batal
+                                        </button>
+                                    </div>
+                                </div>
+                                @if($errors->has('name') || $errors->has('conversion_factor'))
+                                    <div class="alert alert-danger mt-2 mb-0">
+                                        @foreach($errors->get('name') as $error)
+                                            <small>{{ $error }}</small><br>
+                                        @endforeach
+                                        @foreach($errors->get('conversion_factor') as $error)
+                                            <small>{{ $error }}</small><br>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -272,6 +393,38 @@ function handleInactiveReasonChange() {
 document.addEventListener('DOMContentLoaded', function() {
     handleInactiveReasonChange();
 });
+
+// Unit Management Functions
+function editUnit(id, name, factor) {
+    document.getElementById('unit-id').value = id;
+    document.getElementById('unit-name').value = name;
+    document.getElementById('unit-factor').value = factor;
+    document.getElementById('unit-form-title').innerHTML = '<i class="bi bi-pencil me-1"></i>Edit Satuan';
+    document.getElementById('unit-submit-btn').innerHTML = '<i class="bi bi-check"></i> Update';
+    document.getElementById('unit-cancel-btn').style.display = 'inline-block';
+    
+    // Update form action
+    const form = document.getElementById('unit-form');
+    form.action = '{{ route("admin.items.units.update", [$item, ":id"]) }}'.replace(':id', id);
+    form.querySelector('[name="_method"]').value = 'PUT';
+    
+    // Scroll to form
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function resetUnitForm() {
+    document.getElementById('unit-id').value = '';
+    document.getElementById('unit-name').value = '';
+    document.getElementById('unit-factor').value = '';
+    document.getElementById('unit-form-title').innerHTML = '<i class="bi bi-plus-circle me-1"></i>Tambah Satuan Baru';
+    document.getElementById('unit-submit-btn').innerHTML = '<i class="bi bi-check"></i> Simpan';
+    document.getElementById('unit-cancel-btn').style.display = 'none';
+    
+    // Reset form action
+    const form = document.getElementById('unit-form');
+    form.action = '{{ route("admin.items.units.store", $item) }}';
+    form.querySelector('[name="_method"]').value = 'POST';
+}
 </script>
 @endpush
 @endsection

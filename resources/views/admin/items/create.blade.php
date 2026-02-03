@@ -19,14 +19,18 @@
             @csrf
 
             <div class="row">
-                <!-- Code (Auto-generated) -->
+                <!-- Code (Auto-generated dari kategori) -->
                 <div class="col-md-6 mb-3">
-                    <label for="code" class="form-label">Kode Barang</label>
-                    <input type="text" class="form-control" id="code" name="code"
-                           value="{{ old('code', 'INV-' . date('Y') . '-001') }}" readonly>
-                    <div class="form-text">Kode akan di-generate otomatis</div>
+                    <label for="code" class="form-label">Kode Barang <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control @error('code') is-invalid @enderror" 
+                           id="code" name="code"
+                           value="{{ old('code') }}" 
+                           placeholder="Pilih kategori terlebih dahulu" readonly>
+                    <div class="form-text">
+                        <i class="bi bi-info-circle"></i> Kode otomatis dibuat dari kategori. Contoh: 1.01.03.01.001
+                    </div>
                     @error('code')
-                        <div class="text-danger small">{{ $message }}</div>
+                        <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
 
@@ -243,6 +247,35 @@ function selectCategory(id, name) {
     `;
     document.getElementById('category_results').style.display = 'none';
     selectedCategoryId = id;
+    
+    // Auto-generate item code based on category
+    generateItemCode(id);
+}
+
+function generateItemCode(categoryId) {
+    if (!categoryId) return;
+    
+    console.log('Generating item code for category:', categoryId);
+    const url = `{{ route('admin.items.generate-code') }}?category_id=${categoryId}`;
+    console.log('API URL:', url);
+    
+    fetch(url)
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.code) {
+                document.getElementById('code').value = data.code;
+                console.log('Code field updated:', data.code);
+            } else {
+                console.error('No code in response');
+            }
+        })
+        .catch(error => {
+            console.error('Error generating item code:', error);
+        });
 }
 
 function escapeHtml(text) {
@@ -328,6 +361,25 @@ function saveNewCategory() {
 document.addEventListener('click', function(e) {
     if (!e.target.closest('#category_search') && !e.target.closest('#category_results')) {
         document.getElementById('category_results').style.display = 'none';
+    }
+});
+
+// Validate form before submit
+document.querySelector('form').addEventListener('submit', function(e) {
+    const categoryId = document.getElementById('category_id').value;
+    const code = document.getElementById('code').value;
+    
+    if (!categoryId) {
+        e.preventDefault();
+        alert('Silakan pilih kategori terlebih dahulu!');
+        document.getElementById('category_search').focus();
+        return false;
+    }
+    
+    if (!code) {
+        e.preventDefault();
+        alert('Kode barang belum di-generate. Pastikan kategori sudah dipilih!');
+        return false;
     }
 });
 </script>

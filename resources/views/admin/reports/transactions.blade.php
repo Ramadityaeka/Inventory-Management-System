@@ -263,7 +263,7 @@
 
             <!-- Pagination -->
             <div class="mt-3">
-                {{ $transactions->links() }}
+                {{ $transactions->links('vendor.pagination.bootstrap-5') }}
             </div>
         </div>
     </div>

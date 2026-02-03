@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\ItemUnit;
 use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\Supplier;
@@ -83,6 +84,7 @@ class ItemController extends Controller
         $unitOptions = array_keys(getUnitOptions());
         
         $validated = $request->validate([
+            'code' => 'required|string|max:50|unique:items,code',
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
@@ -91,14 +93,12 @@ class ItemController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
-        // Auto-generate code based on category: PREFIX-YYYY-NNN
-        $validated['code'] = generateItemCode($validated['category_id']);
         $validated['is_active'] = $request->has('is_active') ? $request->boolean('is_active') : true;
 
         Item::create($validated);
 
         return redirect()->route('admin.items.index')
-            ->with('success', 'Item created successfully.');
+            ->with('success', 'Barang berhasil ditambahkan.');
     }
 
     public function show(Item $item)
@@ -123,7 +123,7 @@ class ItemController extends Controller
 
     public function edit(Item $item)
     {
-        $item->load(['category', 'supplier', 'deactivatedBy', 'replacementItem']);
+        $item->load(['category', 'supplier', 'deactivatedBy', 'replacementItem', 'units']);
 
         $categories = Category::orderBy('name')->get();
         $suppliers = Supplier::orderBy('name')->get();
@@ -323,5 +323,124 @@ class ItemController extends Controller
                 'last_updated' => now(),
             ]);
         }
+    }
+
+    /**
+     * Store a new unit for an item
+     */
+    public function storeUnit(Request $request, Item $item)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:50',
+            'conversion_factor' => 'required|integer|min:1',
+        ], [
+            'name.required' => 'Nama satuan wajib diisi.',
+            'conversion_factor.required' => 'Faktor konversi wajib diisi.',
+            'conversion_factor.integer' => 'Faktor konversi harus berupa angka.',
+            'conversion_factor.min' => 'Faktor konversi minimal 1.',
+        ]);
+
+        // Check if unit name already exists for this item
+        $existingUnit = ItemUnit::where('item_id', $item->id)
+            ->where('name', $validated['name'])
+            ->first();
+
+        if ($existingUnit) {
+            return back()->withErrors(['name' => 'Satuan dengan nama ini sudah ada untuk item ini.'])->withInput();
+        }
+
+        ItemUnit::create([
+            'item_id' => $item->id,
+            'name' => $validated['name'],
+            'conversion_factor' => $validated['conversion_factor'],
+        ]);
+
+        return redirect()->route('admin.items.edit', $item)
+            ->with('success', 'Satuan berhasil ditambahkan.');
+    }
+
+    /**
+     * Update an existing unit
+     */
+    public function updateUnit(Request $request, Item $item, ItemUnit $itemUnit)
+    {
+        // Verify the unit belongs to the item
+        if ($itemUnit->item_id !== $item->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:50',
+            'conversion_factor' => 'required|integer|min:1',
+        ], [
+            'name.required' => 'Nama satuan wajib diisi.',
+            'conversion_factor.required' => 'Faktor konversi wajib diisi.',
+            'conversion_factor.integer' => 'Faktor konversi harus berupa angka.',
+            'conversion_factor.min' => 'Faktor konversi minimal 1.',
+        ]);
+
+        // Check if unit name already exists for this item (excluding current unit)
+        $existingUnit = ItemUnit::where('item_id', $item->id)
+            ->where('name', $validated['name'])
+            ->where('id', '!=', $itemUnit->id)
+            ->first();
+
+        if ($existingUnit) {
+            return back()->withErrors(['name' => 'Satuan dengan nama ini sudah ada untuk item ini.'])->withInput();
+        }
+
+        $itemUnit->update($validated);
+
+        return redirect()->route('admin.items.edit', $item)
+            ->with('success', 'Satuan berhasil diupdate.');
+    }
+
+    /**
+     * Delete a unit
+     */
+    public function destroyUnit(Item $item, ItemUnit $itemUnit)
+    {
+        // Verify the unit belongs to the item
+        if ($itemUnit->item_id !== $item->id) {
+            abort(404);
+        }
+
+        $itemUnit->delete();
+
+        return redirect()->route('admin.items.edit', $item)
+            ->with('success', 'Satuan berhasil dihapus.');
+    }
+
+    /**
+     * Generate item code based on category
+     * API endpoint for auto-generating item code
+     */
+    public function generateCode(Request $request)
+    {
+        $categoryId = $request->input('category_id');
+        $category = Category::find($categoryId);
+        
+        if (!$category) {
+            return response()->json(['error' => 'Kategori tidak ditemukan'], 404);
+        }
+        
+        // Cari item terakhir dalam kategori ini
+        $lastItem = Item::where('category_id', $categoryId)
+            ->orderBy('code', 'desc')
+            ->first();
+        
+        if ($lastItem) {
+            // Parse nomor urut dari kode terakhir
+            // Misal: 1.01.03.01.001 -> ambil 001
+            $parts = explode('.', $lastItem->code);
+            $lastNumber = intval(end($parts));
+            $nextNumber = $lastNumber + 1;
+            $newCode = $category->code . '.' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        } else {
+            // Belum ada item di kategori ini, mulai dari 001
+            $newCode = $category->code . '.001';
+        }
+        
+        return response()->json(['code' => $newCode]);
     }
 }

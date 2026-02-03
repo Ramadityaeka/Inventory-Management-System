@@ -230,7 +230,7 @@
                             Menampilkan {{ $stocks->firstItem() }} - {{ $stocks->lastItem() }} dari {{ $stocks->total() }} data
                         </div>
                         <div>
-                            {{ $stocks->appends(request()->query())->links() }}
+                            {{ $stocks->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
                         </div>
                     </div>
                 @else

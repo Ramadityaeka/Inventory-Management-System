@@ -193,7 +193,7 @@
         </div>
         @if($stocks->hasPages())
             <div class="card-footer">
-                {{ $stocks->links() }}
+                {{ $stocks->links('vendor.pagination.bootstrap-5') }}
             </div>
         @endif
     </div>

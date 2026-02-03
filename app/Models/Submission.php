@@ -34,6 +34,7 @@ class Submission extends Model
     protected $fillable = [
         'item_id',
         'item_name',
+        'unit_id',
         'warehouse_id',
         'staff_id',
         'quantity',
@@ -47,6 +48,7 @@ class Submission extends Model
         'invoice_photo',
         'status',
         'is_draft',
+        'conversion_factor',
         'submitted_at',
     ];
 

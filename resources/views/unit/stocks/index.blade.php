@@ -210,7 +210,7 @@
                             Showing {{ $stocks->firstItem() }} - {{ $stocks->lastItem() }} of {{ $stocks->total() }} stocks
                         </div>
                         <div>
-                            {{ $stocks->links() }}
+                            {{ $stocks->links('vendor.pagination.bootstrap-5') }}
                         </div>
                     </div>
                 @else

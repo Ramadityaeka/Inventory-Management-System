@@ -61,26 +61,12 @@
                     <select class="form-select @error('unit') is-invalid @enderror" 
                             id="unit" name="unit" required>
                         <option value="">Pilih Satuan</option>
-                        <option value="Botol" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Botol' ? 'selected' : '' }}>Botol</option>
-                        <option value="Buah" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Buah' ? 'selected' : '' }}>Buah</option>
-                        <option value="Box" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Box' ? 'selected' : '' }}>Box</option>
-                        <option value="Dus" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Dus' ? 'selected' : '' }}>Dus</option>
-                        <option value="Dus Besar" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Dus Besar' ? 'selected' : '' }}>Dus Besar</option>
-                        <option value="Karton" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Karton' ? 'selected' : '' }}>Karton</option>
-                        <option value="Kg" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Kg' ? 'selected' : '' }}>Kg</option>
-                        <option value="Liter" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Liter' ? 'selected' : '' }}>Liter</option>
-                        <option value="Lusin" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Lusin' ? 'selected' : '' }}>Lusin</option>
-                        <option value="Meter" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Meter' ? 'selected' : '' }}>Meter</option>
-                        <option value="Pack" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Pack' ? 'selected' : '' }}>Pack</option>
-                        <option value="Pad" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Pad' ? 'selected' : '' }}>Pad</option>
-                        <option value="Pasang" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Pasang' ? 'selected' : '' }}>Pasang</option>
-                        <option value="Pcs" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Pcs' ? 'selected' : '' }}>Pcs</option>
-                        <option value="Rim" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Rim' ? 'selected' : '' }}>Rim</option>
-                        <option value="Roll" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Roll' ? 'selected' : '' }}>Roll</option>
-                        <option value="Sak" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Sak' ? 'selected' : '' }}>Sak</option>
-                        <option value="Set" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Set' ? 'selected' : '' }}>Set</option>
-                        <option value="Unit" {{ old('unit', $submission->unit ?? $submission->item->unit ?? '') == 'Unit' ? 'selected' : '' }}>Unit</option>
+                        <!-- Options will be dynamically loaded based on selected item -->
                     </select>
+                    <input type="hidden" id="conversion_factor" name="conversion_factor" value="{{ old('conversion_factor', $submission->conversion_factor ?? 1) }}">
+                    <div class="form-text" id="unit-help-text">
+                        <i class="bi bi-info-circle"></i> Loading satuan...
+                    </div>
                     @error('unit')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
@@ -408,8 +394,120 @@
     itemNameInput.addEventListener('keydown', function() {
         if (itemIdInput.value) {
             itemIdInput.value = '';
+            resetUnitDropdown();
         }
     });
+
+    // Load units for selected item
+    function loadItemUnits(itemId) {
+        if (!itemId) {
+            resetUnitDropdown();
+            return;
+        }
+
+        fetch(`/staff/api/item-units?item_id=${itemId}`)
+            .then(response => response.json())
+            .then(data => {
+                const unitSelect = document.getElementById('unit');
+                const unitHelpText = document.getElementById('unit-help-text');
+                const conversionFactorInput = document.getElementById('conversion_factor');
+                const currentUnit = '{{ old("unit", $submission->unit ?? "") }}';
+                
+                // Clear existing options
+                unitSelect.innerHTML = '<option value="">Pilih Satuan</option>';
+                
+                if (data.units && data.units.length > 0) {
+                    // Add units to dropdown
+                    data.units.forEach(unit => {
+                        const option = document.createElement('option');
+                        option.value = unit.name;
+                        option.textContent = unit.name;
+                        option.dataset.conversionFactor = unit.conversion_factor;
+                        
+                        // Select current unit if it matches
+                        if (unit.name === currentUnit) {
+                            option.selected = true;
+                            conversionFactorInput.value = unit.conversion_factor;
+                        }
+                        
+                        unitSelect.appendChild(option);
+                    });
+                    
+                    // If no unit selected, select base unit
+                    if (!unitSelect.value && data.units.length > 0) {
+                        const baseUnit = data.units.find(u => u.is_base);
+                        if (baseUnit) {
+                            unitSelect.value = baseUnit.name;
+                            conversionFactorInput.value = baseUnit.conversion_factor;
+                        }
+                    }
+                    
+                    // Update help text
+                    unitHelpText.innerHTML = `
+                        <i class="bi bi-info-circle"></i> 
+                        Satuan yang tersedia untuk barang ini. 
+                        Satuan dasar: <strong>${data.base_unit}</strong>
+                    `;
+                } else {
+                    resetUnitDropdown();
+                    unitHelpText.innerHTML = `
+                        <i class="bi bi-info-circle"></i> 
+                        Barang ini belum memiliki satuan khusus. 
+                        Gunakan satuan dasar: <strong>${data.base_unit || 'Pcs'}</strong>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading units:', error);
+                resetUnitDropdown();
+            });
+    }
+
+    // Reset unit dropdown to default
+    function resetUnitDropdown() {
+        const unitSelect = document.getElementById('unit');
+        const unitHelpText = document.getElementById('unit-help-text');
+        const conversionFactorInput = document.getElementById('conversion_factor');
+        
+        unitSelect.innerHTML = `
+            <option value="">Pilih Satuan</option>
+            <option value="Botol">Botol</option>
+            <option value="Buah">Buah</option>
+            <option value="Box">Box</option>
+            <option value="Dus">Dus</option>
+            <option value="Dus Besar">Dus Besar</option>
+            <option value="Karton">Karton</option>
+            <option value="Kg">Kg</option>
+            <option value="Liter">Liter</option>
+            <option value="Lusin">Lusin</option>
+            <option value="Meter">Meter</option>
+            <option value="Pack">Pack</option>
+            <option value="Pad">Pad</option>
+            <option value="Pasang">Pasang</option>
+            <option value="Pcs" selected>Pcs</option>
+            <option value="Rim">Rim</option>
+            <option value="Roll">Roll</option>
+            <option value="Sak">Sak</option>
+            <option value="Set">Set</option>
+            <option value="Unit">Unit</option>
+        `;
+        conversionFactorInput.value = 1;
+        unitHelpText.innerHTML = '<i class="bi bi-info-circle"></i> Pilih barang terlebih dahulu untuk melihat satuan yang tersedia';
+    }
+
+    // Update conversion factor when unit changes
+    document.getElementById('unit').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const conversionFactor = selectedOption.dataset.conversionFactor || 1;
+        document.getElementById('conversion_factor').value = conversionFactor;
+    });
+
+    // Load units on page load if item_id exists
+    @if($submission->item_id)
+        loadItemUnits({{ $submission->item_id }});
+    @elseif(old('item_id'))
+        loadItemUnits({{ old('item_id') }});
+    @endif
 
     // Preview new photos
     document.getElementById('photos').addEventListener('change', function(e) {

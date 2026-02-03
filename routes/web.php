@@ -68,8 +68,14 @@ Route::middleware('auth')->group(function () {
         Route::get('categories/api/generate-code', [CategoryController::class, 'generateCode'])->name('categories.generate-code');
         
         Route::resource('suppliers', SupplierController::class);
+        // Item API endpoints (harus sebelum resource route)
+        Route::get('items/api/generate-code', [ItemController::class, 'generateCode'])->name('items.generate-code');
         Route::resource('items', ItemController::class);
         Route::post('items/{item}/set-threshold', [ItemController::class, 'setThreshold']);
+        // Item Unit routes
+        Route::post('items/{item}/units', [ItemController::class, 'storeUnit'])->name('items.units.store');
+        Route::put('items/{item}/units/{itemUnit}', [ItemController::class, 'updateUnit'])->name('items.units.update');
+        Route::delete('items/{item}/units/{itemUnit}', [ItemController::class, 'destroyUnit'])->name('items.units.destroy');
 
         // Reports
         Route::post('reports/export-excel', [ReportController::class, 'exportExcel'])->name('reports.export-excel');
@@ -144,6 +150,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/api/search-items', [ReceiveItemController::class, 'search'])->name('api.search-items');
         Route::get('/api/search-categories', [ReceiveItemController::class, 'searchCategories'])->name('api.search-categories');
         Route::get('/api/generate-item-code', [ReceiveItemController::class, 'generateItemCode'])->name('api.generate-item-code');
+        Route::get('/api/item-units', [ReceiveItemController::class, 'getItemUnits'])->name('api.item-units');
         
         // Legacy route for backward compatibility
         Route::get('/search-items', [ReceiveItemController::class, 'search'])->name('search-items');

@@ -259,7 +259,7 @@
             <!-- Pagination -->
             @if($movements->hasPages())
                 <div class="d-flex justify-content-center mt-4">
-                    {{ $movements->appends(request()->query())->links() }}
+                    {{ $movements->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
                 </div>
             @endif
         @else

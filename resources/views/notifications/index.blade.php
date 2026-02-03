@@ -113,7 +113,7 @@
             <!-- Pagination -->
             @if($notifications->hasPages())
                 <div class="d-flex justify-content-center mt-4">
-                    {{ $notifications->links() }}
+                    {{ $notifications->links('vendor.pagination.bootstrap-5') }}
                 </div>
             @endif
         @else

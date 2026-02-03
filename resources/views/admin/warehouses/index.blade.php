@@ -105,7 +105,7 @@
         <!-- Pagination -->
         @if($warehouses->hasPages())
             <div class="d-flex justify-content-center mt-4">
-                {{ $warehouses->appends(request()->query())->links() }}
+                {{ $warehouses->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
             </div>
         @endif
     </div>

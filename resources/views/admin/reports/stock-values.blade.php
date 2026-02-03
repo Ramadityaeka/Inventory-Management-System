@@ -200,7 +200,7 @@
 
             <!-- Pagination -->
             <div class="mt-3">
-                {{ $stocks->links() }}
+                {{ $stocks->links('vendor.pagination.bootstrap-5') }}
             </div>
         </div>
     </div>

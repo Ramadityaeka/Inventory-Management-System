@@ -66,15 +66,12 @@ class StockController extends Controller
         });
         
         // Calculate statistics for the warehouse
-        $statsQuery = Stock::join('items', 'stocks.item_id', '=', 'items.id')
-            ->where('stocks.warehouse_id', $warehouseId);
+        $statsQuery = Stock::where('warehouse_id', $warehouseId);
         
         $statistics = [
-            'total_items' => $statsQuery->distinct('stocks.item_id')->count(),
-            'total_stock' => $statsQuery->sum('stocks.quantity'),
-            'out_stock_count' => $statsQuery->clone()
-                ->where('stocks.quantity', '=', 0)
-                ->count()
+            'total_items' => $statsQuery->count(),
+            'total_stock' => $statsQuery->clone()->where('quantity', '>', 0)->sum('quantity'),
+            'out_stock_count' => $statsQuery->clone()->where('quantity', '=', 0)->count()
         ];
         
         // Get categories for filter dropdown

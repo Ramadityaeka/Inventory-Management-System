@@ -6,6 +6,7 @@ use App\Events\SubmissionCreated;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\ItemUnit;
 use App\Models\Submission;
 use App\Models\SubmissionPhoto;
 use App\Models\Supplier;
@@ -47,6 +48,7 @@ class ReceiveItemController extends Controller
             'category_id' => 'nullable|exists:categories,id',
             'quantity' => 'required|integer|min:1',
             'unit' => 'required|string|max:50',
+            'conversion_factor' => 'nullable|integer|min:1',
             'unit_price' => 'nullable|numeric|min:0',
             'supplier_id' => 'required|exists:suppliers,id',
             'warehouse_id' => 'required|exists:warehouses,id',
@@ -61,6 +63,35 @@ class ReceiveItemController extends Controller
         DB::beginTransaction();
         try {
             $itemId = $validated['item_id'];
+            $conversionFactor = $validated['conversion_factor'] ?? 1;
+            
+            // Jika item_id ada, validasi unit dan dapatkan conversion_factor
+            if ($itemId) {
+                $item = Item::with('units')->find($itemId);
+                if ($item) {
+                    // Validasi unit: harus base unit atau salah satu dari alternative units
+                    $validUnits = [$item->unit];
+                    foreach ($item->units as $unit) {
+                        $validUnits[] = $unit->name;
+                    }
+                    
+                    if (!in_array($validated['unit'], $validUnits)) {
+                        return back()->withErrors([
+                            'unit' => "Satuan '{$validated['unit']}' tidak valid untuk barang ini. Satuan yang tersedia: " . implode(', ', $validUnits)
+                        ])->withInput();
+                    }
+                    
+                    // Dapatkan conversion_factor berdasarkan unit yang dipilih
+                    if ($validated['unit'] === $item->unit) {
+                        $conversionFactor = 1;
+                    } else {
+                        $selectedUnit = $item->units->firstWhere('name', $validated['unit']);
+                        if ($selectedUnit) {
+                            $conversionFactor = $selectedUnit->conversion_factor;
+                        }
+                    }
+                }
+            }
             
             // Jika item_id tidak ada, berarti barang baru - buat item baru
             if (!$itemId && $validated['item_code'] && $validated['category_id']) {
@@ -70,16 +101,52 @@ class ReceiveItemController extends Controller
                     return back()->withErrors(['item_code' => 'Kode barang sudah digunakan.'])->withInput();
                 }
                 
-                // Buat item baru
+                // Tentukan satuan dasar (terkecil) berdasarkan satuan input
+                $baseUnit = 'Pcs'; // Default satuan terkecil
+                $inputUnit = $validated['unit'];
+                $inputConversionFactor = $validated['conversion_factor'] ?? 1;
+                
+                // Mapping satuan besar ke satuan terkecil
+                $unitMapping = [
+                    'Lusin' => ['base' => 'Pcs', 'factor' => 12],
+                    'Box' => ['base' => 'Pcs', 'factor' => 12],
+                    'Gross' => ['base' => 'Pcs', 'factor' => 144],
+                    'Pack' => ['base' => 'Pcs', 'factor' => 10],
+                    'Rim' => ['base' => 'Lembar', 'factor' => 500],
+                    'Pak' => ['base' => 'Lembar', 'factor' => 2500],
+                    'Dus' => ['base' => 'Lembar', 'factor' => 500],
+                    'Karton' => ['base' => 'Pcs', 'factor' => 24],
+                ];
+                
+                // Jika satuan input ada di mapping, gunakan satuan dasar dari mapping
+                if (isset($unitMapping[$inputUnit])) {
+                    $baseUnit = $unitMapping[$inputUnit]['base'];
+                    $conversionFactor = $unitMapping[$inputUnit]['factor'];
+                } else {
+                    // Jika tidak ada di mapping, anggap input adalah satuan dasar
+                    $baseUnit = $inputUnit;
+                    $conversionFactor = 1;
+                }
+                
+                // Buat item baru dengan satuan dasar (terkecil)
                 $newItem = Item::create([
                     'category_id' => $validated['category_id'],
                     'code' => $validated['item_code'],
                     'name' => $validated['item_name'],
-                    'unit' => $validated['unit'],
+                    'unit' => $baseUnit, // Simpan satuan terkecil sebagai base
                     'is_active' => true
                 ]);
                 
                 $itemId = $newItem->id;
+                
+                // Jika input menggunakan satuan besar, buat item_unit untuk satuan tersebut
+                if ($inputUnit !== $baseUnit) {
+                    ItemUnit::create([
+                        'item_id' => $itemId,
+                        'name' => $inputUnit,
+                        'conversion_factor' => $conversionFactor
+                    ]);
+                }
             }
             
             // Calculate total price
@@ -99,6 +166,8 @@ class ReceiveItemController extends Controller
                 'item_name' => $validated['item_name'],
                 'quantity' => $validated['quantity'],
                 'unit' => $validated['unit'],
+                'unit_id' => $validated['warehouse_id'], // Set unit_id same as warehouse_id for compatibility
+                'conversion_factor' => $conversionFactor,
                 'unit_price' => $validated['unit_price'] ?? null,
                 'total_price' => $totalPrice,
                 'supplier_id' => $validated['supplier_id'] ?? null,
@@ -182,6 +251,7 @@ class ReceiveItemController extends Controller
             'item_name' => 'required|string|max:255',
             'quantity' => 'required|integer|min:1',
             'unit' => 'required|string|max:50',
+            'conversion_factor' => 'nullable|integer|min:1',
             'unit_price' => 'nullable|numeric|min:0',
             'supplier_id' => 'required|exists:suppliers,id',
             'warehouse_id' => 'required|exists:warehouses,id',
@@ -193,6 +263,34 @@ class ReceiveItemController extends Controller
 
         DB::beginTransaction();
         try {
+            $conversionFactor = $validated['conversion_factor'] ?? 1;
+            
+            // Validasi unit jika item_id ada
+            if ($validated['item_id']) {
+                $item = Item::with('units')->find($validated['item_id']);
+                if ($item) {
+                    $validUnits = [$item->unit];
+                    foreach ($item->units as $unit) {
+                        $validUnits[] = $unit->name;
+                    }
+                    
+                    if (!in_array($validated['unit'], $validUnits)) {
+                        return back()->withErrors([
+                            'unit' => "Satuan '{$validated['unit']}' tidak valid untuk barang ini."
+                        ])->withInput();
+                    }
+                    
+                    // Dapatkan conversion_factor
+                    if ($validated['unit'] === $item->unit) {
+                        $conversionFactor = 1;
+                    } else {
+                        $selectedUnit = $item->units->firstWhere('name', $validated['unit']);
+                        if ($selectedUnit) {
+                            $conversionFactor = $selectedUnit->conversion_factor;
+                        }
+                    }
+                }
+            }
             // Calculate total price
             $totalPrice = null;
             if ($request->filled('unit_price') && $request->filled('quantity')) {
@@ -217,6 +315,8 @@ class ReceiveItemController extends Controller
                 'item_name' => $validated['item_name'],
                 'quantity' => $validated['quantity'],
                 'unit' => $validated['unit'],
+                'unit_id' => $validated['warehouse_id'], // Set unit_id same as warehouse_id for compatibility
+                'conversion_factor' => $conversionFactor,
                 'unit_price' => $validated['unit_price'] ?? null,
                 'total_price' => $totalPrice,
                 'supplier_id' => $validated['supplier_id'] ?? null,
@@ -439,5 +539,47 @@ class ReceiveItemController extends Controller
         }
         
         return response()->json(['code' => $newCode]);
+    }
+
+    /**
+     * Get available units for an item
+     */
+    public function getItemUnits(Request $request)
+    {
+        $itemId = $request->input('item_id');
+        
+        if (!$itemId) {
+            return response()->json(['units' => []]);
+        }
+        
+        $item = Item::with('units')->find($itemId);
+        
+        if (!$item) {
+            return response()->json(['units' => []]);
+        }
+        
+        // Build units array: include base unit + alternative units
+        $units = [];
+        
+        // Add base unit (conversion_factor = 1)
+        $units[] = [
+            'name' => $item->unit,
+            'conversion_factor' => 1,
+            'is_base' => true
+        ];
+        
+        // Add alternative units
+        foreach ($item->units as $unit) {
+            $units[] = [
+                'name' => $unit->name,
+                'conversion_factor' => $unit->conversion_factor,
+                'is_base' => false
+            ];
+        }
+        
+        return response()->json([
+            'units' => $units,
+            'base_unit' => $item->unit
+        ]);
     }
 }

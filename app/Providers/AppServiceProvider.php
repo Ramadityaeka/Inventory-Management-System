@@ -35,6 +35,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Set default pagination view
+        \Illuminate\Pagination\Paginator::defaultView('vendor.pagination.bootstrap-5');
+        \Illuminate\Pagination\Paginator::defaultSimpleView('vendor.pagination.bootstrap-5');
+        
         // Set Carbon locale to Indonesian
         Carbon::setLocale('id');
         setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'Indonesian');

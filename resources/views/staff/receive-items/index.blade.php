@@ -91,7 +91,7 @@
                     </div>
 
                     <div class="mt-3">
-                        {{ $submissions->links() }}
+                        {{ $submissions->links('vendor.pagination.bootstrap-5') }}
                     </div>
                 @else
                     <div class="text-center py-5">

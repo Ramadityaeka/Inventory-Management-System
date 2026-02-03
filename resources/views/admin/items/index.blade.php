@@ -184,7 +184,7 @@
         <!-- Pagination -->
         @if($items->hasPages())
             <div class="d-flex justify-content-center mt-4">
-                {{ $items->appends(request()->query())->links() }}
+                {{ $items->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
             </div>
         @endif
     </div>

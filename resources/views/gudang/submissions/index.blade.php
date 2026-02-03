@@ -198,7 +198,7 @@
                             Showing {{ $submissions->firstItem() }} - {{ $submissions->lastItem() }} of {{ $submissions->total() }} submissions
                         </div>
                         <div>
-                            {{ $submissions->appends(request()->query())->links() }}
+                            {{ $submissions->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
                         </div>
                     </div>
                 @else

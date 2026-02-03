@@ -232,7 +232,7 @@
         </div>
         @if($transactions->hasPages())
             <div class="card-footer">
-                {{ $transactions->links() }}
+                {{ $transactions->links('vendor.pagination.bootstrap-5') }}
             </div>
         @endif
     </div>

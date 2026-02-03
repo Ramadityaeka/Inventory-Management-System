@@ -52,6 +52,11 @@ class Item extends Model
         ];
     }
 
+    public function units()
+{
+    return $this->hasMany(ItemUnit::class);
+}
+
     // Relationships
     public function category(): BelongsTo
     {
