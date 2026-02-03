@@ -73,6 +73,11 @@ class Item extends Model
         return $this->hasMany(Stock::class);
     }
 
+    public function itemUnits(): HasMany
+    {
+        return $this->hasMany(\App\Models\ItemUnit::class, 'item_id');
+    }
+
     public function submissions(): HasMany
     {
         return $this->hasMany(Submission::class);

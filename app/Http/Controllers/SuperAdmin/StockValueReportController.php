@@ -17,7 +17,7 @@ class StockValueReportController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Stock::with(['item.category', 'warehouse'])
+        $query = Stock::with(['item.category', 'item.itemUnits', 'warehouse'])
             ->where('quantity', '>', 0);
 
         // Filter by Category
@@ -66,6 +66,7 @@ class StockValueReportController extends Controller
                 'item' => $stock->item,
                 'warehouse' => $stock->warehouse,
                 'quantity' => $stock->quantity,
+                'display_quantity' => $stock->quantity,
                 'unit_price' => $unitPrice,
                 'total_value' => $totalValue,
             ];

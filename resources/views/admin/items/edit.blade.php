@@ -140,6 +140,44 @@
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
+                <div class="col-12 mb-3">
+                    <label class="form-label">Satuan Tambahan (Konversi)</label>
+                    @if($item->itemUnits && $item->itemUnits->count() > 0)
+                        <div class="mb-2">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Satuan</th>
+                                        <th>Isi (konversi ke {{ $item->unit }})</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($item->itemUnits as $iu)
+                                        <tr>
+                                            <td>{{ $iu->name }}</td>
+                                            <td>{{ $iu->conversion_factor }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <div class="text-muted mb-2">Belum ada satuan tambahan untuk item ini.</div>
+                    @endif
+
+                    <form action="{{ route('admin.items.units.store', $item) }}" method="POST" class="row g-2">
+                        @csrf
+                        <div class="col-auto">
+                            <input type="text" name="name" class="form-control form-control-sm" placeholder="Nama satuan (mis. Box)" required>
+                        </div>
+                        <div class="col-auto" style="width:160px;">
+                            <input type="number" name="conversion_factor" class="form-control form-control-sm" placeholder="Isi (angka)" min="1" required>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-sm btn-outline-primary">Tambah</button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             <!-- Unit Management Section -->

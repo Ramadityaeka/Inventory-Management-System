@@ -22,25 +22,53 @@ return new class extends Migration
             }
         });
 
-        // Add new structure columns
+        // Add new structure columns only if they don't exist
         Schema::table('categories', function (Blueprint $table) {
             // Add code column (hierarchical code like 1.01.03.01.001)
-            $table->string('code', 50)->after('id')->nullable();
-            
+            if (!Schema::hasColumn('categories', 'code')) {
+                $table->string('code', 50)->after('id')->nullable();
+            }
+
             // Add parent_id for hierarchical structure
-            $table->unsignedBigInteger('parent_id')->nullable()->after('description');
-            
-            // Add unique index for code
-            $table->unique('code', 'idx_category_code');
-            
-            // Add index for parent_id
-            $table->index('parent_id', 'idx_category_parent');
-            
-            // Add foreign key constraint
-            $table->foreign('parent_id', 'fk_category_parent')
-                  ->references('id')->on('categories')
-                  ->onDelete('cascade');
+            if (!Schema::hasColumn('categories', 'parent_id')) {
+                $table->unsignedBigInteger('parent_id')->nullable()->after('description');
+            }
         });
+
+        // Add indexes and foreign keys separately guarded
+        if (!\Schema::hasColumn('categories', 'code') || !\DB::getSchemaBuilder()->hasColumn('categories', 'code')) {
+            // ensure index only if column exists
+            try {
+                Schema::table('categories', function (Blueprint $table) {
+                    if (!\DB::getSchemaBuilder()->hasColumn('categories', 'code')) return;
+                    $table->unique('code', 'idx_category_code');
+                });
+            } catch (\Exception $e) {
+                // ignore if index exists or cannot be created
+            }
+        } else {
+            try {
+                Schema::table('categories', function (Blueprint $table) {
+                    if (Schema::hasColumn('categories', 'code')) {
+                        $table->unique('code', 'idx_category_code');
+                    }
+                });
+            } catch (\Exception $e) {
+                // ignore
+            }
+        }
+
+        try {
+            Schema::table('categories', function (Blueprint $table) {
+                if (!Schema::hasColumn('categories', 'parent_id')) return;
+                $table->index('parent_id', 'idx_category_parent');
+                $table->foreign('parent_id', 'fk_category_parent')
+                      ->references('id')->on('categories')
+                      ->onDelete('cascade');
+            });
+        } catch (\Exception $e) {
+            // ignore if index or foreign key already exists
+        }
     }
 
     /**

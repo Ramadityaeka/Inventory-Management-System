@@ -73,7 +73,7 @@
             <form method="GET" action="{{ route('gudang.reports.stock-values') }}" id="filterForm">
                 <div class="row g-3">
                     <!-- Category Filter -->
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Kategori</label>
                         <select name="category_id" class="form-select">
                             <option value="">Semua Kategori</option>
@@ -86,28 +86,28 @@
                     </div>
 
                     <!-- Item Name Filter -->
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Nama Barang</label>
                         <input type="text" 
                                name="item_name" 
                                id="item_name_input" 
                                class="form-control" 
-                               placeholder="Ketik untuk mencari barang..." 
+                               placeholder="Cari barang..." 
                                value="{{ request('item_name') }}"
                                autocomplete="off">
                         <div id="item_suggestions" class="autocomplete-suggestions"></div>
                     </div>
 
                     <!-- Item Code Filter -->
-                    <div class="col-md-4">
+                    <div class="col-md-2">
                         <label class="form-label">Kode Barang</label>
                         <input type="text" name="item_code" class="form-control" placeholder="Cari kode..." value="{{ request('item_code') }}">
                     </div>
 
                     <!-- Submit Buttons -->
-                    <div class="col-md-4 d-flex align-items-end">
+                    <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary me-2">
-                            <i class="bi bi-search"></i> Terapkan Filter
+                            <i class="bi bi-search"></i> Terapkan
                         </button>
                         <a href="{{ route('gudang.reports.stock-values') }}" class="btn btn-secondary">
                             <i class="bi bi-x-circle"></i> Reset
@@ -151,8 +151,12 @@
                                     <strong>{{ $stock->item->name ?? '-' }}</strong>
                                 </td>
                                 <td>{{ $stock->item->category->name ?? '-' }}</td>
-                                <td class="text-end">{{ number_format($stock->quantity, 0, ',', '.') }}</td>
-                                <td>{{ $stock->item->unit ?? '-' }}</td>
+                                <td class="text-end">
+                                    {{ number_format($stock->quantity, 0, ',', '.') }}
+                                </td>
+                                <td>
+                                    {{ $stock->item->unit }}
+                                </td>
                                 <td class="text-end">
                                     @if($stock->latest_unit_price > 0)
                                         Rp {{ number_format($stock->latest_unit_price, 0, ',', '.') }}

@@ -145,7 +145,7 @@ class GudangReportController extends Controller
                 ->with('error', 'Anda belum ditugaskan ke gudang manapun.');
         }
 
-        $query = Stock::with(['item.category', 'warehouse'])
+        $query = Stock::with(['item.category', 'item.itemUnits', 'warehouse'])
             ->whereIn('warehouse_id', $warehouseIds)
             ->where('quantity', '>', 0);
 

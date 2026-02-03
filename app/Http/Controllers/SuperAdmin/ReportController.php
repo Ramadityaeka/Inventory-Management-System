@@ -155,8 +155,8 @@ class ReportController extends Controller
 
     public function monthly(Request $request)
     {
-        $month = $request->get('month', now()->month);
-        $year = $request->get('year', now()->year);
+        $month = $request->get('month', date('m'));
+        $year = $request->get('year', date('Y'));
 
         $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth();

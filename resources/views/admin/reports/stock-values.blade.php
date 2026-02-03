@@ -42,20 +42,20 @@
                     </div>
 
                     <!-- Item Name Filter -->
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Nama Barang</label>
                         <input type="text" 
                                name="item_name" 
                                id="item_name_input" 
                                class="form-control" 
-                               placeholder="Ketik untuk mencari barang..." 
+                               placeholder="Cari barang..." 
                                value="{{ request('item_name') }}"
                                autocomplete="off">
                         <div id="item_suggestions" class="autocomplete-suggestions"></div>
                     </div>
 
                     <!-- Item Code Filter -->
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Kode Barang</label>
                         <input type="text" name="item_code" class="form-control" placeholder="Cari kode..." value="{{ request('item_code') }}">
                     </div>
@@ -157,9 +157,11 @@
                                     <span class="badge bg-secondary">{{ $data['item']->category->name }}</span>
                                 </td>
                                 <td>
-                                    <strong>{{ number_format($data['quantity']) }}</strong>
+                                    <strong>{{ number_format($data['display_quantity']) }}</strong>
                                 </td>
-                                <td>{{ $data['item']->unit }}</td>
+                                <td>
+                                    {{ $data['item']->unit }}
+                                </td>
                                 <td>
                                     @if($data['unit_price'] > 0)
                                         Rp {{ number_format($data['unit_price'], 0, ',', '.') }}

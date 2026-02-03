@@ -65,6 +65,7 @@
                                         data-unit="{{ $item['unit'] }}"
                                         data-warehouse="{{ $item['warehouse_id'] }}"
                                         data-quantity="{{ $item['quantity'] }}"
+                                        data-units='@json($item['available_units'])'
                                         {{ old('item_id', request('item_id')) == $item['id'] ? 'selected' : '' }}>
                                     {{ $item['name'] }} ({{ $item['code'] }}) - {{ $item['warehouse_name'] }}
                                 </option>
@@ -77,18 +78,33 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="unit_id" class="form-label">Satuan <span class="text-danger">*</span></label>
+                        <select name="unit_id" id="unit_id" class="form-select @error('unit_id') is-invalid @enderror" required>
+                            <option value="">Pilih satuan</option>
+                        </select>
+                        @error('unit_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="form-text text-muted">Pilih satuan yang akan digunakan untuk request</small>
+                    </div>
+
+                    <div class="mb-3">
                         <label for="quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
-                        <input type="number" 
-                               name="quantity" 
-                               id="quantity" 
-                               class="form-control @error('quantity') is-invalid @enderror" 
-                               value="{{ old('quantity') }}" 
-                               min="1" 
-                               required>
+                        <div class="input-group">
+                            <input type="number" 
+                                   name="quantity" 
+                                   id="quantity" 
+                                   class="form-control @error('quantity') is-invalid @enderror" 
+                                   value="{{ old('quantity') }}" 
+                                   min="1" 
+                                   step="1"
+                                   required>
+                            <span class="input-group-text" id="quantity-unit-label">-</span>
+                        </div>
                         @error('quantity')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
-                        <small class="form-text text-muted">Enter the quantity you need</small>
+                        <small id="base-quantity-info" class="form-text text-muted"></small>
                     </div>
 
                     <div class="mb-3">
@@ -149,8 +165,15 @@
 document.addEventListener('DOMContentLoaded', function() {
     const warehouseSelect = document.getElementById('warehouse_id');
     const itemSelect = document.getElementById('item_id');
+    const unitSelect = document.getElementById('unit_id');
     const quantityInput = document.getElementById('quantity');
+    const quantityUnitLabel = document.getElementById('quantity-unit-label');
     const availableStockText = document.getElementById('available-stock');
+    const baseQuantityInfo = document.getElementById('base-quantity-info');
+    
+    let currentUnits = [];
+    let currentBaseUnit = '';
+    let currentStockQuantity = 0;
 
     // Filter items based on selected warehouse
     warehouseSelect.addEventListener('change', function() {
@@ -159,7 +182,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Reset item selection
         itemSelect.value = '';
+        unitSelect.innerHTML = '<option value="">Pilih satuan</option>';
         availableStockText.textContent = '';
+        baseQuantityInfo.textContent = '';
+        quantityUnitLabel.textContent = '-';
         
         options.forEach(option => {
             if (option.value === '') return; // Skip the placeholder
@@ -173,19 +199,86 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Show available stock when item is selected
+    // Populate units dropdown when item is selected
     itemSelect.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
+        unitSelect.innerHTML = '<option value="">Pilih satuan</option>';
+        baseQuantityInfo.textContent = '';
+        quantityUnitLabel.textContent = '-';
+        
         if (selectedOption.value !== '') {
-            const unit = selectedOption.dataset.unit;
-            const quantity = selectedOption.dataset.quantity;
-            availableStockText.textContent = `Tersedia: ${quantity} ${unit}`;
-            availableStockText.className = quantity > 0 ? 'form-text text-success' : 'form-text text-danger';
-            quantityInput.max = quantity;
+            currentBaseUnit = selectedOption.dataset.unit;
+            currentStockQuantity = parseInt(selectedOption.dataset.quantity);
+            const unitsData = selectedOption.dataset.units;
+            
+            try {
+                currentUnits = JSON.parse(unitsData);
+                
+                // Populate unit dropdown
+                currentUnits.forEach(unit => {
+                    const option = document.createElement('option');
+                    option.value = unit.id;
+                    option.textContent = `${unit.name} (1 ${unit.name} = ${unit.conversion_factor} ${currentBaseUnit})`;
+                    option.dataset.conversion = unit.conversion_factor;
+                    option.dataset.name = unit.name;
+                    unitSelect.appendChild(option);
+                });
+                
+                availableStockText.textContent = `Stok tersedia: ${currentStockQuantity} ${currentBaseUnit}`;
+                availableStockText.className = currentStockQuantity > 0 ? 'form-text text-success fw-bold' : 'form-text text-danger fw-bold';
+                
+            } catch (e) {
+                console.error('Error parsing units:', e);
+            }
         } else {
             availableStockText.textContent = '';
+            currentUnits = [];
         }
     });
+
+    // Update labels and validation when unit is selected
+    unitSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.value !== '') {
+            const unitName = selectedOption.dataset.name;
+            const conversionFactor = parseFloat(selectedOption.dataset.conversion);
+            
+            quantityUnitLabel.textContent = unitName;
+            
+            // Calculate max quantity in selected unit
+            const maxInSelectedUnit = Math.floor(currentStockQuantity / conversionFactor);
+            quantityInput.max = maxInSelectedUnit;
+            
+            // Update quantity to show conversion
+            updateBaseQuantityInfo();
+        } else {
+            quantityUnitLabel.textContent = '-';
+            baseQuantityInfo.textContent = '';
+        }
+    });
+
+    // Update base quantity calculation when quantity changes
+    quantityInput.addEventListener('input', updateBaseQuantityInfo);
+
+    function updateBaseQuantityInfo() {
+        const selectedUnit = unitSelect.options[unitSelect.selectedIndex];
+        if (selectedUnit && selectedUnit.value !== '' && quantityInput.value) {
+            const conversionFactor = parseFloat(selectedUnit.dataset.conversion);
+            const quantity = parseFloat(quantityInput.value);
+            const baseQuantity = quantity * conversionFactor;
+            const maxInSelectedUnit = Math.floor(currentStockQuantity / conversionFactor);
+            
+            if (quantity > maxInSelectedUnit) {
+                baseQuantityInfo.textContent = `⚠️ Melebihi stok! Maksimal: ${maxInSelectedUnit} ${selectedUnit.dataset.name}`;
+                baseQuantityInfo.className = 'form-text text-danger fw-bold';
+            } else {
+                baseQuantityInfo.textContent = `= ${baseQuantity} ${currentBaseUnit} (dari stok tersedia ${currentStockQuantity} ${currentBaseUnit})`;
+                baseQuantityInfo.className = 'form-text text-info';
+            }
+        } else {
+            baseQuantityInfo.textContent = '';
+        }
+    }
 
     // Trigger change event if item is pre-selected (from URL parameter)
     if (itemSelect.value !== '') {

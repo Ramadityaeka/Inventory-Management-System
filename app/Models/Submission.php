@@ -38,6 +38,7 @@ class Submission extends Model
         'warehouse_id',
         'staff_id',
         'quantity',
+        'conversion_factor',
         'unit',
         'unit_price',
         'total_price',
@@ -56,6 +57,7 @@ class Submission extends Model
     {
         return [
             'quantity' => 'integer',
+            'conversion_factor' => 'integer',
             'receive_date' => 'date',
             'submitted_at' => 'datetime',
             'is_draft' => 'boolean',

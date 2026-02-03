@@ -94,7 +94,7 @@ class DashboardController extends Controller
                 // Monthly progress targets (these could be configurable)
                 'monthly_transfers_current' => 0, // Feature disabled - no transfers table
                 'monthly_transfers_target' => 50,
-                'monthly_movements_current' => StockMovement::whereYear('created_at', now()->year)->whereMonth('created_at', now()->month)->sum(DB::raw('ABS(quantity)')) ?? 0,
+                'monthly_movements_current' => StockMovement::whereYear('created_at', date('Y'))->whereMonth('created_at', date('m'))->sum(DB::raw('ABS(quantity)')) ?? 0,
                 'monthly_movements_target' => 1000,
             ];
 
@@ -285,13 +285,13 @@ class DashboardController extends Controller
             'approval_rate' => 0,
             // Monthly progress targets
             'monthly_submissions_current' => Submission::whereIn('warehouse_id', $warehouseIds)
-                ->whereYear('created_at', now()->year)
-                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', date('Y'))
+                ->whereMonth('created_at', date('m'))
                 ->count(),
             'monthly_submissions_target' => 100,
             'monthly_movements_current' => StockMovement::whereIn('warehouse_id', $warehouseIds)
-                ->whereYear('created_at', now()->year)
-                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', date('Y'))
+                ->whereMonth('created_at', date('m'))
                 ->sum(DB::raw('ABS(quantity)')),
             'monthly_movements_target' => 500,
         ];
@@ -383,7 +383,7 @@ class DashboardController extends Controller
 
         // Stock turnover - most active items this month
         $activeItems = StockMovement::whereIn('warehouse_id', $warehouseIds)
-            ->whereMonth('stock_movements.created_at', now()->month)
+            ->whereMonth('stock_movements.created_at', date('m'))
             ->join('items', 'stock_movements.item_id', '=', 'items.id')
             ->select(
                 'items.id',
@@ -421,8 +421,8 @@ class DashboardController extends Controller
                 ->count(),
             'approved_this_month' => Submission::where('staff_id', $user->id)
                 ->where('status', 'approved')
-                ->whereMonth('updated_at', now()->month)
-                ->whereYear('updated_at', now()->year)
+                ->whereMonth('updated_at', date('m'))
+                ->whereYear('updated_at', date('Y'))
                 ->count(),
             'rejected' => Submission::where('staff_id', $user->id)
                 ->where('status', 'rejected')
