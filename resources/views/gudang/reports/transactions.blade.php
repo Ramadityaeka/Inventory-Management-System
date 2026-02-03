@@ -9,7 +9,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h4 class="mb-1">📊 Laporan Transaksi</h4>
-                    <p class="text-muted mb-0">Data transaksi penerimaan barang di gudang Anda</p>
+                    <p class="text-muted mb-0">Data transaksi penerimaan barang di unit Anda</p>
                 </div>
                 <div>
                     <a href="{{ route('gudang.reports.index') }}" class="btn btn-outline-secondary me-2">
@@ -165,7 +165,7 @@
                         <tr>
                             <th width="50">No</th>
                             <th>Tanggal</th>
-                            <th>Gudang</th>
+                            <th>Unit</th>
                             <th>Nama Barang</th>
                             <th>Kategori</th>
                             <th>Supplier</th>

@@ -221,7 +221,7 @@
                             @if(request()->hasAny(['search', 'category_id', 'stock_status']))
                                 Tidak ada hasil dengan filter yang dipilih.
                             @else
-                                Belum ada data stok untuk gudang ini.
+                                Belum ada data stok untuk unit ini.
                             @endif
                         </p>
                     </div>

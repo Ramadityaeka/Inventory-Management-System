@@ -128,7 +128,7 @@
     <div class="header-info">
         <p><strong>Tanggal Cetak:</strong> {{ formatDateIndoLong(now()) }} WIB</p>
         <p><strong>Dicetak oleh:</strong> {{ auth()->user()->name }}</p>
-        <p><strong>Gudang:</strong> {{ $warehouses->pluck('name')->implode(', ') }}</p>
+        <p><strong>Unit:</strong> {{ $warehouses->pluck('name')->implode(', ') }}</p>
         @if(isset($filters['category_id']))
             <p><strong>Kategori:</strong> {{ \App\Models\Category::find($filters['category_id'])->name }}</p>
         @endif
@@ -156,7 +156,7 @@
             <thead>
                 <tr>
                     <th width="3%">No</th>
-                    <th width="11%">Gudang</th>
+                    <th width="11%">Unit</th>
                     <th width="9%">Kode</th>
                     <th width="18%">Nama Barang</th>
                     <th width="10%">Kategori</th>

@@ -135,7 +135,7 @@
                                     <p class="fw-bold" id="md-date">-</p>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label text-muted small">Unit/Gudang</label>
+                                    <label class="form-label text-muted small">Unit</label>
                                     <p class="fw-bold" id="md-warehouse">-</p>
                                 </div>
                                 <div class="col-md-6">
