@@ -16,60 +16,78 @@
     </div>
         @push('scripts')
         <script>
-        document.addEventListener('DOMContentLoaded', function(){
-            document.querySelectorAll('.btn-detail').forEach(function(btn){
-                btn.addEventListener('click', function(e){
-                    var raw = btn.getAttribute('data-movement');
-                    var m = null;
-                    try { m = JSON.parse(raw); } catch(err) { m = $(btn).data('movement') || {} }
+        (function(){
+            if(window.stockHistoryModalInit) return;
+            window.stockHistoryModalInit = true;
+            
+            document.addEventListener('DOMContentLoaded', function(){
+                var modalEl = document.getElementById('detailModal');
+                if(!modalEl) return;
+                
+                var modal = null;
+                
+                document.querySelectorAll('.btn-detail').forEach(function(btn){
+                    btn.addEventListener('click', function(e){
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        if(!modal) {
+                            modal = new bootstrap.Modal(modalEl, {
+                                backdrop: 'static',
+                                keyboard: true
+                            });
+                        }
+                        
+                        var raw = btn.getAttribute('data-movement');
+                        var m = null;
+                        try { m = JSON.parse(raw); } catch(err) { return; }
 
-                    document.getElementById('md-date').textContent = m.created_at || '-';
-                    document.getElementById('md-warehouse').textContent = m.warehouse || '-';
+                        document.getElementById('md-date').textContent = m.created_at || '-';
+                        document.getElementById('md-warehouse').textContent = m.warehouse || '-';
 
-                    var typeEl = document.getElementById('md-type');
-                    var typeHtml = '';
-                    if(m.movement_type === 'in') typeHtml = '<span class="badge bg-success"><i class="bi bi-arrow-up-circle me-1"></i>Barang Masuk</span>';
-                    else if(m.movement_type === 'out') typeHtml = '<span class="badge bg-danger"><i class="bi bi-arrow-down-circle me-1"></i>Barang Keluar</span>';
-                    else if(m.movement_type === 'adjustment') typeHtml = '<span class="badge bg-warning text-dark"><i class="bi bi-gear me-1"></i>Penyesuaian</span>';
-                    else typeHtml = m.movement_type || '-';
-                    typeEl.innerHTML = typeHtml;
+                        var typeEl = document.getElementById('md-type');
+                        var typeHtml = '';
+                        if(m.movement_type === 'in') typeHtml = '<span class="badge bg-success"><i class="bi bi-arrow-up-circle me-1"></i>Barang Masuk</span>';
+                        else if(m.movement_type === 'out') typeHtml = '<span class="badge bg-danger"><i class="bi bi-arrow-down-circle me-1"></i>Barang Keluar</span>';
+                        else if(m.movement_type === 'adjustment') typeHtml = '<span class="badge bg-warning text-dark"><i class="bi bi-gear me-1"></i>Penyesuaian</span>';
+                        else typeHtml = m.movement_type || '-';
+                        typeEl.innerHTML = typeHtml;
 
-                    document.getElementById('md-quantity').textContent = (typeof m.quantity !== 'undefined') ? (new Intl.NumberFormat().format(m.quantity) + ' ' + (m.unit || '')) : '-';
+                        document.getElementById('md-quantity').textContent = (typeof m.quantity !== 'undefined') ? (new Intl.NumberFormat().format(m.quantity) + ' ' + (m.unit || '')) : '-';
 
-                    if(m.supplier){
-                        var supplierHtml = '<h6 class="mb-2">'+(m.supplier.name||'')+'</h6>';
-                        supplierHtml += m.supplier.phone ? '<p class="mb-1"><i class="bi bi-telephone me-2"></i>'+m.supplier.phone+'</p>' : '';
-                        supplierHtml += m.supplier.email ? '<p class="mb-1"><i class="bi bi-envelope me-2"></i>'+m.supplier.email+'</p>' : '';
-                        document.getElementById('md-supplier').innerHTML = supplierHtml;
-                        document.getElementById('md-supplier-wrapper').style.display = 'block';
-                    } else {
-                        document.getElementById('md-supplier-wrapper').style.display = 'none';
-                    }
+                        if(m.supplier){
+                            var supplierHtml = '<h6 class="mb-2">'+(m.supplier.name||'')+'</h6>';
+                            supplierHtml += m.supplier.phone ? '<p class="mb-1"><i class="bi bi-telephone me-2"></i>'+m.supplier.phone+'</p>' : '';
+                            supplierHtml += m.supplier.email ? '<p class="mb-1"><i class="bi bi-envelope me-2"></i>'+m.supplier.email+'</p>' : '';
+                            document.getElementById('md-supplier').innerHTML = supplierHtml;
+                            document.getElementById('md-supplier-wrapper').style.display = 'block';
+                        } else {
+                            document.getElementById('md-supplier-wrapper').style.display = 'none';
+                        }
 
-                    if(m.staff){
-                        document.getElementById('md-staff').innerHTML = '<p class="mb-0 fw-bold">'+(m.staff.name||'')+'</p><small class="text-muted">Staff Unit</small>';
-                        document.getElementById('md-staff-wrapper').style.display = 'block';
-                    } else {
-                        document.getElementById('md-staff-wrapper').style.display = 'none';
-                    }
+                        if(m.staff){
+                            document.getElementById('md-staff').innerHTML = '<p class="mb-0 fw-bold">'+(m.staff.name||'')+'</p><small class="text-muted">Staff Unit</small>';
+                            document.getElementById('md-staff-wrapper').style.display = 'block';
+                        } else {
+                            document.getElementById('md-staff-wrapper').style.display = 'none';
+                        }
 
-                    if(m.creator){
-                        var role = m.creator.role || '';
-                        var roleText = role === 'super_admin' ? 'Super Admin' : (role === 'admin_gudang' ? 'Admin Unit' : (role === 'staff_gudang' ? 'Staff Unit' : (role ? role.charAt(0).toUpperCase()+role.slice(1) : '')));
-                        document.getElementById('md-creator').innerHTML = '<p class="mb-0 fw-bold">'+(m.creator.name||'')+'</p><small class="text-muted">'+roleText+'</small>';
-                        document.getElementById('md-creator-wrapper').style.display = 'block';
-                    } else {
-                        document.getElementById('md-creator-wrapper').style.display = 'none';
-                    }
+                        if(m.creator){
+                            var role = m.creator.role || '';
+                            var roleText = role === 'super_admin' ? 'Super Admin' : (role === 'admin_gudang' ? 'Admin Unit' : (role === 'staff_gudang' ? 'Staff Unit' : (role ? role.charAt(0).toUpperCase()+role.slice(1) : '')));
+                            document.getElementById('md-creator').innerHTML = '<p class="mb-0 fw-bold">'+(m.creator.name||'')+'</p><small class="text-muted">'+roleText+'</small>';
+                            document.getElementById('md-creator-wrapper').style.display = 'block';
+                        } else {
+                            document.getElementById('md-creator-wrapper').style.display = 'none';
+                        }
 
-                    document.getElementById('md-notes').textContent = m.notes || 'Tidak ada catatan';
+                        document.getElementById('md-notes').textContent = m.notes || 'Tidak ada catatan';
 
-                    var modalEl = document.getElementById('detailModal');
-                    var modal = new bootstrap.Modal(modalEl);
-                    modal.show();
+                        modal.show();
+                    });
                 });
             });
-        });
+        })();
         </script>
         @endpush
 </div>
@@ -356,28 +374,31 @@
                                     @endif
                                 </td>
                                 <td class="text-center">
+                                    @php
+                                        $movementData = [
+                                            "id" => $movement->id,
+                                            "created_at" => $movement->created_at->format("d M Y, H:i:s"),
+                                            "warehouse" => $movement->warehouse->name ?? null,
+                                            "movement_type" => $movement->movement_type,
+                                            "quantity" => $movement->quantity,
+                                            "unit" => $movement->item->unit ?? null,
+                                            "supplier" => $movement->submission && $movement->submission->supplier ? [
+                                                "name" => $movement->submission->supplier->name,
+                                                "phone" => $movement->submission->supplier->phone ?? null,
+                                                "email" => $movement->submission->supplier->email ?? null
+                                            ] : null,
+                                            "staff" => $movement->submission && $movement->submission->staff ? [
+                                                "name" => $movement->submission->staff->name
+                                            ] : null,
+                                            "creator" => $movement->creator ? [
+                                                "name" => $movement->creator->name,
+                                                "role" => $movement->creator->role
+                                            ] : null,
+                                            "notes" => $movement->notes
+                                        ];
+                                    @endphp
                                     <button type="button" class="btn btn-sm btn-outline-primary btn-detail" 
-                                            data-movement='@json([
-                                                "id" => $movement->id,
-                                                "created_at" => $movement->created_at->format("d M Y, H:i:s"),
-                                                "warehouse" => $movement->warehouse->name ?? null,
-                                                "movement_type" => $movement->movement_type,
-                                                "quantity" => $movement->quantity,
-                                                "unit" => $movement->item->unit ?? null,
-                                                "supplier" => $movement->submission && $movement->submission->supplier ? [
-                                                    "name" => $movement->submission->supplier->name,
-                                                    "phone" => $movement->submission->supplier->phone ?? null,
-                                                    "email" => $movement->submission->supplier->email ?? null,
-                                                ] : null,
-                                                "staff" => $movement->submission && $movement->submission->staff ? [
-                                                    "name" => $movement->submission->staff->name,
-                                                ] : null,
-                                                "creator" => $movement->creator ? [
-                                                    "name" => $movement->creator->name,
-                                                    "role" => $movement->creator->role,
-                                                ] : null,
-                                                "notes" => $movement->notes,
-                                            ])'>
+                                            data-movement='@json($movementData)'>
                                         <i class="bi bi-eye"></i>
                                     </button>
                                 </td>

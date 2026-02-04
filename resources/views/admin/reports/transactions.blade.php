@@ -187,7 +187,7 @@
                             <th>No</th>
                             <th>Gudang</th>
                             <th>Nama Barang</th>
-                            <th>Jumlah</th>
+                            <th>Barang masuk</th>
                             <th>Satuan</th>
                             <th>Sisa Stok</th>
                             <th>Keterangan</th>

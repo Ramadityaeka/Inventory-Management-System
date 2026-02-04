@@ -167,7 +167,7 @@
                     <th width="3%">No</th>
                     <th width="10%">Gudang</th>
                     <th width="17%">Nama Barang</th>
-                    <th width="7%">Jumlah</th>
+                    <th width="7%">Barang Masuk</th>
                     <th width="5%">Satuan</th>
                     <th width="7%">Sisa Stok</th>
                     <th width="20%">Keterangan</th>

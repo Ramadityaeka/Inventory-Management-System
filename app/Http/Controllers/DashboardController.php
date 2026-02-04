@@ -10,8 +10,10 @@ use App\Models\Submission;
 use App\Models\Warehouse;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+
 
 class DashboardController extends Controller
 {
@@ -57,9 +59,9 @@ class DashboardController extends Controller
             // Log the error and show a friendly message
             Log::error('Dashboard error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             Log::error('Stack trace: ' . $e->getTraceAsString());
-            
+
             // Redirect back to login with error message
-            auth()->logout();
+            Auth::logout();
             return redirect()->route('login')->with('error', 'Terjadi kesalahan saat mengakses dashboard. Silakan login kembali.');
         }
     }

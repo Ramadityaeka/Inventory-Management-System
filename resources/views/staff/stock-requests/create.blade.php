@@ -218,11 +218,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentUnits.forEach(unit => {
                     const option = document.createElement('option');
                     option.value = unit.id;
-                    option.textContent = `${unit.name} (1 ${unit.name} = ${unit.conversion_factor} ${currentBaseUnit})`;
+                    option.textContent = unit.conversion_factor === 1 
+                        ? unit.name 
+                        : `${unit.name} (1 ${unit.name} = ${unit.conversion_factor} ${currentBaseUnit})`;
                     option.dataset.conversion = unit.conversion_factor;
                     option.dataset.name = unit.name;
                     unitSelect.appendChild(option);
                 });
+                
+                // Auto-select first unit (default)
+                if (currentUnits.length > 0) {
+                    unitSelect.value = currentUnits[0].id;
+                    unitSelect.dispatchEvent(new Event('change'));
+                }
                 
                 availableStockText.textContent = `Stok tersedia: ${currentStockQuantity} ${currentBaseUnit}`;
                 availableStockText.className = currentStockQuantity > 0 ? 'form-text text-success fw-bold' : 'form-text text-danger fw-bold';
