@@ -96,12 +96,21 @@ class StockRequestController extends Controller
         // Get all items with current stock in user's warehouses (only active items)
         $items = Stock::whereIn('warehouse_id', $warehouses->pluck('id'))
             ->where('quantity', '>', 0)
-            ->with(['item.category', 'warehouse'])
+            ->with(['item.category', 'item.itemUnits', 'warehouse'])
             ->whereHas('item', function($q) {
                 $q->where('is_active', true);
             })
             ->get()
             ->map(function($stock) {
+                // Get available units for this item
+                $availableUnits = $stock->item->itemUnits->map(function($unit) {
+                    return [
+                        'id' => $unit->id,
+                        'name' => $unit->name,
+                        'conversion_factor' => $unit->conversion_factor,
+                    ];
+                });
+                
                 return [
                     'id' => $stock->item_id,
                     'name' => $stock->item->name,
@@ -110,6 +119,7 @@ class StockRequestController extends Controller
                     'warehouse_id' => $stock->warehouse_id,
                     'warehouse_name' => $stock->warehouse->name,
                     'quantity' => $stock->quantity,
+                    'available_units' => $availableUnits,
                 ];
             });
         
@@ -125,19 +135,27 @@ class StockRequestController extends Controller
             'item_id' => 'required|exists:items,id',
             'warehouse_id' => 'required|exists:warehouses,id',
             'quantity' => 'required|integer|min:1',
+            'unit_id' => 'required|exists:item_units,id',
             'purpose' => 'required|string|max:255',
             'notes' => 'nullable|string|max:1000',
         ]);
 
         DB::transaction(function () use ($validated) {
-            // Verify stock availability
+            // Get item unit to calculate base quantity
+            $itemUnit = \App\Models\ItemUnit::findOrFail($validated['unit_id']);
+            
+            // Calculate base quantity (quantity * conversion_factor)
+            $baseQuantity = $validated['quantity'] * $itemUnit->conversion_factor;
+            
+            // Verify stock availability (in base unit)
             $stock = Stock::with('item')->where('item_id', $validated['item_id'])
                 ->where('warehouse_id', $validated['warehouse_id'])
                 ->lockForUpdate()
                 ->first();
             
-            if (!$stock || $stock->quantity < $validated['quantity']) {
-                throw new \Exception('Stok tidak mencukupi. Stok tersedia: ' . ($stock ? $stock->quantity : 0));
+            if (!$stock || $stock->quantity < $baseQuantity) {
+                $availableInRequestedUnit = $stock ? floor($stock->quantity / $itemUnit->conversion_factor) : 0;
+                throw new \Exception("Stok tidak mencukupi. Stok tersedia: {$availableInRequestedUnit} {$itemUnit->name} (setara {$stock->quantity} {$stock->item->unit})");
             }
             
             // Check if item is inactive
@@ -153,12 +171,15 @@ class StockRequestController extends Controller
                 throw new \Exception('Anda tidak memiliki akses ke gudang ini.');
             }
             
-            // Create stock request
+            // Create stock request with unit info
             $stockRequest = StockRequest::create([
                 'item_id' => $validated['item_id'],
                 'warehouse_id' => $validated['warehouse_id'],
                 'staff_id' => auth()->id(),
                 'quantity' => $validated['quantity'],
+                'unit_name' => $itemUnit->name,
+                'conversion_factor' => $itemUnit->conversion_factor,
+                'base_quantity' => $baseQuantity,
                 'purpose' => $validated['purpose'],
                 'notes' => $validated['notes'] ?? null,
                 'status' => StockRequest::STATUS_PENDING,

@@ -349,9 +349,6 @@
                     <h6 class="mb-0">
                         <i class="bi bi-building text-primary me-2"></i>Status Gudang
                     </h6>
-                    <a href="{{ route('admin.warehouses.index') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-gear me-1"></i>Kelola
-                    </a>
                 </div>
             </div>
             <div class="card-body">

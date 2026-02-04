@@ -80,7 +80,7 @@
                             id="role" name="role" required onchange="toggleWarehouseSection()">
                         <option value="">Pilih Role</option>
                         <option value="super_admin" {{ old('role') === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
-                        <option value="admin_unit" {{ old('role') === 'admin_unit' ? 'selected' : '' }}>Admin Unit</option>
+                        <option value="admin_gudang" {{ old('role') === 'admin_gudang' ? 'selected' : '' }}>Admin Unit</option>
                         <option value="staff_gudang" {{ old('role') === 'staff_gudang' ? 'selected' : '' }}>Staff Unit</option>
                     </select>
                     @error('role')
@@ -234,7 +234,7 @@
                 checkbox.checked = false;
                 checkbox.required = false;
             });
-        } else if (role === 'admin_unit') {
+        } else if (role === 'admin_gudang') {
             // Show warehouse section with select dropdown for single selection
             warehouseCard.style.display = 'block';
             adminSection.style.display = 'block';

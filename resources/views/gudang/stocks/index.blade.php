@@ -48,7 +48,7 @@
                     </div>
                 </div>
                 <h3 class="mb-1">{{ number_format($statistics['out_stock_count']) }}</h3>
-                <p class="text-muted mb-0 small">Out of Stock</p>
+                <p class="text-muted mb-0 small">stock habis</p>
             </div>
         </div>
     </div>
@@ -61,14 +61,14 @@
             <div class="card-body">
                 <form method="GET" action="{{ route('gudang.stocks.index') }}" class="row g-3">
                     <div class="col-md-3">
-                        <label for="search" class="form-label">Search Item</label>
+                        <label for="search" class="form-label">Cari Barang</label>
                         <input type="text" class="form-control" id="search" name="search" 
                                value="{{ request('search') }}" placeholder="Nama barang...">
                     </div>
                     <div class="col-md-3">
-                        <label for="category_id" class="form-label">Category</label>
+                        <label for="category_id" class="form-label">Kategori</label>
                         <select class="form-select" id="category_id" name="category_id">
-                            <option value="">All Categories</option>
+                            <option value="">Semua Kategori</option>
                             @foreach($categories as $category)
                                 <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
                                     {{ $category->name }}
@@ -77,11 +77,11 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label for="stock_status" class="form-label">Stock Status</label>
+                        <label for="stock_status" class="form-label">Status Stock</label>
                         <select class="form-select" id="stock_status" name="stock_status">
-                            <option value="">All Stock</option>
-                            <option value="low" {{ request('stock_status') == 'low' ? 'selected' : '' }}>Low Stock</option>
-                            <option value="out" {{ request('stock_status') == 'out' ? 'selected' : '' }}>Out of Stock</option>
+                            <option value="">Semua Stock</option>
+                            <option value="low" {{ request('stock_status') == 'low' ? 'selected' : '' }}>Stock Sedikit</option>
+                            <option value="out" {{ request('stock_status') == 'out' ? 'selected' : '' }}>Stock Habis</option>
                         </select>
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
@@ -113,15 +113,15 @@
                         <table class="table table-hover table-sm">
                             <thead class="table-dark">
                                 <tr>
-                                    <th>Item Code</th>
-                                    <th>Item Name</th>
-                                    <th>Category</th>
-                                    <th>Current Stock</th>
+                                    <th>Code Barang</th>
+                                    <th>Nama Barang</th>
+                                    <th>Kategori</th>
+                                    <th>Stock Saat ini</th>
                                     <th>Unit</th>
                                     <th>Status</th>
-                                    <th style="width: 280px;">Recent Activity</th>
-                                    <th>Last Updated</th>
-                                    <th>Actions</th>
+                                    <th>Aktivitas Sebelumnya</th>
+                                    <th>Terakhir Di Ubah</th>
+                                    <th>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>

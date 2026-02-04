@@ -8,15 +8,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h4 class="mb-1">Dashboard Admin Gudang - {{ $warehouseName }}</h4>
-                <p class="text-muted mb-0">Pantau dan kelola aktivitas gudang dengan mudah</p>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="{{ route('gudang.reports.index') }}" class="btn btn-outline-primary">
-                    <i class="bi bi-file-earmark-text me-1"></i>Laporan
-                </a>
-                <a href="{{ route('gudang.stocks.index') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-gear me-1"></i>Pengaturan
-                </a>
+                <p class="text-muted mb-0">Pantau dan kelola aktivitas Unit dengan mudah</p>
             </div>
         </div>
     </div>
