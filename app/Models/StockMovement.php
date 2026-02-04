@@ -64,6 +64,11 @@ class StockMovement extends Model
         return $this->belongsTo(Submission::class, 'reference_id');
     }
 
+    public function stockRequest(): BelongsTo
+    {
+        return $this->belongsTo(StockRequest::class, 'reference_id');
+    }
+
     // Scopes
     public function scopeIn($query)
     {

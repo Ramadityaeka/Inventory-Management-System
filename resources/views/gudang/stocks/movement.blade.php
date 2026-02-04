@@ -20,9 +20,9 @@
                     <form method="GET" class="mb-4">
                         <div class="row g-3">
                             <div class="col-md-3">
-                                <label for="warehouse_id" class="form-label">Gudang</label>
+                                <label for="warehouse_id" class="form-label">Unit</label>
                                 <select class="form-select" id="warehouse_id" name="warehouse_id">
-                                    <option value="">Semua Gudang</option>
+                                    <option value="">Semua Unit</option>
                                     @foreach($warehouses as $warehouse)
                                         <option value="{{ $warehouse->id }}" 
                                                 {{ request('warehouse_id') == $warehouse->id ? 'selected' : '' }}>

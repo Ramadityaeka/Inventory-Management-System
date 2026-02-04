@@ -18,68 +18,119 @@ class TransactionReportController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Submission::with([
+        // Get Submissions (Barang Masuk)
+        $submissionsQuery = Submission::with([
             'item.category',
             'warehouse',
             'supplier',
+            'staff',
             'approvals.admin'
         ])->whereNotNull('submitted_at');
 
-        // Filter by Category
+        // Get Stock Requests (Barang Keluar) - only approved
+        $stockRequestsQuery = \App\Models\StockRequest::with([
+            'item.category',
+            'warehouse',
+            'staff',
+            'approver'
+        ])->where('status', 'approved');
+
+        // Apply filters to submissions
         if ($request->filled('category_id')) {
-            $query->whereHas('item', function($q) use ($request) {
+            $submissionsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('category_id', $request->category_id);
+            });
+            $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
         }
 
-        // Filter by Item Name
         if ($request->filled('item_name')) {
-            $query->whereHas('item', function($q) use ($request) {
+            $submissionsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('name', 'LIKE', '%' . $request->item_name . '%');
+            });
+            $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('name', 'LIKE', '%' . $request->item_name . '%');
             });
         }
 
-        // Filter by Item Code
         if ($request->filled('item_code')) {
-            $query->whereHas('item', function($q) use ($request) {
+            $submissionsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('code', 'LIKE', '%' . $request->item_code . '%');
+            });
+            $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('code', 'LIKE', '%' . $request->item_code . '%');
             });
         }
 
-        // Filter by Year
         if ($request->filled('year')) {
-            $query->whereYear('submitted_at', $request->year);
+            $submissionsQuery->whereYear('submitted_at', $request->year);
+            $stockRequestsQuery->whereYear('created_at', $request->year);
         }
 
-        // Filter by Month
         if ($request->filled('month')) {
-            $query->whereMonth('submitted_at', $request->month);
+            $submissionsQuery->whereMonth('submitted_at', $request->month);
+            $stockRequestsQuery->whereMonth('created_at', $request->month);
         }
 
-        // Filter by Warehouse
         if ($request->filled('warehouse_id')) {
-            $query->where('warehouse_id', $request->warehouse_id);
+            $submissionsQuery->where('warehouse_id', $request->warehouse_id);
+            $stockRequestsQuery->where('warehouse_id', $request->warehouse_id);
         }
 
-        // Filter by Processed By (Admin)
-        if ($request->filled('processed_by')) {
-            $query->whereHas('approvals', function($q) use ($request) {
-                $q->where('admin_id', $request->processed_by);
+        // Apply status filter only to submissions
+        if ($request->filled('status')) {
+            $submissionsQuery->where('status', $request->status);
+        }
+
+        // Get results
+        $submissions = $submissionsQuery->get()->map(function($item) {
+            $item->transaction_type = 'in';
+            $item->transaction_date = $item->submitted_at;
+            return $item;
+        });
+
+        // Only get stock requests if status is empty or approved (because all stock requests are approved)
+        $stockRequests = collect([]);
+        if (!$request->filled('status') || $request->status == 'approved') {
+            $stockRequests = $stockRequestsQuery->get()->map(function($item) {
+                $item->transaction_type = 'out';
+                $item->transaction_date = $item->approved_at ?? $item->created_at;
+                return $item;
             });
         }
 
-        // Filter by Status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $transactions = $query->orderBy('submitted_at', 'desc')->paginate(50);
+        // Merge and sort
+        $allTransactions = $submissions->concat($stockRequests)->sortByDesc('transaction_date');
+        
+        // Manual pagination
+        $perPage = 50;
+        $currentPage = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
+        $currentPageItems = $allTransactions->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        
+        $transactions = new \Illuminate\Pagination\LengthAwarePaginator(
+            $currentPageItems,
+            $allTransactions->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         // Get filter options
         $categories = Category::orderBy('name')->get();
         $items = Item::orderBy('name')->get();
         $warehouses = Warehouse::orderBy('name')->get();
         $admins = User::whereIn('role', ['super_admin', 'admin_gudang'])->orderBy('name')->get();
+        
+        // Calculate statistics
+        $stats = [
+            'total_transactions' => $allTransactions->count(),
+            'total_stock_in' => $submissions->where('status', 'approved')->sum('quantity'),
+            'total_stock_out' => $stockRequests->sum('base_quantity'),
+            'approved_count' => $submissions->where('status', 'approved')->count() + $stockRequests->count(),
+            'pending_count' => $submissions->where('status', 'pending')->count(),
+            'rejected_count' => $submissions->where('status', 'rejected')->count(),
+        ];
         
         // Get years from submissions
         $years = Submission::selectRaw('YEAR(submitted_at) as year')
@@ -94,69 +145,105 @@ class TransactionReportController extends Controller
             'items',
             'warehouses',
             'admins',
-            'years'
+            'years',
+            'stats'
         ));
     }
 
     public function exportPdf(Request $request)
     {
-        $query = Submission::with([
+        // Get Submissions (Barang Masuk)
+        $submissionsQuery = Submission::with([
             'item.category',
             'warehouse',
             'supplier',
+            'staff',
             'approvals.admin'
         ])->whereNotNull('submitted_at');
 
+        // Get Stock Requests (Barang Keluar)
+        $stockRequestsQuery = \App\Models\StockRequest::with([
+            'item.category',
+            'warehouse',
+            'staff',
+            'approver'
+        ])->where('status', 'approved');
+
         // Apply same filters
         if ($request->filled('category_id')) {
-            $query->whereHas('item', function($q) use ($request) {
+            $submissionsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('category_id', $request->category_id);
+            });
+            $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
         }
 
         if ($request->filled('item_name')) {
-            $query->whereHas('item', function($q) use ($request) {
+            $submissionsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('name', 'LIKE', '%' . $request->item_name . '%');
+            });
+            $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('name', 'LIKE', '%' . $request->item_name . '%');
             });
         }
 
         if ($request->filled('item_code')) {
-            $query->whereHas('item', function($q) use ($request) {
+            $submissionsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('code', 'LIKE', '%' . $request->item_code . '%');
+            });
+            $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('code', 'LIKE', '%' . $request->item_code . '%');
             });
         }
 
         if ($request->filled('year')) {
-            $query->whereYear('submitted_at', $request->year);
+            $submissionsQuery->whereYear('submitted_at', $request->year);
+            $stockRequestsQuery->whereYear('created_at', $request->year);
         }
 
         if ($request->filled('month')) {
-            $query->whereMonth('submitted_at', $request->month);
+            $submissionsQuery->whereMonth('submitted_at', $request->month);
+            $stockRequestsQuery->whereMonth('created_at', $request->month);
         }
 
         if ($request->filled('warehouse_id')) {
-            $query->where('warehouse_id', $request->warehouse_id);
+            $submissionsQuery->where('warehouse_id', $request->warehouse_id);
+            $stockRequestsQuery->where('warehouse_id', $request->warehouse_id);
         }
 
-        if ($request->filled('processed_by')) {
-            $query->whereHas('approvals', function($q) use ($request) {
-                $q->where('admin_id', $request->processed_by);
+        // Apply status filter only to submissions
+        if ($request->filled('status')) {
+            $submissionsQuery->where('status', $request->status);
+        }
+
+        // Get results
+        $submissions = $submissionsQuery->get()->map(function($item) {
+            $item->transaction_type = 'in';
+            $item->transaction_date = $item->submitted_at;
+            return $item;
+        });
+
+        // Only get stock requests if status is empty or approved
+        $stockRequests = collect([]);
+        if (!$request->filled('status') || $request->status == 'approved') {
+            $stockRequests = $stockRequestsQuery->get()->map(function($item) {
+                $item->transaction_type = 'out';
+                $item->transaction_date = $item->approved_at ?? $item->created_at;
+                return $item;
             });
         }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $transactions = $query->orderBy('submitted_at', 'desc')->get();
+        $transactions = $submissions->concat($stockRequests)->sortByDesc('transaction_date');
 
         // Calculate statistics
         $stats = [
             'total_transactions' => $transactions->count(),
-            'total_stock_in' => $transactions->where('status', 'approved')->sum('quantity'),
+            'total_stock_in' => $submissions->where('status', 'approved')->sum('quantity'),
+            'total_stock_out' => $stockRequests->sum('base_quantity'),
             'approved_count' => $transactions->where('status', 'approved')->count(),
-            'pending_count' => $transactions->where('status', 'pending')->count(),
-            'rejected_count' => $transactions->where('status', 'rejected')->count(),
+            'pending_count' => $submissions->where('status', 'pending')->count(),
+            'rejected_count' => $submissions->where('status', 'rejected')->count(),
         ];
 
         $filters = $request->all();

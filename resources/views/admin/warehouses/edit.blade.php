@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('page-title', 'Edit Gudang')
+@section('page-title', 'Edit Unit')
 
 @section('content')
 <div class="row">
     <div class="col-12">
-        <h4 class="mb-4">Edit Gudang</h4>
+        <h4 class="mb-4">Edit Unit</h4>
     </div>
 </div>
 
@@ -31,7 +31,7 @@
 
 <div class="card">
     <div class="card-header">
-        <h6 class="mb-0">Form Gudang</h6>
+        <h6 class="mb-0">Form Unit</h6>
     </div>
 
     <div class="card-body">
@@ -45,7 +45,7 @@
                     <label for="code" class="form-label">Code <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="code" name="code"
                            value="{{ old('code', $warehouse->code) }}" readonly>
-                    <div class="form-text">Code gudang tidak dapat diubah</div>
+                    <div class="form-text">Code unit tidak dapat diubah</div>
                     @error('code')
                         <div class="text-danger small">{{ $message }}</div>
                     @enderror
@@ -53,7 +53,7 @@
 
                 <!-- Name -->
                 <div class="col-md-6 mb-3">
-                    <label for="name" class="form-label">Nama Gudang <span class="text-danger">*</span></label>
+                    <label for="name" class="form-label">Nama unit <span class="text-danger">*</span></label>
                     <input type="text" class="form-control @error('name') is-invalid @enderror"
                            id="name" name="name" value="{{ old('name', $warehouse->name) }}" required>
                     @error('name')
@@ -101,7 +101,7 @@
                         <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1"
                                {{ old('is_active', $warehouse->is_active) ? 'checked' : '' }}>
                         <label class="form-check-label" for="is_active">
-                            Gudang Aktif
+                            Unit Aktif
                         </label>
                     </div>
                 </div>

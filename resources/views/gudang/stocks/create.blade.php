@@ -38,10 +38,10 @@
                             
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="warehouse_id" class="form-label">Gudang <span class="text-danger">*</span></label>
+                                    <label for="warehouse_id" class="form-label">Unit <span class="text-danger">*</span></label>
                                     <select class="form-select @error('warehouse_id') is-invalid @enderror" 
                                             id="warehouse_id" name="warehouse_id" required>
-                                        <option value="">Pilih Gudang</option>
+                                        <option value="">Pilih Unit</option>
                                         @foreach($userWarehouses as $warehouse)
                                             <option value="{{ $warehouse->id }}" 
                                                     {{ old('warehouse_id') == $warehouse->id ? 'selected' : '' }}>

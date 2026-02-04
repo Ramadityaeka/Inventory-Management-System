@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('page-title', 'Tambah Gudang')
+@section('page-title', 'Tambah Unit')
 
 @section('content')
 <div class="row">
     <div class="col-12">
-        <h4 class="mb-4">Tambah Gudang Baru</h4>
+        <h4 class="mb-4">Tambah Unit Baru</h4>
     </div>
 </div>
 
 <div class="card">
     <div class="card-header">
-        <h6 class="mb-0">Form Gudang</h6>
+        <h6 class="mb-0">Form Unit</h6>
     </div>
 
     <div class="card-body">
@@ -24,7 +24,7 @@
                     <label for="code" class="form-label">Code <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="code" name="code"
                            value="{{ old('code', $nextCode ?? '') }}" readonly>
-                    <div class="form-text">Code gudang akan di-generate otomatis</div>
+                    <div class="form-text">Code unit akan di-generate otomatis</div>
                     @error('code')
                         <div class="text-danger small">{{ $message }}</div>
                     @enderror
@@ -32,7 +32,7 @@
 
                 <!-- Name -->
                 <div class="col-md-6 mb-3">
-                    <label for="name" class="form-label">Nama Gudang <span class="text-danger">*</span></label>
+                    <label for="name" class="form-label">Nama Unit <span class="text-danger">*</span></label>
                     <input type="text" class="form-control @error('name') is-invalid @enderror"
                            id="name" name="name" value="{{ old('name') }}" required>
                     @error('name')
@@ -79,7 +79,7 @@
                     <div class="form-check mt-4">
                         <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" {{ old('is_active', true) ? 'checked' : '' }}>
                         <label class="form-check-label" for="is_active">
-                            Gudang Aktif
+                            Unit Aktif
                         </label>
                     </div>
                 </div>

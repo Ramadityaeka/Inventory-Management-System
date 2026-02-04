@@ -6,8 +6,8 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h4 class="mb-1">Laporan Gudang</h4>
-                    <p class="text-muted mb-0">Akses laporan transaksi dan nilai stok gudang Anda</p>
+                    <h4 class="mb-1">Laporan Unit</h4>
+                    <p class="text-muted mb-0">Akses laporan transaksi dan nilai stok unit Anda</p>
                 </div>
             </div>
         </div>
@@ -23,7 +23,7 @@
                     </div>
                     <h5 class="card-title mb-3">Laporan Transaksi</h5>
                     <p class="card-text text-muted mb-4">
-                        Lihat dan ekspor data transaksi penerimaan barang di gudang Anda. 
+                        Lihat dan ekspor data transaksi penerimaan barang di unit Anda. 
                         Filter berdasarkan kategori, item, periode, dan status.
                     </p>
                     <a href="{{ route('gudang.reports.transactions') }}" class="btn btn-primary px-4">
@@ -43,7 +43,7 @@
                     <h5 class="card-title mb-3">Laporan Stok & Nilai</h5>
                     <p class="card-text text-muted mb-4">
                         Lihat dan ekspor data inventori dengan nilai harga terkini. 
-                        Pantau stok dan nilai aset gudang Anda.
+                        Pantau stok dan nilai aset unit Anda.
                     </p>
                     <a href="{{ route('gudang.reports.stock-values') }}" class="btn btn-success px-4">
                         <i class="bi bi-file-earmark-bar-graph me-2"></i>Buka Laporan
@@ -61,7 +61,7 @@
                     <h6 class="mb-3"><i class="bi bi-info-circle me-2"></i>Informasi</h6>
                     <ul class="mb-0">
                         <li class="mb-2">Anda dapat mengekspor semua laporan ke format Excel (.xlsx)</li>
-                        <li class="mb-2">Laporan menampilkan data sesuai gudang yang Anda kelola</li>
+                        <li class="mb-2">Laporan menampilkan data sesuai unit yang Anda kelola</li>
                         <li class="mb-2">Gunakan filter untuk menyaring data sesuai kebutuhan</li>
                         <li>Data dapat diurutkan dan dipaginate untuk kemudahan akses</li>
                     </ul>

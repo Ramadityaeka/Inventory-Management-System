@@ -129,7 +129,7 @@
                     <thead class="table-light">
                         <tr>
                             <th width="50">No</th>
-                            <th>Gudang</th>
+                            <th>Unit</th>
                             <th>Kode Barang</th>
                             <th>Nama Barang</th>
                             <th>Kategori</th>

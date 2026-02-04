@@ -236,7 +236,7 @@ class StockController extends Controller
         }
         
         // Get stock movements for this item
-        $query = StockMovement::with(['creator', 'warehouse', 'item', 'submission.supplier', 'submission.staff'])
+        $query = StockMovement::with(['creator', 'warehouse', 'item', 'submission.supplier', 'submission.staff', 'stockRequest.staff'])
             ->where('item_id', $item->id)
             ->whereIn('warehouse_id', $userWarehouses);
         

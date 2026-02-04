@@ -234,26 +234,6 @@
     </div>
 </div>
 
-<!-- Bulk Actions (if pending submissions exist) -->
-@if($currentStatus == 'pending' && $submissions->count() > 0)
-<div class="row mt-3">
-    <div class="col-12">
-        <div class="card border-info">
-            <div class="card-body py-2">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="text-info small">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Tip: Pilih beberapa submission untuk approve sekaligus
-                    </div>
-                    <button type="button" class="btn btn-info btn-sm" onclick="showBulkActions()">
-                        <i class="bi bi-check2-all me-1"></i>Bulk Actions
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-@endif
 @endsection
 
 @section('scripts')
@@ -278,12 +258,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-
-// Show bulk actions modal/form
-function showBulkActions() {
-    // Implementation for bulk actions
-    alert('Bulk actions feature will be implemented here');
-}
 
 // Auto-refresh pending count every 30 seconds if on pending tab
 @if($currentStatus == 'pending')
