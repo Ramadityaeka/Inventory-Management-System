@@ -24,6 +24,9 @@ class NotifyAdminsNewSubmission
      */
     public function handle(SubmissionCreated $event): void
     {
+        // Log untuk debugging duplikasi
+        \Log::info('NotifyAdminsNewSubmission triggered for submission: ' . $event->submission->id);
+        
         // Load necessary relationships
         $event->submission->load(['item', 'staff', 'warehouse']);
         

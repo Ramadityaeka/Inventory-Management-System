@@ -120,10 +120,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Apakah Anda yakin ingin menonaktifkan gudang <strong id="warehouseName"></strong>?</p>
+                <p>Apakah Anda yakin ingin menonaktifkan unit <strong id="warehouseName"></strong>?</p>
                 <div class="alert alert-warning">
                     <i class="bi bi-exclamation-triangle me-2"></i>
-                    Gudang yang memiliki item tidak dapat dihapus.
+                    Unit yang memiliki item tidak dapat dihapus.
                 </div>
             </div>
             <div class="modal-footer">

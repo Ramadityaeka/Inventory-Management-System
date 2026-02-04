@@ -18,6 +18,7 @@ class StockMovement extends Model
 
     protected $fillable = [
         'item_id',
+        'unit_id',
         'warehouse_id',
         'movement_type',
         'quantity',
@@ -61,6 +62,11 @@ class StockMovement extends Model
     public function submission(): BelongsTo
     {
         return $this->belongsTo(Submission::class, 'reference_id');
+    }
+
+    public function stockRequest(): BelongsTo
+    {
+        return $this->belongsTo(StockRequest::class, 'reference_id');
     }
 
     // Scopes

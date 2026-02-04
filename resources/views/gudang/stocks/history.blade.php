@@ -14,64 +14,6 @@
             </h4>
         </div>
     </div>
-        @push('scripts')
-        <script>
-        document.addEventListener('DOMContentLoaded', function(){
-            document.querySelectorAll('.btn-detail').forEach(function(btn){
-                btn.addEventListener('click', function(e){
-                    var raw = btn.getAttribute('data-movement');
-                    var m = null;
-                    try { m = JSON.parse(raw); } catch(err) { m = $(btn).data('movement') || {} }
-
-                    document.getElementById('md-date').textContent = m.created_at || '-';
-                    document.getElementById('md-warehouse').textContent = m.warehouse || '-';
-
-                    var typeEl = document.getElementById('md-type');
-                    var typeHtml = '';
-                    if(m.movement_type === 'in') typeHtml = '<span class="badge bg-success"><i class="bi bi-arrow-up-circle me-1"></i>Barang Masuk</span>';
-                    else if(m.movement_type === 'out') typeHtml = '<span class="badge bg-danger"><i class="bi bi-arrow-down-circle me-1"></i>Barang Keluar</span>';
-                    else if(m.movement_type === 'adjustment') typeHtml = '<span class="badge bg-warning text-dark"><i class="bi bi-gear me-1"></i>Penyesuaian</span>';
-                    else typeHtml = m.movement_type || '-';
-                    typeEl.innerHTML = typeHtml;
-
-                    document.getElementById('md-quantity').textContent = (typeof m.quantity !== 'undefined') ? (new Intl.NumberFormat().format(m.quantity) + ' ' + (m.unit || '')) : '-';
-
-                    if(m.supplier){
-                        var supplierHtml = '<h6 class="mb-2">'+(m.supplier.name||'')+'</h6>';
-                        supplierHtml += m.supplier.phone ? '<p class="mb-1"><i class="bi bi-telephone me-2"></i>'+m.supplier.phone+'</p>' : '';
-                        supplierHtml += m.supplier.email ? '<p class="mb-1"><i class="bi bi-envelope me-2"></i>'+m.supplier.email+'</p>' : '';
-                        document.getElementById('md-supplier').innerHTML = supplierHtml;
-                        document.getElementById('md-supplier-wrapper').style.display = 'block';
-                    } else {
-                        document.getElementById('md-supplier-wrapper').style.display = 'none';
-                    }
-
-                    if(m.staff){
-                        document.getElementById('md-staff').innerHTML = '<p class="mb-0 fw-bold">'+(m.staff.name||'')+'</p><small class="text-muted">Staff Unit</small>';
-                        document.getElementById('md-staff-wrapper').style.display = 'block';
-                    } else {
-                        document.getElementById('md-staff-wrapper').style.display = 'none';
-                    }
-
-                    if(m.creator){
-                        var role = m.creator.role || '';
-                        var roleText = role === 'super_admin' ? 'Super Admin' : (role === 'admin_gudang' ? 'Admin Unit' : (role === 'staff_gudang' ? 'Staff Unit' : (role ? role.charAt(0).toUpperCase()+role.slice(1) : '')));
-                        document.getElementById('md-creator').innerHTML = '<p class="mb-0 fw-bold">'+(m.creator.name||'')+'</p><small class="text-muted">'+roleText+'</small>';
-                        document.getElementById('md-creator-wrapper').style.display = 'block';
-                    } else {
-                        document.getElementById('md-creator-wrapper').style.display = 'none';
-                    }
-
-                    document.getElementById('md-notes').textContent = m.notes || 'Tidak ada catatan';
-
-                    var modalEl = document.getElementById('detailModal');
-                    var modal = new bootstrap.Modal(modalEl);
-                    modal.show();
-                });
-            });
-        });
-        </script>
-        @endpush
 </div>
 
 <!-- Item Info Card -->
@@ -82,7 +24,7 @@
                 <h5 class="mb-3">{{ $item->name }}</h5>
                 <table class="table table-sm table-borderless">
                     <tr>
-                        <th width="150">Kode Item:</th>
+                        <th width="150">Kode Barang:</th>
                         <td><code>{{ $item->code }}</code></td>
                     </tr>
                     <tr>
@@ -118,61 +60,6 @@
                         </td>
                     </tr>
                 </table>
-            </div>
-
-            <!-- Single Detail Modal (reused) -->
-            <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Detail Pergerakan Stok</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label text-muted small">Tanggal & Waktu</label>
-                                    <p class="fw-bold" id="md-date">-</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label text-muted small">Unit</label>
-                                    <p class="fw-bold" id="md-warehouse">-</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label text-muted small">Tipe Pergerakan</label>
-                                    <p id="md-type">-</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label text-muted small">Jumlah</label>
-                                    <p class="fw-bold fs-4" id="md-quantity">-</p>
-                                </div>
-                                <div class="col-12" id="md-supplier-wrapper" style="display:none;">
-                                    <label class="form-label text-muted small">Supplier</label>
-                                    <div class="card bg-light">
-                                        <div class="card-body" id="md-supplier">-</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6" id="md-staff-wrapper" style="display:none;">
-                                    <label class="form-label text-muted small">Diajukan Oleh</label>
-                                    <div id="md-staff">-</div>
-                                </div>
-                                <div class="col-md-6" id="md-creator-wrapper" style="display:none;">
-                                    <label class="form-label text-muted small">Disetujui Oleh</label>
-                                    <div id="md-creator">-</div>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label text-muted small">Catatan</label>
-                                    <div class="card bg-light">
-                                        <div class="card-body" id="md-notes">-</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-                        </div>
-                    </div>
-                </div>
             </div>
             <div class="col-md-6">
                 <h6 class="mb-3">Stok Saat Ini per Unit</h6>
@@ -268,7 +155,7 @@
     <div class="card-body">
         @if($movements->count() > 0)
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table">
                     <thead>
                         <tr>
                             <th>Tanggal/Waktu</th>
@@ -278,7 +165,7 @@
                             <th>Supplier</th>
                             <th>Diajukan Oleh</th>
                             <th>Catatan</th>
-                            <th class="text-center" width="80">Aksi</th>
+                            <th class="text-center" width="100">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -331,7 +218,8 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if($movement->submission && $movement->submission->staff)
+                                    @if($movement->movement_type == 'in' && $movement->submission && $movement->submission->staff)
+                                        {{-- Barang Masuk: Staff dari submission --}}
                                         <div class="d-flex align-items-center">
                                             <div class="avatar-initial rounded-circle me-2 d-flex align-items-center justify-content-center" 
                                                  style="width: 28px; height: 28px; background-color: #28a745; color: white; font-size: 0.7rem; font-weight: bold;">
@@ -339,6 +227,18 @@
                                             </div>
                                             <div>
                                                 <small><strong>{{ $movement->submission->staff->name }}</strong></small>
+                                                <br><small class="text-muted">Staff Unit</small>
+                                            </div>
+                                        </div>
+                                    @elseif($movement->movement_type == 'out' && $movement->stockRequest && $movement->stockRequest->staff)
+                                        {{-- Barang Keluar: Staff dari stock request --}}
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-initial rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                                                 style="width: 28px; height: 28px; background-color: #28a745; color: white; font-size: 0.7rem; font-weight: bold;">
+                                                {{ strtoupper(substr($movement->stockRequest->staff->name, 0, 1)) }}
+                                            </div>
+                                            <div>
+                                                <small><strong>{{ $movement->stockRequest->staff->name }}</strong></small>
                                                 <br><small class="text-muted">Staff Unit</small>
                                             </div>
                                         </div>
@@ -356,29 +256,31 @@
                                     @endif
                                 </td>
                                 <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-primary btn-detail" 
-                                            data-movement='@json([
-                                                "id" => $movement->id,
-                                                "created_at" => $movement->created_at->format("d M Y, H:i:s"),
-                                                "warehouse" => $movement->warehouse->name ?? null,
-                                                "movement_type" => $movement->movement_type,
-                                                "quantity" => $movement->quantity,
-                                                "unit" => $movement->item->unit ?? null,
-                                                "supplier" => $movement->submission && $movement->submission->supplier ? [
-                                                    "name" => $movement->submission->supplier->name,
-                                                    "phone" => $movement->submission->supplier->phone ?? null,
-                                                    "email" => $movement->submission->supplier->email ?? null,
-                                                ] : null,
-                                                "staff" => $movement->submission && $movement->submission->staff ? [
-                                                    "name" => $movement->submission->staff->name,
-                                                ] : null,
-                                                "creator" => $movement->creator ? [
-                                                    "name" => $movement->creator->name,
-                                                    "role" => $movement->creator->role,
-                                                ] : null,
-                                                "notes" => $movement->notes,
-                                            ])'>
-                                        <i class="bi bi-eye"></i>
+                                    @php
+                                        // Tentukan staff berdasarkan tipe movement
+                                        $staffName = '';
+                                        if ($movement->movement_type == 'in' && $movement->submission && $movement->submission->staff) {
+                                            $staffName = $movement->submission->staff->name;
+                                        } elseif ($movement->movement_type == 'out' && $movement->stockRequest && $movement->stockRequest->staff) {
+                                            $staffName = $movement->stockRequest->staff->name;
+                                        }
+                                    @endphp
+                                    <button type="button" class="btn btn-sm btn-info text-white" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#detailModal"
+                                            data-date="{{ $movement->created_at->format('d M Y, H:i:s') }}"
+                                            data-warehouse="{{ $movement->warehouse->name }}"
+                                            data-type="{{ $movement->movement_type }}"
+                                            data-quantity="{{ number_format($movement->quantity) }}"
+                                            data-unit="{{ $movement->item->unit }}"
+                                            data-supplier-name="{{ $movement->submission && $movement->submission->supplier ? $movement->submission->supplier->name : '' }}"
+                                            data-supplier-phone="{{ $movement->submission && $movement->submission->supplier ? $movement->submission->supplier->phone : '' }}"
+                                            data-supplier-email="{{ $movement->submission && $movement->submission->supplier ? $movement->submission->supplier->email : '' }}"
+                                            data-staff-name="{{ $staffName }}"
+                                            data-creator-name="{{ $movement->creator ? $movement->creator->name : '' }}"
+                                            data-creator-role="{{ $movement->creator ? $movement->creator->role : '' }}"
+                                            data-notes="{{ $movement->notes }}">
+                                        <i class="bi bi-eye"></i> Detail
                                     </button>
                                 </td>
                             </tr>
@@ -443,4 +345,224 @@
         </div>
     </div>
 @endif
+
+<!-- Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="detailModalLabel">
+                    <i class="bi bi-info-circle me-2"></i>Detail Pergerakan Stok
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Tanggal & Waktu</label>
+                        <p class="mb-0" id="detail-date">-</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Unit</label>
+                        <p class="mb-0" id="detail-warehouse">-</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Tipe Pergerakan</label>
+                        <div id="detail-type">-</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold">Jumlah</label>
+                        <p class="mb-0 fs-4 fw-bold" id="detail-quantity">-</p>
+                    </div>
+                    <div class="col-12" id="detail-supplier-section" style="display:none;">
+                        <hr>
+                        <label class="form-label text-muted small fw-bold">Informasi Supplier</label>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="mb-2" id="detail-supplier-name">-</h6>
+                                <p class="mb-1" id="detail-supplier-phone" style="display:none;">
+                                    <i class="bi bi-telephone me-2"></i><span></span>
+                                </p>
+                                <p class="mb-0" id="detail-supplier-email" style="display:none;">
+                                    <i class="bi bi-envelope me-2"></i><span></span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- For Barang Masuk & Keluar: Show Staff (Diajukan) and Creator (Disetujui) -->
+                    <div id="detail-staff-creator-section" style="display:none;">
+                        <div class="col-md-6">
+                            <hr>
+                            <label class="form-label text-muted small fw-bold">Diajukan Oleh</label>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-initial rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                                     style="width: 40px; height: 40px; background-color: #28a745; color: white; font-weight: bold;">
+                                    <span id="detail-staff-initial">-</span>
+                                </div>
+                                <div>
+                                    <p class="mb-0 fw-bold" id="detail-staff-name">-</p>
+                                    <small class="text-muted">Staff Unit</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <hr>
+                            <label class="form-label text-muted small fw-bold">Disetujui Oleh</label>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-initial rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                                     style="width: 40px; height: 40px; background-color: #007bff; color: white; font-weight: bold;">
+                                    <span id="detail-creator-initial">-</span>
+                                </div>
+                                <div>
+                                    <p class="mb-0 fw-bold" id="detail-creator-name">-</p>
+                                    <small class="text-muted" id="detail-creator-role">-</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- For Adjustment: Show only Creator (Disesuaikan Oleh) -->
+                    <div class="col-12" id="detail-adjustment-section" style="display:none;">
+                        <hr>
+                        <label class="form-label text-muted small fw-bold">Disesuaikan Oleh</label>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-initial rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                                 style="width: 40px; height: 40px; background-color: #ffc107; color: white; font-weight: bold;">
+                                <span id="detail-adjustment-initial">-</span>
+                            </div>
+                            <div>
+                                <p class="mb-0 fw-bold" id="detail-adjustment-name">-</p>
+                                <small class="text-muted" id="detail-adjustment-role">-</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <hr>
+                        <label class="form-label text-muted small fw-bold">Catatan</label>
+                        <div class="card bg-light">
+                            <div class="card-body" id="detail-notes">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+const detailModal = document.getElementById('detailModal');
+
+detailModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    
+    // Get data from button
+    const date = button.getAttribute('data-date');
+    const warehouse = button.getAttribute('data-warehouse');
+    const type = button.getAttribute('data-type');
+    const quantity = button.getAttribute('data-quantity');
+    const unit = button.getAttribute('data-unit');
+    const supplierName = button.getAttribute('data-supplier-name');
+    const supplierPhone = button.getAttribute('data-supplier-phone');
+    const supplierEmail = button.getAttribute('data-supplier-email');
+    const staffName = button.getAttribute('data-staff-name');
+    const creatorName = button.getAttribute('data-creator-name');
+    const creatorRole = button.getAttribute('data-creator-role');
+    const notes = button.getAttribute('data-notes');
+    
+    // Update modal content
+    document.getElementById('detail-date').textContent = date;
+    document.getElementById('detail-warehouse').textContent = warehouse;
+    document.getElementById('detail-quantity').textContent = quantity + ' ' + unit;
+    
+    // Type badge
+    const typeHtml = {
+        'in': '<span class="badge bg-success"><i class="bi bi-arrow-up-circle me-1"></i>Barang Masuk</span>',
+        'out': '<span class="badge bg-danger"><i class="bi bi-arrow-down-circle me-1"></i>Barang Keluar</span>',
+        'adjustment': '<span class="badge bg-warning text-dark"><i class="bi bi-gear me-1"></i>Penyesuaian</span>'
+    };
+    document.getElementById('detail-type').innerHTML = typeHtml[type] || type;
+    
+    // Supplier section
+    if (supplierName) {
+        document.getElementById('detail-supplier-name').textContent = supplierName;
+        
+        if (supplierPhone) {
+            document.getElementById('detail-supplier-phone').style.display = 'block';
+            document.querySelector('#detail-supplier-phone span').textContent = supplierPhone;
+        } else {
+            document.getElementById('detail-supplier-phone').style.display = 'none';
+        }
+        
+        if (supplierEmail) {
+            document.getElementById('detail-supplier-email').style.display = 'block';
+            document.querySelector('#detail-supplier-email span').textContent = supplierEmail;
+        } else {
+            document.getElementById('detail-supplier-email').style.display = 'none';
+        }
+        
+        document.getElementById('detail-supplier-section').style.display = 'block';
+    } else {
+        document.getElementById('detail-supplier-section').style.display = 'none';
+    }
+    
+    // Check if adjustment or not
+    if (type === 'adjustment') {
+        // For adjustment: show only admin who made the adjustment
+        document.getElementById('detail-staff-creator-section').style.display = 'none';
+        
+        if (creatorName) {
+            document.getElementById('detail-adjustment-name').textContent = creatorName;
+            document.getElementById('detail-adjustment-initial').textContent = creatorName.charAt(0).toUpperCase();
+            
+            const roleMap = {
+                'super_admin': 'Super Admin',
+                'admin_gudang': 'Admin Unit',
+                'staff_gudang': 'Staff Unit'
+            };
+            document.getElementById('detail-adjustment-role').textContent = roleMap[creatorRole] || creatorRole;
+            document.getElementById('detail-adjustment-section').style.display = 'block';
+        } else {
+            document.getElementById('detail-adjustment-section').style.display = 'none';
+        }
+    } else {
+        // For barang masuk & keluar: show staff (diajukan) and admin (disetujui)
+        document.getElementById('detail-adjustment-section').style.display = 'none';
+        
+        if (staffName || creatorName) {
+            if (staffName) {
+                document.getElementById('detail-staff-name').textContent = staffName;
+                document.getElementById('detail-staff-initial').textContent = staffName.charAt(0).toUpperCase();
+            }
+            
+            if (creatorName) {
+                document.getElementById('detail-creator-name').textContent = creatorName;
+                document.getElementById('detail-creator-initial').textContent = creatorName.charAt(0).toUpperCase();
+                
+                const roleMap = {
+                    'super_admin': 'Super Admin',
+                    'admin_gudang': 'Admin Unit',
+                    'staff_gudang': 'Staff Unit'
+                };
+                document.getElementById('detail-creator-role').textContent = roleMap[creatorRole] || creatorRole;
+            }
+            
+            document.getElementById('detail-staff-creator-section').style.display = 'block';
+        } else {
+            document.getElementById('detail-staff-creator-section').style.display = 'none';
+        }
+    }
+    
+    // Notes
+    document.getElementById('detail-notes').textContent = notes || 'Tidak ada catatan';
+});
+</script>
+@endpush

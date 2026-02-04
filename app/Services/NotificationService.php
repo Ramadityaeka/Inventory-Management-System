@@ -14,6 +14,20 @@ class NotificationService
      */
     public function create(array $data): Notification
     {
+        // Cek apakah ada notifikasi duplikat dalam 10 detik terakhir
+        $recentDuplicate = Notification::where('user_id', $data['user_id'])
+            ->where('type', $data['type'])
+            ->where('message', $data['message'])
+            ->where('reference_type', $data['reference_type'] ?? null)
+            ->where('reference_id', $data['reference_id'] ?? null)
+            ->where('created_at', '>=', now()->subSeconds(10))
+            ->first();
+        
+        // Jika ada duplikat, return yang sudah ada
+        if ($recentDuplicate) {
+            return $recentDuplicate;
+        }
+        
         return Notification::create([
             'user_id' => $data['user_id'],
             'type' => $data['type'],

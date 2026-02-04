@@ -131,8 +131,8 @@
                 
                 @if(!$item->is_active && $item->inactive_reason)
                     <div class="alert alert-warning mt-3 mb-0">
-                        <h6 class="alert-heading">Inactive Information</h6>
-                        <p class="mb-1"><strong>Reason:</strong> 
+                        <h6 class="alert-heading">Informasi Tidak aktif</h6>
+                        <p class="mb-1"><strong>Alasannya:</strong> 
                             @if($item->inactive_reason === 'discontinued')
                                 Barang Tidak Diproduksi Lagi
                             @elseif($item->inactive_reason === 'wrong_input')
@@ -145,7 +145,7 @@
                             @endif
                         </p>
                         @if($item->inactive_notes)
-                            <p class="mb-1"><strong>Notes:</strong> {{ $item->inactive_notes }}</p>
+                            <p class="mb-1"><strong>Catatan:</strong> {{ $item->inactive_notes }}</p>
                         @endif
                         @if($item->deactivated_at)
                             <p class="mb-0"><small><strong>Deactivated:</strong> {{ formatDateIndoLong($item->deactivated_at) }} WIB
@@ -173,7 +173,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h6 class="mb-0">Stock per Gudang</h6>
+                <h6 class="mb-0">Stock per Unit</h6>
             </div>
             <div class="card-body">
                 @if($item->stocks->count() > 0)
@@ -221,7 +221,7 @@
                 @else
                     <div class="text-center py-4">
                         <i class="bi bi-building text-muted fs-1 mb-3"></i>
-                        <p class="text-muted mb-0">Item belum memiliki stock di gudang manapun.</p>
+                        <p class="text-muted mb-0">Item belum memiliki stock di unit manapun.</p>
                     </div>
                 @endif
             </div>
@@ -368,21 +368,6 @@
         </div>
     </div>
 </div>
-
-<!-- Stock Movement Chart -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0">Stock Movement Timeline (Last 30 Days)</h6>
-            </div>
-            <div class="card-body">
-                <canvas id="stockMovementChart" width="400" height="200"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-@endsection
 
 @section('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

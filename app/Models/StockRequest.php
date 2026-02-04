@@ -32,6 +32,7 @@ class StockRequest extends Model
 
     protected $fillable = [
         'item_id',
+        'unit_id',
         'warehouse_id',
         'staff_id',
         'quantity',

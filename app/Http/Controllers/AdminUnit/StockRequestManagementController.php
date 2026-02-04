@@ -82,19 +82,20 @@ class StockRequestManagementController extends Controller
                 ->lockForUpdate()
                 ->first();
             
-            if (!$stock || $stock->quantity < $stockRequest->quantity) {
-                throw new \Exception('Stok tidak mencukupi. Stok saat ini: ' . ($stock ? $stock->quantity : 0));
+            if (!$stock || $stock->quantity < $stockRequest->base_quantity) {
+                throw new \Exception('Stok tidak mencukupi. Stok saat ini: ' . ($stock ? $stock->quantity : 0) . ' (dibutuhkan: ' . $stockRequest->base_quantity . ')');
             }
             
             // Reduce stock
-            $stock->decrement('quantity', $stockRequest->quantity);
+            $stock->decrement('quantity', $stockRequest->base_quantity);
             
             // Create stock movement
             StockMovement::create([
                 'item_id' => $stockRequest->item_id,
+                'unit_id' => $stockRequest->unit_id,
                 'warehouse_id' => $stockRequest->warehouse_id,
                 'movement_type' => 'out',
-                'quantity' => -$stockRequest->quantity,  // Negative for stock out
+                'quantity' => -$stockRequest->base_quantity,  // Negative for stock out (in base unit)
                 'reference_type' => 'stock_request',
                 'reference_id' => $stockRequest->id,
                 'notes' => 'Penggunaan barang approved - ' . $stockRequest->purpose,

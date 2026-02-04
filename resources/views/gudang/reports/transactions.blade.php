@@ -123,7 +123,7 @@
             <div class="card border-0 shadow-sm bg-primary text-white">
                 <div class="card-body">
                     <h6 class="mb-2">Total Transaksi</h6>
-                    <h3 class="mb-0">{{ number_format($transactions->total()) }}</h3>
+                    <h3 class="mb-0">{{ number_format($stats['total_transactions']) }}</h3>
                 </div>
             </div>
         </div>
@@ -131,7 +131,7 @@
             <div class="card border-0 shadow-sm bg-success text-white">
                 <div class="card-body">
                     <h6 class="mb-2">Disetujui</h6>
-                    <h3 class="mb-0">{{ number_format($transactions->where('status', 'approved')->count()) }}</h3>
+                    <h3 class="mb-0">{{ number_format($stats['approved_count']) }}</h3>
                 </div>
             </div>
         </div>
@@ -139,7 +139,7 @@
             <div class="card border-0 shadow-sm bg-warning text-white">
                 <div class="card-body">
                     <h6 class="mb-2">Menunggu</h6>
-                    <h3 class="mb-0">{{ number_format($transactions->where('status', 'pending')->count()) }}</h3>
+                    <h3 class="mb-0">{{ number_format($stats['pending_count']) }}</h3>
                 </div>
             </div>
         </div>
@@ -147,7 +147,7 @@
             <div class="card border-0 shadow-sm bg-danger text-white">
                 <div class="card-body">
                     <h6 class="mb-2">Ditolak</h6>
-                    <h3 class="mb-0">{{ number_format($transactions->where('status', 'rejected')->count()) }}</h3>
+                    <h3 class="mb-0">{{ number_format($stats['rejected_count']) }}</h3>
                 </div>
             </div>
         </div>
@@ -167,13 +167,14 @@
                             <th>Tanggal</th>
                             <th>Unit</th>
                             <th>Nama Barang</th>
+                            <th>Barang Masuk</th>
+                            <th>Barang Keluar</th>
+                            <th>Satuan</th>
+                            <th>Stok Saat Ini</th>
                             <th>Kategori</th>
-                            <th>Supplier</th>
-                            <th class="text-end">Stok</th>
-                            <th class="text-end">Harga/Satuan</th>
-                            <th class="text-end">Total Harga</th>
-                            <th>Staff</th>
+                            <th>Diajukan Oleh</th>
                             <th class="text-center">Status</th>
+                            <th>Diproses Oleh</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -181,7 +182,11 @@
                             <tr>
                                 <td>{{ $transactions->firstItem() + $index }}</td>
                                 <td>
-                                    <small>{{ $transaction->submitted_at ? $transaction->submitted_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : '-' }}</small>
+                                    @if($transaction->transaction_type == 'in')
+                                        <small>{{ $transaction->submitted_at ? $transaction->submitted_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : '-' }}</small>
+                                    @else
+                                        <small>{{ ($transaction->approved_at ?? $transaction->created_at)->timezone('Asia/Jakarta')->format('d/m/Y H:i') }}</small>
+                                    @endif
                                 </td>
                                 <td>{{ $transaction->warehouse->name ?? '-' }}</td>
                                 <td>
@@ -190,37 +195,65 @@
                                         <br><small class="text-muted">{{ $transaction->item->code }}</small>
                                     @endif
                                 </td>
+                                <td>
+                                    @if($transaction->transaction_type == 'in')
+                                        <span class="badge bg-success">{{ number_format($transaction->quantity, 0, ',', '.') }}</span>
+                                    @else
+                                        -
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($transaction->transaction_type == 'out')
+                                        <span class="badge bg-danger">{{ number_format($transaction->base_quantity ?? $transaction->quantity, 0, ',', '.') }}</span>
+                                    @else
+                                        -
+                                    @endif
+                                </td>
+                                <td>{{ $transaction->item->unit ?? $transaction->unit }}</td>
+                                <td>
+                                    @php
+                                        $currentStock = \App\Models\Stock::where('warehouse_id', $transaction->warehouse_id)
+                                            ->where('item_id', $transaction->item_id)
+                                            ->first();
+                                        $remainingStock = $currentStock ? $currentStock->quantity : 0;
+                                    @endphp
+                                    <strong>{{ number_format($remainingStock, 0, ',', '.') }}</strong>
+                                </td>
                                 <td>{{ $transaction->item->category->name ?? '-' }}</td>
-                                <td>{{ $transaction->supplier->name ?? '-' }}</td>
-                                <td class="text-end">{{ number_format($transaction->quantity, 0, ',', '.') }} {{ $transaction->unit }}</td>
-                                <td class="text-end">
-                                    @if($transaction->unit_price)
-                                        Rp {{ number_format($transaction->unit_price, 0, ',', '.') }}
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                                <td class="text-end">
-                                    @if($transaction->total_price)
-                                        <strong>Rp {{ number_format($transaction->total_price, 0, ',', '.') }}</strong>
-                                    @else
-                                        -
-                                    @endif
-                                </td>
                                 <td>{{ $transaction->staff->name ?? '-' }}</td>
                                 <td class="text-center">
-                                    @if($transaction->status == 'approved')
-                                        <span class="badge bg-success">Disetujui</span>
-                                    @elseif($transaction->status == 'rejected')
-                                        <span class="badge bg-danger">Ditolak</span>
+                                    @if($transaction->transaction_type == 'in')
+                                        @if($transaction->status == 'approved')
+                                            <span class="badge bg-success">Disetujui</span>
+                                        @elseif($transaction->status == 'rejected')
+                                            <span class="badge bg-danger">Ditolak</span>
+                                        @else
+                                            <span class="badge bg-warning text-dark">Menunggu</span>
+                                        @endif
                                     @else
-                                        <span class="badge bg-warning text-dark">Menunggu</span>
+                                        <span class="badge bg-success">Disetujui</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($transaction->transaction_type == 'in')
+                                        @php $approval = $transaction->approvals->first(); @endphp
+                                        @if($approval)
+                                            {{ $approval->admin->name }}
+                                        @else
+                                            -
+                                        @endif
+                                    @else
+                                        @if($transaction->approver)
+                                            {{ $transaction->approver->name }}
+                                        @else
+                                            -
+                                        @endif
                                     @endif
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="11" class="text-center py-4 text-muted">
+                                <td colspan="12" class="text-center py-4 text-muted">
                                     <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                     Tidak ada data transaksi
                                 </td>

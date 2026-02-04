@@ -109,7 +109,17 @@ class StockRequestController extends Controller
                         'name' => $unit->name,
                         'conversion_factor' => $unit->conversion_factor,
                     ];
-                });
+                })->toArray();
+                
+                // Jika tidak ada itemUnits (belum di-set satuan konversi), 
+                // gunakan satuan default dari item dengan conversion_factor = 1
+                if (empty($availableUnits)) {
+                    $availableUnits = [[
+                        'id' => 0, // ID 0 untuk satuan default
+                        'name' => $stock->item->unit,
+                        'conversion_factor' => 1,
+                    ]];
+                }
                 
                 return [
                     'id' => $stock->item_id,
@@ -135,17 +145,41 @@ class StockRequestController extends Controller
             'item_id' => 'required|exists:items,id',
             'warehouse_id' => 'required|exists:warehouses,id',
             'quantity' => 'required|integer|min:1',
-            'unit_id' => 'required|exists:item_units,id',
+            'unit_id' => 'required|integer',
             'purpose' => 'required|string|max:255',
             'notes' => 'nullable|string|max:1000',
         ]);
 
         DB::transaction(function () use ($validated) {
-            // Get item unit to calculate base quantity
-            $itemUnit = \App\Models\ItemUnit::findOrFail($validated['unit_id']);
+            // Get item for base unit
+            $item = \App\Models\Item::findOrFail($validated['item_id']);
+            
+            // Determine unit info based on unit_id
+            $actualUnitId = $validated['unit_id'];
+            if ($validated['unit_id'] == 0) {
+                // Satuan default (belum di-set konversi)
+                // Buat atau dapatkan ItemUnit default untuk item ini
+                $defaultUnit = \App\Models\ItemUnit::firstOrCreate(
+                    [
+                        'item_id' => $item->id,
+                        'name' => $item->unit,
+                    ],
+                    [
+                        'conversion_factor' => 1,
+                    ]
+                );
+                $actualUnitId = $defaultUnit->id;
+                $unitName = $item->unit;
+                $conversionFactor = 1;
+            } else {
+                // Get item unit to calculate base quantity
+                $itemUnit = \App\Models\ItemUnit::findOrFail($validated['unit_id']);
+                $unitName = $itemUnit->name;
+                $conversionFactor = $itemUnit->conversion_factor;
+            }
             
             // Calculate base quantity (quantity * conversion_factor)
-            $baseQuantity = $validated['quantity'] * $itemUnit->conversion_factor;
+            $baseQuantity = $validated['quantity'] * $conversionFactor;
             
             // Verify stock availability (in base unit)
             $stock = Stock::with('item')->where('item_id', $validated['item_id'])
@@ -154,8 +188,8 @@ class StockRequestController extends Controller
                 ->first();
             
             if (!$stock || $stock->quantity < $baseQuantity) {
-                $availableInRequestedUnit = $stock ? floor($stock->quantity / $itemUnit->conversion_factor) : 0;
-                throw new \Exception("Stok tidak mencukupi. Stok tersedia: {$availableInRequestedUnit} {$itemUnit->name} (setara {$stock->quantity} {$stock->item->unit})");
+                $availableInRequestedUnit = $stock ? floor($stock->quantity / $conversionFactor) : 0;
+                throw new \Exception("Stok tidak mencukupi. Stok tersedia: {$availableInRequestedUnit} {$unitName} (setara {$stock->quantity} {$item->unit})");
             }
             
             // Check if item is inactive
@@ -174,11 +208,12 @@ class StockRequestController extends Controller
             // Create stock request with unit info
             $stockRequest = StockRequest::create([
                 'item_id' => $validated['item_id'],
+                'unit_id' => $actualUnitId,
                 'warehouse_id' => $validated['warehouse_id'],
                 'staff_id' => auth()->id(),
                 'quantity' => $validated['quantity'],
-                'unit_name' => $itemUnit->name,
-                'conversion_factor' => $itemUnit->conversion_factor,
+                'unit_name' => $unitName,
+                'conversion_factor' => $conversionFactor,
                 'base_quantity' => $baseQuantity,
                 'purpose' => $validated['purpose'],
                 'notes' => $validated['notes'] ?? null,

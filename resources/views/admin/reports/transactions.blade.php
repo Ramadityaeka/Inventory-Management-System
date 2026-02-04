@@ -9,12 +9,12 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h1 class="h3 mb-0">📊 Laporan Transaksi Barang Masuk & Keluar</h1>
                 <div>
-                    <button type="button" class="btn btn-danger" onclick="exportPdf()">
-                        <i class="fas fa-file-pdf"></i> Export PDF
-                    </button>
                     <button type="button" class="btn btn-success" onclick="exportExcel()">
                         <i class="fas fa-file-excel"></i> Export Excel
                     </button>
+                    <button type="button" class="btn btn-danger" onclick="exportPdf()">
+                        <i class="fas fa-file-pdf"></i> Export PDF
+                    </button>                    
                 </div>
             </div>
         </div>
@@ -144,15 +144,15 @@
             <div class="card bg-success text-white">
                 <div class="card-body">
                     <h5>Total Transaksi</h5>
-                    <h2>{{ number_format($transactions->total()) }}</h2>
+                    <h2>{{ number_format($stats['total_transactions']) }}</h2>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-info text-white">
+            <div class="card bg-primary text-white">
                 <div class="card-body">
                     <h5>Disetujui</h5>
-                    <h2>{{ number_format($transactions->where('status', 'approved')->count()) }}</h2>
+                    <h2>{{ number_format($stats['approved_count']) }}</h2>
                 </div>
             </div>
         </div>
@@ -160,7 +160,7 @@
             <div class="card bg-warning text-white">
                 <div class="card-body">
                     <h5>Menunggu</h5>
-                    <h2>{{ number_format($transactions->where('status', 'pending')->count()) }}</h2>
+                    <h2>{{ number_format($stats['pending_count']) }}</h2>
                 </div>
             </div>
         </div>
@@ -168,7 +168,7 @@
             <div class="card bg-danger text-white">
                 <div class="card-body">
                     <h5>Ditolak</h5>
-                    <h2>{{ number_format($transactions->where('status', 'rejected')->count()) }}</h2>
+                    <h2>{{ number_format($stats['rejected_count']) }}</h2>
                 </div>
             </div>
         </div>
@@ -185,12 +185,14 @@
                     <thead class="table-dark">
                         <tr>
                             <th>No</th>
-                            <th>Gudang</th>
+                            <th>Unit</th>
                             <th>Nama Barang</th>
-                            <th>Jumlah</th>
+                            <th>Barang Masuk</th>
+                            <th>Barang Keluar</th>
                             <th>Satuan</th>
-                            <th>Sisa Stok</th>
+                            <th>Stok Saat Ini</th>
                             <th>Keterangan</th>
+                            <th>Diajukan Oleh</th>
                             <th>Status</th>
                             <th>Diproses Oleh</th>
                             <th>Waktu</th>
@@ -203,7 +205,6 @@
                                     ->where('item_id', $transaction->item_id)
                                     ->first();
                                 $remainingStock = $currentStock ? $currentStock->quantity : 0;
-                                $approval = $transaction->approvals->first();
                             @endphp
                             <tr>
                                 <td>{{ $transactions->firstItem() + $index }}</td>
@@ -215,43 +216,83 @@
                                     <small class="text-muted">{{ $transaction->item->code }}</small>
                                 </td>
                                 <td>
-                                    <span class="badge bg-success">{{ number_format($transaction->quantity) }}</span>
+                                    @if($transaction->transaction_type == 'in')
+                                        <span class="badge bg-success">{{ number_format($transaction->quantity) }}</span>
+                                    @else
+                                        -
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($transaction->transaction_type == 'out')
+                                        <span class="badge bg-danger">{{ number_format($transaction->base_quantity ?? $transaction->quantity) }}</span>
+                                    @else
+                                        -
+                                    @endif
                                 </td>
                                 <td>{{ $transaction->item->unit }}</td>
                                 <td>
                                     <strong>{{ number_format($remainingStock) }}</strong>
                                 </td>
                                 <td>
-                                    @if($transaction->notes)
-                                        {{ Str::limit($transaction->notes, 50) }}
+                                    @if($transaction->transaction_type == 'in')
+                                        @if($transaction->notes)
+                                            {{ Str::limit($transaction->notes, 50) }}
+                                        @else
+                                            <small class="text-muted">Penerimaan dari {{ $transaction->supplier->name ?? '-' }}</small>
+                                        @endif
                                     @else
-                                        <small class="text-muted">Penerimaan dari {{ $transaction->supplier->name ?? '-' }}</small>
+                                        <small>{{ $transaction->purpose ?? 'Penggunaan barang' }}</small>
                                     @endif
                                 </td>
                                 <td>
-                                    @if($transaction->status == 'approved')
-                                        <span class="badge bg-success">Disetujui</span>
-                                    @elseif($transaction->status == 'rejected')
-                                        <span class="badge bg-danger">Ditolak</span>
-                                    @else
-                                        <span class="badge bg-warning">Menunggu</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($approval)
-                                        <strong>{{ $approval->admin->name }}</strong><br>
-                                        <small class="text-muted">{{ $approval->admin->role }}</small>
+                                    @if($transaction->staff)
+                                        <strong>{{ $transaction->staff->name }}</strong>
                                     @else
                                         -
                                     @endif
                                 </td>
                                 <td>
-                                    {{ formatDateIndoLong($transaction->submitted_at) }} WIB
+                                    @if($transaction->transaction_type == 'in')
+                                        @if($transaction->status == 'approved')
+                                            <span class="badge bg-success">Disetujui</span>
+                                        @elseif($transaction->status == 'rejected')
+                                            <span class="badge bg-danger">Ditolak</span>
+                                        @else
+                                            <span class="badge bg-warning">Menunggu</span>
+                                        @endif
+                                    @else
+                                        <span class="badge bg-success">Disetujui</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($transaction->transaction_type == 'in')
+                                        @php $approval = $transaction->approvals->first(); @endphp
+                                        @if($approval)
+                                            <strong>{{ $approval->admin->name }}</strong><br>
+                                            <small class="text-muted">{{ $approval->admin->role }}</small>
+                                        @else
+                                            -
+                                        @endif
+                                    @else
+                                        @if($transaction->approver)
+                                            <strong>{{ $transaction->approver->name }}</strong><br>
+                                            <small class="text-muted">{{ $transaction->approver->role }}</small>
+                                        @else
+                                            -
+                                        @endif
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($transaction->transaction_type == 'in')
+                                        {{ formatDateIndoLong($transaction->submitted_at) }} WIB
+                                    @else
+                                        {{ formatDateIndoLong($transaction->approved_at ?? $transaction->created_at) }} WIB
+                                    @endif
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center py-4">
+                                <td colspan="12" class="text-center py-4">
                                     <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                                     <p class="text-muted">Tidak ada data transaksi</p>
                                 </td>
