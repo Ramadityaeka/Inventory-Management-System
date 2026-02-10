@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 03, 2026 at 03:09 AM
+-- Generation Time: Feb 10, 2026 at 08:54 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -43,45 +43,43 @@ CREATE TABLE `approvals` (
 --
 DELIMITER $$
 CREATE TRIGGER `after_insert_approvals` AFTER INSERT ON `approvals` FOR EACH ROW BEGIN
-    DECLARE item_id_var INT;
-    DECLARE warehouse_id_var INT;
-    DECLARE quantity_var INT;
-    DECLARE conversion_factor_var INT;
-    DECLARE base_quantity INT;
-    
-    
-    SELECT s.item_id, s.warehouse_id, s.quantity, COALESCE(s.conversion_factor, 1)
-    INTO item_id_var, warehouse_id_var, quantity_var, conversion_factor_var
-    FROM submissions s
-    WHERE s.id = NEW.submission_id;
-    
-    
-    SET base_quantity = quantity_var * conversion_factor_var;
-    
-    
-    IF NEW.action = "approved" AND item_id_var IS NOT NULL THEN
-        
-        
-        INSERT INTO stocks (item_id, unit_id, quantity, last_updated)
-        VALUES (item_id_var, warehouse_id_var, base_quantity, NOW())
-        ON DUPLICATE KEY UPDATE 
-            quantity = quantity + base_quantity,
-            last_updated = NOW();
-        
-        
-        INSERT INTO stock_movements (item_id, warehouse_id, quantity, movement_type, reference_type, reference_id, created_by, created_at)
-        VALUES (
-            item_id_var, 
-            warehouse_id_var, 
-            base_quantity, 
-            "in", 
-            "submission", 
-            NEW.submission_id, 
-            NEW.admin_id, 
-            NOW()
-        );
-    END IF;
-END
+                DECLARE item_id_var BIGINT;
+                DECLARE warehouse_id_var BIGINT;
+                DECLARE quantity_var INT;
+                DECLARE conversion_factor_var INT DEFAULT 1;
+                DECLARE total_qty INT;
+                DECLARE unit_id_var BIGINT;
+
+                SELECT s.item_id, s.warehouse_id, s.quantity, COALESCE(s.conversion_factor, 1), s.unit_id
+                INTO item_id_var, warehouse_id_var, quantity_var, conversion_factor_var, unit_id_var
+                FROM submissions s
+                WHERE s.id = NEW.submission_id;
+
+                SET total_qty = quantity_var * conversion_factor_var;
+
+                IF NEW.action = "approved" AND item_id_var IS NOT NULL THEN
+                    -- Update stocks
+                    INSERT INTO stocks (item_id, unit_id, warehouse_id, quantity, last_updated)
+                    VALUES (item_id_var, unit_id_var, warehouse_id_var, total_qty, NOW())
+                    ON DUPLICATE KEY UPDATE
+                        quantity = quantity + total_qty,
+                        last_updated = NOW();
+
+                    -- Insert stock movement with unit_id
+                    INSERT INTO stock_movements (item_id, unit_id, warehouse_id, quantity, movement_type, reference_type, reference_id, created_by, created_at)
+                    VALUES (
+                        item_id_var,
+                        unit_id_var,
+                        warehouse_id_var,
+                        total_qty,
+                        "in",
+                        "submission",
+                        NEW.submission_id,
+                        NEW.admin_id,
+                        NOW()
+                    );
+                END IF;
+            END
 $$
 DELIMITER ;
 
@@ -255,13 +253,9 @@ INSERT INTO `items` (`id`, `category_id`, `code`, `name`, `supplier_id`, `unit`,
 (30, 6, '1.01.03.01.001.007', 'Ballpoint Faster', NULL, 'Buah', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
 (31, 6, '1.01.03.01.001.008', 'Ballpoint Standar', NULL, 'Buah', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
 (32, 6, '1.01.03.01.001.009', 'Pensil Faber Castel', NULL, 'Buah', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
-(33, 15, '1.01.03.01.010.001', 'Lem Glue Joyko', NULL, 'Buah', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
-(34, 15, '1.01.03.01.010.002', 'Lem Glue Kenko', NULL, 'Buah', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
 (35, 15, '1.01.03.01.010.003', 'Lakban Hitam 36 mm', NULL, 'Roll', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
 (36, 15, '1.01.03.01.010.004', 'Lakban Diamaru Bening', NULL, 'Roll', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
 (37, 15, '1.01.03.01.010.005', 'Lakban 1/2 in x 72 yds', NULL, 'Roll', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
-(38, 17, '1.01.03.01.012.002', 'Stapler Max HD 10', NULL, 'Buah', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
-(39, 17, '1.01.03.01.012.003', 'Stapler Max HD 50', NULL, 'Buah', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
 (40, 23, '1.01.03.02.002.001', 'Post it Sign Here', NULL, 'Pak', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
 (41, 23, '1.01.03.02.002.002', 'Post it Notes', NULL, 'Pak', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
 (42, 23, '1.01.03.02.002.003', 'Post it Warna', NULL, 'Pak', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
@@ -269,7 +263,11 @@ INSERT INTO `items` (`id`, `category_id`, `code`, `name`, `supplier_id`, `unit`,
 (44, 9, '1.01.03.01.004.001', 'Tip ex Kenko', NULL, 'Pak', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
 (45, 15, '1.01.03.01.010.006', 'Lem Glue Stick Joyko', NULL, 'Buah', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
 (46, 15, '1.01.03.01.010.007', 'Lem Glue Stick Kenko', NULL, 'Buah', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
-(47, 49, '1.01.03.06.010.001', 'Bateray ABC Alkaline AA Isi 2', NULL, 'Set', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23');
+(47, 49, '1.01.03.06.010.001', 'Bateray ABC Alkaline AA Isi 2', NULL, 'Set', NULL, 1, '2026-02-02 09:20:23', '2026-02-02 09:20:23'),
+(48, 49, '1.01.03.06.010.002', 'Bateray ABC Alkaline AAA Isi 2', NULL, 'Set', NULL, 1, '2026-02-03 04:22:27', '2026-02-03 04:22:27'),
+(49, 31, '1.01.03.04.004.007', 'Tinta Epson Color', NULL, 'Buah', NULL, 1, '2026-02-03 04:25:24', '2026-02-03 04:25:24'),
+(50, 31, '1.01.03.04.004.008', 'Tinta Epson Black', NULL, 'Buah', NULL, 1, '2026-02-03 04:25:49', '2026-02-03 04:25:49'),
+(51, 39, '1.01.03.04.999.001', 'Power Bank EW 71', NULL, 'Buah', NULL, 1, '2026-02-03 04:27:25', '2026-02-03 06:32:39');
 
 -- --------------------------------------------------------
 
@@ -291,7 +289,9 @@ CREATE TABLE `item_units` (
 --
 
 INSERT INTO `item_units` (`id`, `item_id`, `name`, `conversion_factor`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Dus', 500, '2026-02-02 07:47:57', '2026-02-02 07:47:57');
+(1, 1, 'Dus', 500, '2026-02-02 07:47:57', '2026-02-02 07:47:57'),
+(3, 40, 'Pak', 1, '2026-02-04 01:59:56', '2026-02-04 01:59:56'),
+(4, 4, 'Rim', 1, '2026-02-04 02:00:32', '2026-02-04 02:00:32');
 
 -- --------------------------------------------------------
 
@@ -385,7 +385,11 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 (39, '2026_01_28_000005_add_warehouse_id_compat_to_stocks', 28),
 (40, '2026_01_28_000006_add_warehouse_id_compat_to_stock_movements', 29),
 (41, '2026_01_28_000007_add_warehouse_id_compat_to_submissions', 30),
-(42, '2026_02_02_140000_add_unit_fields_to_stock_requests', 31);
+(42, '2026_02_02_140000_add_unit_fields_to_stock_requests', 31),
+(43, '2026_01_28_000001_update_approval_trigger_use_conversion_factor', 32),
+(47, '2026_02_04_000001_fix_after_insert_approvals_trigger_unit_id', 33),
+(48, '2026_02_08_145041_add_missing_columns_to_users_table', 34),
+(49, '2026_02_08_150000_create_transfers_table', 35);
 
 -- --------------------------------------------------------
 
@@ -419,19 +423,9 @@ INSERT INTO `notifications` (`id`, `user_id`, `type`, `title`, `message`, `refer
 (27, 4, 'password_reset', 'Password Direset', 'Password Anda telah direset oleh Super Admin. Silakan login dengan password baru dan segera menggantinya.', 'user', 6, 0, NULL, '2026-01-26 09:00:00', '2026-01-26 09:00:00'),
 (28, 4, 'password_reset', 'Password Direset', 'Password Anda telah direset oleh Super Admin. Silakan login dengan password baru dan segera menggantinya.', 'user', 6, 0, NULL, '2026-01-26 09:00:00', '2026-01-26 09:00:00'),
 (29, 4, 'submission_approved', 'Submission Approved', 'Submission Anda telah diapprove oleh admin gudang.', NULL, NULL, 0, NULL, '2026-01-26 09:00:00', '2026-01-26 09:00:00'),
-(32, 2, 'new_submission', 'Submission Barang Baru', 'Submission baru dari gilbert untuk item Amplop No 90 Paperline (80 Pack) di Inspektorat II', 'submission', 13, 0, NULL, '2026-01-28 08:40:40', '2026-01-28 08:40:40'),
-(33, 2, 'new_submission', 'Submission Barang Baru', 'Submission baru dari gilbert untuk item Amplop No 90 Paperline (80 Pack) di Inspektorat II', 'submission', 13, 0, NULL, '2026-01-28 08:40:40', '2026-01-28 08:40:40'),
 (34, 5, 'submission_approved', 'Submission Approved', 'Submission Anda telah diapprove oleh admin gudang.', NULL, NULL, 1, '2026-01-31 14:48:06', '2026-01-28 08:41:18', '2026-01-31 14:48:06'),
-(35, 2, 'new_submission', 'Submission Barang Baru', 'Submission baru dari gilbert untuk item Batu Baterai AAA (800 box) di Inspektorat II', 'submission', 18, 0, NULL, '2026-02-02 03:47:22', '2026-02-02 03:47:22'),
-(36, 2, 'new_submission', 'Submission Barang Baru', 'Submission baru dari gilbert untuk item Batu Baterai AAA (800 box) di Inspektorat II', 'submission', 18, 0, NULL, '2026-02-02 03:47:22', '2026-02-02 03:47:22'),
-(37, 2, 'new_submission', 'Submission Barang Baru', 'Submission baru dari gilbert untuk item Ballpoint Sarasa 0.7 Zebra ( Biru ) (80 Lusin) di Inspektorat II', 'submission', 19, 0, NULL, '2026-02-02 03:48:06', '2026-02-02 03:48:06'),
-(38, 2, 'new_submission', 'Submission Barang Baru', 'Submission baru dari gilbert untuk item Ballpoint Sarasa 0.7 Zebra ( Biru ) (80 Lusin) di Inspektorat II', 'submission', 19, 0, NULL, '2026-02-02 03:48:06', '2026-02-02 03:48:06'),
 (39, 5, 'submission_approved', 'Submission Approved', 'Submission Anda telah diapprove oleh admin gudang.', NULL, NULL, 0, NULL, '2026-02-02 03:56:14', '2026-02-02 03:56:14'),
 (40, 5, 'submission_rejected', 'Submission Rejected', 'Submission Anda ditolak. Alasan: Data tidak lengkap atau tidak valid', NULL, NULL, 0, NULL, '2026-02-02 03:56:38', '2026-02-02 03:56:38'),
-(41, 10, 'info', 'Selamat Datang di Inventory ESDM', 'Akun Anda telah berhasil dibuat oleh Super Admin. Anda sekarang dapat login ke sistem.', NULL, NULL, 0, NULL, '2026-02-02 04:34:07', '2026-02-02 04:34:07'),
-(42, 10, 'info', 'Penugasan Gudang', 'Anda telah ditugaskan sebagai Admin Gudang untuk mengelola gudang: Bagian Pengelolaan Tindak Lanjut Hasil Pengawasan dan Kepatuhan Internal.', NULL, NULL, 0, NULL, '2026-02-02 04:34:07', '2026-02-02 04:34:07'),
-(43, 10, 'role_changed', 'Perubahan Role', 'Role Anda telah diubah dari Admin Gudang menjadi Staff Gudang oleh Super Admin', 'user', 6, 0, NULL, '2026-02-02 04:34:33', '2026-02-02 04:34:33'),
-(44, 10, 'role_changed', 'Perubahan Role', 'Role Anda telah diubah dari Admin Gudang menjadi Staff Gudang oleh Super Admin', 'user', 6, 0, NULL, '2026-02-02 04:34:33', '2026-02-02 04:34:33'),
 (45, 9, 'warehouse_assignment', 'Penugasan Gudang', 'Anda telah ditugaskan ke gudang: Bagian Pengelolaan Tindak Lanjut Hasil Pengawasan dan Kepatuhan Internal oleh Super Admin', 'user', 6, 0, NULL, '2026-02-02 04:34:46', '2026-02-02 04:34:46'),
 (46, 9, 'warehouse_assignment', 'Penugasan Gudang', 'Anda telah ditugaskan ke gudang: Bagian Pengelolaan Tindak Lanjut Hasil Pengawasan dan Kepatuhan Internal oleh Super Admin', 'user', 6, 0, NULL, '2026-02-02 04:34:47', '2026-02-02 04:34:47'),
 (47, 9, 'warehouse_assignment', 'Penugasan Gudang', 'Anda telah dihapus dari gudang: Inspektorat III oleh Super Admin', 'user', 6, 0, NULL, '2026-02-02 04:34:47', '2026-02-02 04:34:47'),
@@ -440,13 +434,33 @@ INSERT INTO `notifications` (`id`, `user_id`, `type`, `title`, `message`, `refer
 (50, 9, 'new_submission', 'Submission Barang Baru', 'Submission baru dari pak heri untuk item Binder Clip 200 (5 Lembar) di Bagian Pengelolaan Tindak Lanjut Hasil Pengawasan dan Kepatuhan Internal', 'submission', 20, 0, NULL, '2026-02-02 06:10:35', '2026-02-02 06:10:35'),
 (51, 9, 'new_submission', 'Submission Barang Baru', 'Submission baru dari pak heri untuk item Kertas HVS Bola Dunia A4 80 Gram (120 Lembar) di Bagian Pengelolaan Tindak Lanjut Hasil Pengawasan dan Kepatuhan Internal', 'submission', 21, 0, NULL, '2026-02-02 06:13:00', '2026-02-02 06:13:00'),
 (52, 9, 'new_submission', 'Submission Barang Baru', 'Submission baru dari pak heri untuk item Kertas HVS Bola Dunia A4 80 Gram (120 Lembar) di Bagian Pengelolaan Tindak Lanjut Hasil Pengawasan dan Kepatuhan Internal', 'submission', 21, 0, NULL, '2026-02-02 06:13:00', '2026-02-02 06:13:00'),
-(53, 10, 'password_reset', 'Password Direset', 'Password Anda telah direset oleh Super Admin. Silakan login dengan password baru dan segera menggantinya.', 'user', 6, 0, NULL, '2026-02-02 06:26:50', '2026-02-02 06:26:50'),
-(54, 10, 'password_reset', 'Password Direset', 'Password Anda telah direset oleh Super Admin. Silakan login dengan password baru dan segera menggantinya.', 'user', 6, 0, NULL, '2026-02-02 06:26:50', '2026-02-02 06:26:50'),
 (57, 9, 'new_submission', 'Submission Barang Baru', 'Submission baru dari Herry Effendi untuk item Stopmap 5002 Diamond ( Kuning ) (7 Lembar) di Bagian Pengelolaan Tindak Lanjut Hasil Pengawasan dan Kepatuhan Internal', 'submission', 22, 0, NULL, '2026-02-02 06:31:19', '2026-02-02 06:31:19'),
 (59, 9, 'new_submission', 'Submission Barang Baru', 'Submission baru dari Herry Effendi untuk item Stopmap 5002 Diamond ( Kuning ) (7 Lembar) di Bagian Pengelolaan Tindak Lanjut Hasil Pengawasan dan Kepatuhan Internal', 'submission', 22, 0, NULL, '2026-02-02 06:31:19', '2026-02-02 06:31:19'),
-(61, 10, 'submission_approved', 'Submission Approved', 'Submission Anda telah diapprove oleh admin gudang.', NULL, NULL, 0, NULL, '2026-02-02 06:32:59', '2026-02-02 06:32:59'),
 (62, 9, 'new_submission', 'Submission Barang Baru', 'Submission baru dari Herry Effendi untuk item test (80 Pcs) di Bagian Pengelolaan Tindak Lanjut Hasil Pengawasan dan Kepatuhan Internal', 'submission', 23, 0, NULL, '2026-02-02 06:41:33', '2026-02-02 06:41:33'),
-(64, 9, 'new_submission', 'Submission Barang Baru', 'Submission baru dari Herry Effendi untuk item test (80 Pcs) di Bagian Pengelolaan Tindak Lanjut Hasil Pengawasan dan Kepatuhan Internal', 'submission', 23, 0, NULL, '2026-02-02 06:41:33', '2026-02-02 06:41:33');
+(64, 9, 'new_submission', 'Submission Barang Baru', 'Submission baru dari Herry Effendi untuk item test (80 Pcs) di Bagian Pengelolaan Tindak Lanjut Hasil Pengawasan dan Kepatuhan Internal', 'submission', 23, 0, NULL, '2026-02-02 06:41:33', '2026-02-02 06:41:33'),
+(70, 4, 'warehouse_assignment', 'Penugasan Gudang', 'Anda telah ditugaskan ke gudang: test oleh Super Admin', 'user', 6, 0, NULL, '2026-02-04 01:15:10', '2026-02-04 01:15:10'),
+(71, 4, 'warehouse_assignment', 'Penugasan Gudang', 'Anda telah ditugaskan ke gudang: test oleh Super Admin', 'user', 6, 0, NULL, '2026-02-04 01:15:10', '2026-02-04 01:15:10'),
+(72, 4, 'warehouse_assignment', 'Penugasan Gudang', 'Anda telah dihapus dari gudang: Inspektorat II oleh Super Admin', 'user', 6, 0, NULL, '2026-02-04 01:15:10', '2026-02-04 01:15:10'),
+(73, 4, 'warehouse_assignment', 'Penugasan Gudang', 'Anda telah dihapus dari gudang: Inspektorat II oleh Super Admin', 'user', 6, 0, NULL, '2026-02-04 01:15:10', '2026-02-04 01:15:10'),
+(82, 4, 'submission_approved', 'Submission Approved', 'Submission Anda telah diapprove oleh admin gudang.', NULL, NULL, 0, NULL, '2026-02-04 01:38:24', '2026-02-04 01:38:24'),
+(83, 4, 'submission_approved', 'Submission Approved', 'Submission Anda telah diapprove oleh admin gudang.', NULL, NULL, 0, NULL, '2026-02-04 01:40:26', '2026-02-04 01:40:26'),
+(84, 4, 'submission_rejected', 'Submission Rejected', 'Submission Anda ditolak. Alasan: Data tidak lengkap atau tidak valid', NULL, NULL, 0, NULL, '2026-02-04 01:41:13', '2026-02-04 01:41:13'),
+(85, 4, 'submission_rejected', 'Submission Rejected', 'Submission Anda ditolak. Alasan: Data duplikat, submission serupa sudah ada - data tidak di iisi semua jadi saya tolak, dan juga barangnya tidak jelas', NULL, NULL, 0, NULL, '2026-02-04 01:45:43', '2026-02-04 01:45:43'),
+(86, 2, 'new_stock_request', 'Permintaan Barang Keluar Baru', 'Permintaan barang keluar dari test untuk Post it Sign Here (20 Pak) di test', 'stock_request', 1, 0, NULL, '2026-02-04 01:59:56', '2026-02-04 01:59:56'),
+(87, 2, 'new_stock_request', 'Permintaan Barang Keluar Baru', 'Permintaan barang keluar dari test untuk Kertas HVS Bola Dunia A4 70 Gram (30 Rim) di test', 'stock_request', 2, 0, NULL, '2026-02-04 02:00:32', '2026-02-04 02:00:32'),
+(88, 4, 'warning', 'Request Penggunaan Barang Ditolak', 'Request penggunaan Kertas HVS Bola Dunia A4 70 Gram sebanyak 30 telah ditolak. Alasan: kebanyakan', NULL, NULL, 0, NULL, '2026-02-04 02:02:04', '2026-02-04 02:02:04'),
+(89, 4, 'info', 'Request Penggunaan Barang Disetujui', 'Request penggunaan Post it Sign Here sebanyak 20 telah disetujui oleh irsyad.', NULL, NULL, 0, NULL, '2026-02-04 02:04:24', '2026-02-04 02:04:24'),
+(90, 12, 'info', 'Selamat Datang di Inventory ESDM', 'Akun Anda telah berhasil dibuat oleh Super Admin. Anda sekarang dapat login ke sistem.', NULL, NULL, 0, NULL, '2026-02-05 09:05:50', '2026-02-05 09:05:50'),
+(91, 12, 'password_reset', 'Password Direset', 'Password Anda telah direset oleh Super Admin. Silakan login dengan password baru dan segera menggantinya.', 'user', 6, 0, NULL, '2026-02-05 09:13:36', '2026-02-05 09:13:36'),
+(92, 4, 'warehouse_assignment', 'Penugasan Gudang', 'Anda telah ditugaskan ke gudang: Klinik oleh Laris Siregar', 'user', 12, 0, NULL, '2026-02-10 03:58:25', '2026-02-10 03:58:25'),
+(93, 2, 'warehouse_assignment', 'Penugasan Gudang', 'Anda telah ditugaskan ke gudang: Klinik oleh Laris Siregar', 'user', 12, 0, NULL, '2026-02-10 03:58:39', '2026-02-10 03:58:39'),
+(94, 2, 'warehouse_assignment', 'Penugasan Gudang', 'Anda telah dihapus dari gudang: test oleh Laris Siregar', 'user', 12, 0, NULL, '2026-02-10 03:58:39', '2026-02-10 03:58:39'),
+(95, 14, 'info', 'Selamat Datang di Inventory ESDM', 'Akun Anda telah berhasil dibuat oleh Super Admin. Anda sekarang dapat login ke sistem.', NULL, NULL, 0, NULL, '2026-02-10 04:01:00', '2026-02-10 04:01:00'),
+(96, 14, 'info', 'Penugasan Gudang', 'Anda telah ditugaskan sebagai Admin Gudang untuk mengelola gudang: Klinik.', NULL, NULL, 0, NULL, '2026-02-10 04:01:00', '2026-02-10 04:01:00'),
+(97, 14, 'role_changed', 'Perubahan Role', 'Role Anda telah diubah dari Admin Gudang menjadi Staff Gudang oleh Laris Siregar', 'user', 12, 0, NULL, '2026-02-10 04:10:23', '2026-02-10 04:10:23'),
+(98, 15, 'info', 'Selamat Datang di Inventory ESDM', 'Akun Anda telah berhasil dibuat oleh Super Admin. Anda sekarang dapat login ke sistem.', NULL, NULL, 0, NULL, '2026-02-10 07:47:49', '2026-02-10 07:47:49'),
+(99, 15, 'info', 'Penugasan Gudang', 'Anda telah ditugaskan sebagai Admin Gudang untuk mengelola gudang: Klinik.', NULL, NULL, 0, NULL, '2026-02-10 07:47:49', '2026-02-10 07:47:49'),
+(100, 14, 'warehouse_assignment', 'Penugasan Gudang', 'Anda telah ditugaskan ke gudang: Klinik oleh Laris Siregar', 'user', 12, 0, NULL, '2026-02-10 07:47:59', '2026-02-10 07:47:59');
 
 -- --------------------------------------------------------
 
@@ -468,8 +482,11 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('EC7qAQv2j2VHMKI9rHalpW2Gl2sjNSzay1Sn40Zc', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/126.0.0.0', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiMGRJaGRXWjFsWUhnMnVLWFF0blczMkhOUkFrbllqNXVKTm5VNUE0diI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJuZXciO2E6MDp7fXM6Mzoib2xkIjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mjc6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9sb2dpbiI7czo1OiJyb3V0ZSI7czo1OiJsb2dpbiI7fX0=', 1770084533),
-('lKmquyJsLNXwv1izoDpoQEZfbhyoUFp6fqwO2oSv', 6, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/126.0.0.0', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiZGJvNFpLQUdiUGdMdUR4SUJhTUU3Zko5Q29DNWtIRDFnd1AwUnN1OSI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJuZXciO2E6MDp7fXM6Mzoib2xkIjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6NDg6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9hZG1pbi9yZXBvcnRzL3N0b2NrLXZhbHVlcyI7czo1OiJyb3V0ZSI7czoyNjoiYWRtaW4ucmVwb3J0cy5zdG9jay12YWx1ZXMiO31zOjUwOiJsb2dpbl93ZWJfNTliYTM2YWRkYzJiMmY5NDAxNTgwZjAxNGM3ZjU4ZWE0ZTMwOTg5ZCI7aTo2O30=', 1770026432);
+('6NVEy05oiUJ9Gb0OdlNJ4jfzhpacbT7EgWRAU4sp', 12, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/126.0.0.0', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoibTJFTWdWUWFHZUlUbFVYVU05UDVVcWRtbFB0aDEwZ0s0TW9ET0IyeSI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJuZXciO2E6MDp7fXM6Mzoib2xkIjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6NDA6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9hZG1pbi91c2Vycy8yL2VkaXQiO31zOjUwOiJsb2dpbl93ZWJfNTliYTM2YWRkYzJiMmY5NDAxNTgwZjAxNGM3ZjU4ZWE0ZTMwOTg5ZCI7aToxMjt9', 1770710015),
+('P1WRCnKv4aje973Eo1RgzSH88nrYv4nZoh5R7uMo', 12, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/126.0.0.0', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiTWZ1bkpCRTBFU3dTbXF4dkhoTDZkSXJiVkdTc2pacm1yM1N1NHUyZCI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJuZXciO2E6MDp7fXM6Mzoib2xkIjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MzE6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9kYXNoYm9hcmQiO31zOjUwOiJsb2dpbl93ZWJfNTliYTM2YWRkYzJiMmY5NDAxNTgwZjAxNGM3ZjU4ZWE0ZTMwOTg5ZCI7aToxMjt9', 1770697168),
+('S2MlYbBos8xkenbzXKTADMvpomCZnqdUgtu4Ixvd', 14, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiNzgxZ1EzdWxjMXM0Skppd1ZWWU1XUFNKcXQ4NTU4Mkc0cXhSZzlqUSI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJuZXciO2E6MDp7fXM6Mzoib2xkIjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6Nzc6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9zdGFmZi9hcGkvc2VhcmNoLWl0ZW1zP3E9QUxLT0hPTCUyMDcwJTI1JTIwJTQwMSUyMExJVEVSIjt9czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTQ7fQ==', 1770696858),
+('vYQPTsuo8qIz30QKMHNiPSgSUh3oPbUXZSig2imb', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/126.0.0.0', 'YToyOntzOjY6Il90b2tlbiI7czo0MDoiQkJ0aUY4Ulh5MVFDUXV5SU9Dc3Zabkdrc01rNWlHRHNZd1cyQWVmcSI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1770682821),
+('zhGU0LKZhad45FDnLb0K95u5wSKI1VP1vE7E6ijy', 6, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/126.0.0.0', 'YTo1OntzOjY6Il90b2tlbiI7czo0MDoiTW9mTVMxbW9xTVZSamxBMEdKazVITmVkZ25KcWVMR21hc0ZFeGpubyI7czozOiJ1cmwiO2E6MTp7czo4OiJpbnRlbmRlZCI7czoyODoiaHR0cDovLzEyNy4wLjAuMTo4MDAwL2xvZ291dCI7fXM6OToiX3ByZXZpb3VzIjthOjE6e3M6MzoidXJsIjtzOjQ4OiJodHRwOi8vMTI3LjAuMC4xOjgwMDAvYWRtaW4vcmVwb3J0cy90cmFuc2FjdGlvbnMiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX1zOjUwOiJsb2dpbl93ZWJfNTliYTM2YWRkYzJiMmY5NDAxNTgwZjAxNGM3ZjU4ZWE0ZTMwOTg5ZCI7aTo2O30=', 1770683077);
 
 -- --------------------------------------------------------
 
@@ -504,10 +521,12 @@ INSERT INTO `stocks` (`id`, `item_id`, `unit_id`, `warehouse_id`, `quantity`, `l
 (10, 36, 7, 7, 2, '2026-02-02 09:20:24', '2026-02-02 09:20:24'),
 (11, 37, 7, 7, 1, '2026-02-02 09:20:24', '2026-02-02 09:20:24'),
 (12, 11, 7, 7, 7, '2026-02-02 09:20:24', '2026-02-02 09:20:24'),
-(13, 39, 7, 7, 2, '2026-02-02 09:20:24', '2026-02-02 09:20:24'),
 (14, 43, 7, 7, 3, '2026-02-02 09:20:24', '2026-02-02 09:20:24'),
 (15, 3, 7, 7, 105, '2026-02-02 09:20:24', '2026-02-02 09:20:24'),
-(16, 47, 7, 7, 2, '2026-02-02 09:20:24', '2026-02-02 09:20:24');
+(16, 47, 7, 7, 2, '2026-02-02 09:20:24', '2026-02-02 09:20:24'),
+(23, 48, 7, 7, 4, '2026-02-03 06:58:19', '2026-02-03 06:58:19'),
+(24, 49, 7, 7, 1, '2026-02-03 06:58:33', '2026-02-03 06:58:33'),
+(25, 50, 7, 7, 3, '2026-02-03 06:59:21', '2026-02-03 06:59:21');
 
 --
 -- Triggers `stocks`
@@ -699,6 +718,57 @@ INSERT INTO `suppliers` (`id`, `code`, `name`, `contact_person`, `phone`, `email
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `transfers`
+--
+
+CREATE TABLE `transfers` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `transfer_number` varchar(255) NOT NULL,
+  `item_id` bigint(20) UNSIGNED NOT NULL,
+  `from_warehouse_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `to_warehouse_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `quantity` int(11) NOT NULL,
+  `reason` text DEFAULT NULL,
+  `status` enum('draft','waiting_review','waiting_approval','approved','in_transit','waiting_receive','completed','rejected','cancelled') NOT NULL DEFAULT 'draft',
+  `requested_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `reviewed_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `approved_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `received_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `requested_at` timestamp NULL DEFAULT NULL,
+  `reviewed_at` timestamp NULL DEFAULT NULL,
+  `approved_at` timestamp NULL DEFAULT NULL,
+  `shipped_at` timestamp NULL DEFAULT NULL,
+  `received_at` timestamp NULL DEFAULT NULL,
+  `completed_at` timestamp NULL DEFAULT NULL,
+  `rejection_stage` enum('review','approval','receive') DEFAULT NULL,
+  `rejection_reason` text DEFAULT NULL,
+  `unit_name` varchar(255) DEFAULT NULL,
+  `conversion_factor` int(10) UNSIGNED DEFAULT 1,
+  `base_quantity` int(10) UNSIGNED DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `transfer_photos`
+--
+
+CREATE TABLE `transfer_photos` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `transfer_id` bigint(20) UNSIGNED NOT NULL,
+  `photo_path` varchar(255) NOT NULL,
+  `photo_type` enum('packing','shipping','receiving') NOT NULL DEFAULT 'packing',
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `units`
 --
 
@@ -720,15 +790,16 @@ CREATE TABLE `units` (
 --
 
 INSERT INTO `units` (`id`, `code`, `name`, `location`, `address`, `pic_name`, `pic_phone`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'GD-01', 'Inspektorat II', 'Jakarta Selatan', NULL, 'Budi Santoso', '021-3456789', 1, '2026-01-02 02:00:00', '2026-01-22 02:00:00'),
-(2, 'GD-02', 'Inspektorat III', 'Jakarta Selatan', NULL, 'Siti Aminah', '031-7654321', 1, '2026-01-02 02:00:00', '2026-01-22 02:00:00'),
-(3, 'GD-03', 'Inspektorat IV', 'Jakarta Selatan', NULL, 'Andi Wijaya', '061-4567890', 1, '2026-01-02 02:00:00', '2026-01-22 02:00:00'),
-(4, 'GD-04', 'Inspektorat V', 'Jakarta Selatan', NULL, 'Rina Wati', '0411-345678', 1, '2026-01-02 02:00:00', '2026-01-22 02:00:00'),
-(5, 'GD-05', 'Bagian Umum', 'Jakarta Selatan', 'Jl. Jenderal Sudirman No. 15, Balikpapan', 'Ahmad Fauzi', '0542-123456', 1, '2026-01-02 02:00:00', '2026-01-19 02:00:00'),
-(6, 'GD-06', 'Inspektorat I', 'Jakarta Selatan', NULL, 'Johanes', NULL, 1, '2026-01-13 02:00:00', '2026-01-22 02:00:00'),
-(7, 'GD-07', 'Bagian Pengelolaan Tindak Lanjut Hasil Pengawasan dan Kepatuhan Internal', 'Jakarta Selatan', NULL, 'Heri effendi', NULL, 1, '2026-01-15 02:00:00', '2026-01-22 02:00:00'),
-(8, 'GD-08', 'Kelompok Kerja Hukum Kepegawaian dan Organisasi', 'Jakarta Selatan', NULL, 'Sudahwan', NULL, 1, '2026-01-15 02:00:00', '2026-01-22 02:00:00'),
-(9, 'GD-09', 'Kelompok Kerja Rencana dan Keuangan', 'Jakarta Selatan', NULL, 'Sophni', NULL, 1, '2026-01-15 02:00:00', '2026-01-22 02:00:00');
+(1, 'GD-01', 'Inspektorat II', 'Jakarta Selatan', NULL, 'Budi Santoso', '021-3456789', 1, '2026-01-01 19:00:00', '2026-01-21 19:00:00'),
+(2, 'GD-02', 'Inspektorat III', 'Jakarta Selatan', NULL, 'Siti Aminah', '031-7654321', 1, '2026-01-01 19:00:00', '2026-01-21 19:00:00'),
+(3, 'GD-03', 'Inspektorat IV', 'Jakarta Selatan', NULL, 'Andi Wijaya', '061-4567890', 1, '2026-01-01 19:00:00', '2026-01-21 19:00:00'),
+(4, 'GD-04', 'Inspektorat V', 'Jakarta Selatan', NULL, 'Rina Wati', '0411-345678', 1, '2026-01-01 19:00:00', '2026-01-21 19:00:00'),
+(5, 'GD-05', 'Bagian Umum', 'Jakarta Selatan', 'Jl. Jenderal Sudirman No. 15, Balikpapan', 'Ahmad Fauzi', '0542-123456', 1, '2026-01-01 19:00:00', '2026-01-18 19:00:00'),
+(6, 'GD-06', 'Inspektorat I', 'Jakarta Selatan', NULL, 'Johanes', NULL, 1, '2026-01-12 19:00:00', '2026-01-21 19:00:00'),
+(7, 'GD-07', 'Bagian Pengelolaan Tindak Lanjut Hasil Pengawasan dan Kepatuhan Internal', 'Jakarta Selatan', NULL, 'Heri effendi', NULL, 1, '2026-01-14 19:00:00', '2026-01-21 19:00:00'),
+(8, 'GD-08', 'Kelompok Kerja Hukum Kepegawaian dan Organisasi', 'Jakarta Selatan', NULL, 'Sudahwan', NULL, 1, '2026-01-14 19:00:00', '2026-01-21 19:00:00'),
+(9, 'GD-09', 'Kelompok Kerja Rencana dan Keuangan', 'Jakarta Selatan', NULL, 'Sophni', NULL, 1, '2026-01-14 19:00:00', '2026-01-21 19:00:00'),
+(10, 'GD-010', 'Klinik', 'Jakarta Selatan', NULL, 'Amalinda', NULL, 1, '2026-02-10 07:39:36', '2026-02-10 07:39:36');
 
 -- --------------------------------------------------------
 
@@ -740,28 +811,35 @@ CREATE TABLE `users` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `name` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
+  `email_verified_at` timestamp NULL DEFAULT NULL,
   `password` varchar(255) NOT NULL,
+  `remember_token` varchar(100) DEFAULT NULL,
   `role` enum('super_admin','admin_gudang','staff_gudang') NOT NULL,
   `phone` varchar(20) DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `phone`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'Super Admin', 'superadmin@esdm.go.id', '$2y$10$92IXUNpkjO0rOQ5byMi. Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'super_admin', '081234567890', 1, '2026-01-01 19:00:00', '2026-01-28 11:10:50'),
-(2, 'irsyad', 'irsyad@gmail.com', '$2y$12$Odyj01yRdFnP.7XRVpp7MO.HliNXb.JMKDqhkkrJeRg1.nZCWOaSy', 'admin_gudang', '081234567891', 1, '2026-01-01 19:00:00', '2026-01-28 11:10:50'),
-(4, 'Staff Gudang 1', 'staff1@gmail.com', '$2y$12$ZoDwO6VcdC6m53L2ExSNou0G.rgqGeWSJjyQkQehGCaLx2hz36DPC', 'staff_gudang', '081234567893', 1, '2026-01-01 19:00:00', '2026-01-28 11:10:50'),
-(5, 'gilbert', 'gilbert@gmail.com', '$2y$12$9WceKebLAcjHFKbwx2OZPunrwREAuz1lZe4OPqIsLfF53LN7uixLy', 'staff_gudang', '081234567894', 1, '2026-01-01 19:00:00', '2026-01-28 11:10:50'),
-(6, 'Super Admin', 'admin@test.com', '$2y$12$A99fTGCgZriqKYkwj5PMQ.dIMlsp4KPrUASFr2tUlxe7Pw.o4gsJi', 'super_admin', NULL, 1, '2026-01-05 19:00:00', '2026-01-28 11:10:50'),
-(7, 'Super Admin', 'admin@gmail.com', '$2y$12$wPw.kxAX7Am6MVxMNEDLWegz5Ry1LVPxWV/sU8Ggi2/920QdGJS5.', 'super_admin', NULL, 1, '2026-01-06 19:00:00', '2026-01-28 11:10:50'),
-(9, 'rama', 'rama@gmail.com', '$2y$12$zmfyaM5x.5HF9oIU2Mfc4OCtPAp2CanzqKJwdHJ4dJtzdbYKEwds6', 'admin_gudang', NULL, 1, '2026-01-12 19:00:00', '2026-01-28 11:10:50'),
-(10, 'Herry Effendi', 'herry.effendi@esdm.go.id', '$2y$12$e/UxRXYxtBSfy001efR77uOwldjRQzvWpMoUwZUD27zgIHS5SNjPe', 'staff_gudang', NULL, 1, '2026-02-02 04:34:07', '2026-02-02 06:26:50'),
-(11, 'Hari Tri Subagyo', 'hari.subagyo@esdm.go.id', '$2y$12$a4xt8Ir.mfYff4dEmKqLYO069pUbBi3I/5c0itgkFucnoHleVyJgi', 'admin_gudang', NULL, 1, '2026-02-02 06:28:14', '2026-02-02 06:28:14');
+INSERT INTO `users` (`id`, `name`, `email`, `email_verified_at`, `password`, `remember_token`, `role`, `phone`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'Super Admin', 'superadmin@esdm.go.id', NULL, '$2y$10$92IXUNpkjO0rOQ5byMi. Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, 'super_admin', '081234567890', 1, '2026-01-01 19:00:00', '2026-01-28 11:10:50', NULL),
+(2, 'irsyad', 'irsyad@gmail.com', NULL, '$2y$12$Odyj01yRdFnP.7XRVpp7MO.HliNXb.JMKDqhkkrJeRg1.nZCWOaSy', NULL, 'admin_gudang', '081234567891', 1, '2026-01-01 19:00:00', '2026-01-28 11:10:50', NULL),
+(4, 'staff test', 'staff_test@gmail.com', NULL, '$2y$12$ZoDwO6VcdC6m53L2ExSNou0G.rgqGeWSJjyQkQehGCaLx2hz36DPC', NULL, 'staff_gudang', NULL, 1, '2026-01-01 19:00:00', '2026-02-04 03:10:54', NULL),
+(5, 'Gilbert', 'gilbert@gmail.com', NULL, '$2y$12$G9tVvpnX6NPMp82xZD.vROVfkHEfCcXQ2NSsPFKUW1jeT918ywWX2', NULL, 'staff_gudang', '081234567894', 1, '2026-01-01 19:00:00', '2026-02-08 07:51:20', NULL),
+(6, 'Super Admin', 'admin@test.com', NULL, '$2y$12$vAZW/vbUjbNYjB/gNOIRgu7KXlJWGGZQgPX5NSys81Em6P2usycxC', '9tbL9weK5o2946kXGDTC1if0z7i7lD9AdzIBnLcx1irdW8ud0O1MQC3pXZYU', 'super_admin', NULL, 1, '2026-01-05 19:00:00', '2026-02-10 04:01:03', NULL),
+(7, 'Super Admin', 'admin@gmail.com', NULL, '$2y$12$wPw.kxAX7Am6MVxMNEDLWegz5Ry1LVPxWV/sU8Ggi2/920QdGJS5.', NULL, 'super_admin', NULL, 1, '2026-01-06 19:00:00', '2026-01-28 11:10:50', NULL),
+(9, 'rama', 'rama@gmail.com', NULL, '$2y$12$zmfyaM5x.5HF9oIU2Mfc4OCtPAp2CanzqKJwdHJ4dJtzdbYKEwds6', NULL, 'admin_gudang', NULL, 1, '2026-01-12 19:00:00', '2026-01-28 11:10:50', NULL),
+(10, 'Herry Effendi', 'herry.effendi@esdm.go.id', NULL, '$2y$12$e/UxRXYxtBSfy001efR77uOwldjRQzvWpMoUwZUD27zgIHS5SNjPe', NULL, 'staff_gudang', NULL, 1, '2026-02-02 04:34:07', '2026-02-02 06:26:50', NULL),
+(11, 'Hari Tri Subagyo', 'hari.subagyo@esdm.go.id', NULL, '$2y$12$a4xt8Ir.mfYff4dEmKqLYO069pUbBi3I/5c0itgkFucnoHleVyJgi', NULL, 'admin_gudang', NULL, 1, '2026-02-02 06:28:14', '2026-02-02 06:28:14', NULL),
+(12, 'Laris Siregar', 'larissiregar@gmail.com', NULL, '$2y$12$YtOWYsj.hnEpUlZfRmxBY.xdR6cLc2pMw8Wf87NQ683LY5xTBi6gm', NULL, 'super_admin', NULL, 1, '2026-02-05 09:05:50', '2026-02-05 09:13:48', NULL),
+(13, 'Admin Gudang', 'admingudang@gmail.com', NULL, '$2y$12$YX0NV5X/9IeYCbdWign4cO4FhclmZY2i.FbmZ8qQ8wvkfAOTUs4qm', NULL, 'admin_gudang', NULL, 1, '2026-02-08 07:51:20', '2026-02-08 07:56:20', '2026-02-08 07:56:20'),
+(14, 'Amalinda', 'amalindasetyakartika@gmail.com', NULL, '$2y$12$N2GbdPPYQqCb8HMXHAUCQuPZv2m2rieaD2Bt2VipdKrDdltI6cq8m', NULL, 'staff_gudang', NULL, 1, '2026-02-10 04:01:00', '2026-02-10 04:10:23', NULL),
+(15, 'Sandya Zahrannisa', 'sandya.zahrannisa@esdm.go.id', NULL, '$2y$12$Ex5uZrBacv6bLpajWv6Fe.TUmGYyyrd2nwC3rHuC8Aw./n35VnYC.', NULL, 'admin_gudang', NULL, 1, '2026-02-10 07:47:49', '2026-02-10 07:47:49', NULL);
 
 -- --------------------------------------------------------
 
@@ -781,7 +859,6 @@ CREATE TABLE `user_warehouses` (
 --
 
 INSERT INTO `user_warehouses` (`id`, `user_id`, `warehouse_id`, `created_at`) VALUES
-(3, 4, 1, '2026-01-02 02:00:00'),
 (4, 5, 2, '2026-01-02 02:00:00'),
 (9, 5, 1, '2026-01-13 02:00:00'),
 (10, 5, 4, '2026-01-13 02:00:00'),
@@ -791,10 +868,14 @@ INSERT INTO `user_warehouses` (`id`, `user_id`, `warehouse_id`, `created_at`) VA
 (18, 5, 7, '2026-01-16 02:00:00'),
 (19, 5, 8, '2026-01-16 02:00:00'),
 (20, 5, 9, '2026-01-16 02:00:00'),
-(21, 2, 1, '2026-01-19 02:00:00'),
 (24, 10, 7, '2026-02-02 04:34:07'),
 (25, 9, 7, '2026-02-02 04:34:46'),
-(26, 11, 7, '2026-02-02 06:28:14');
+(26, 11, 7, '2026-02-02 06:28:14'),
+(28, 4, 10, '2026-02-04 01:15:10'),
+(29, 4, 11, '2026-02-10 03:58:25'),
+(30, 2, 11, '2026-02-10 03:58:39'),
+(32, 15, 10, '2026-02-10 07:47:49'),
+(33, 14, 10, '2026-02-10 07:47:59');
 
 -- --------------------------------------------------------
 
@@ -1052,13 +1133,32 @@ ALTER TABLE `suppliers`
   ADD KEY `idx_is_active` (`is_active`);
 
 --
+-- Indexes for table `transfers`
+--
+ALTER TABLE `transfers`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `transfers_transfer_number_unique` (`transfer_number`),
+  ADD KEY `transfers_item_id_foreign` (`item_id`),
+  ADD KEY `transfers_from_warehouse_id_foreign` (`from_warehouse_id`),
+  ADD KEY `transfers_to_warehouse_id_foreign` (`to_warehouse_id`),
+  ADD KEY `transfers_requested_by_foreign` (`requested_by`),
+  ADD KEY `transfers_reviewed_by_foreign` (`reviewed_by`),
+  ADD KEY `transfers_approved_by_foreign` (`approved_by`),
+  ADD KEY `transfers_received_by_foreign` (`received_by`);
+
+--
+-- Indexes for table `transfer_photos`
+--
+ALTER TABLE `transfer_photos`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `transfer_photos_transfer_id_foreign` (`transfer_id`);
+
+--
 -- Indexes for table `units`
 --
 ALTER TABLE `units`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `code` (`code`),
-  ADD KEY `idx_code` (`code`),
-  ADD KEY `idx_is_active` (`is_active`);
+  ADD UNIQUE KEY `units_code_unique` (`code`);
 
 --
 -- Indexes for table `users`
@@ -1087,7 +1187,7 @@ ALTER TABLE `user_warehouses`
 -- AUTO_INCREMENT for table `approvals`
 --
 ALTER TABLE `approvals`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `categories`
@@ -1105,13 +1205,13 @@ ALTER TABLE `failed_jobs`
 -- AUTO_INCREMENT for table `items`
 --
 ALTER TABLE `items`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
 
 --
 -- AUTO_INCREMENT for table `item_units`
 --
 ALTER TABLE `item_units`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `jobs`
@@ -1123,19 +1223,19 @@ ALTER TABLE `jobs`
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
 
 --
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=101;
 
 --
 -- AUTO_INCREMENT for table `stocks`
 --
 ALTER TABLE `stocks`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT for table `stock_alerts`
@@ -1147,19 +1247,19 @@ ALTER TABLE `stock_alerts`
 -- AUTO_INCREMENT for table `stock_movements`
 --
 ALTER TABLE `stock_movements`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `stock_requests`
 --
 ALTER TABLE `stock_requests`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `submissions`
 --
 ALTER TABLE `submissions`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `submission_photos`
@@ -1174,22 +1274,34 @@ ALTER TABLE `suppliers`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
+-- AUTO_INCREMENT for table `transfers`
+--
+ALTER TABLE `transfers`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `transfer_photos`
+--
+ALTER TABLE `transfer_photos`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `units`
 --
 ALTER TABLE `units`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `user_warehouses`
 --
 ALTER TABLE `user_warehouses`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- Constraints for dumped tables
@@ -1271,6 +1383,24 @@ ALTER TABLE `submissions`
 --
 ALTER TABLE `submission_photos`
   ADD CONSTRAINT `submission_photos_ibfk_1` FOREIGN KEY (`submission_id`) REFERENCES `submissions` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `transfers`
+--
+ALTER TABLE `transfers`
+  ADD CONSTRAINT `transfers_approved_by_foreign` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `transfers_from_warehouse_id_foreign` FOREIGN KEY (`from_warehouse_id`) REFERENCES `units` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `transfers_item_id_foreign` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `transfers_received_by_foreign` FOREIGN KEY (`received_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `transfers_requested_by_foreign` FOREIGN KEY (`requested_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `transfers_reviewed_by_foreign` FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `transfers_to_warehouse_id_foreign` FOREIGN KEY (`to_warehouse_id`) REFERENCES `units` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `transfer_photos`
+--
+ALTER TABLE `transfer_photos`
+  ADD CONSTRAINT `transfer_photos_transfer_id_foreign` FOREIGN KEY (`transfer_id`) REFERENCES `transfers` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `user_warehouses`
