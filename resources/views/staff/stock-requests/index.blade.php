@@ -94,7 +94,7 @@
                                         <td>
                                             <span class="badge bg-secondary">{{ $stock->item->category->name }}</span>
                                         </td>
-                                        <td>{{ $stock->warehouse->name }}</td>
+                                        <td>{{ $stock->warehouse->name ?? '-' }}</td>
                                         <td>
                                             @if($stock->quantity > 0)
                                                 <span class="badge bg-success">{{ $stock->quantity }}</span>

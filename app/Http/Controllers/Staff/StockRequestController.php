@@ -6,6 +6,7 @@ use App\Events\StockRequestCreated;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\ItemUnit;
 use App\Models\Stock;
 use App\Models\StockRequest;
 use App\Models\Notification;
@@ -127,7 +128,7 @@ class StockRequestController extends Controller
                     'code' => $stock->item->code,
                     'unit' => $stock->item->unit,
                     'warehouse_id' => $stock->warehouse_id,
-                    'warehouse_name' => $stock->warehouse->name,
+                    'warehouse_name' => $stock->warehouse->name ?? '-',
                     'quantity' => $stock->quantity,
                     'available_units' => $availableUnits,
                 ];
@@ -152,14 +153,14 @@ class StockRequestController extends Controller
 
         DB::transaction(function () use ($validated) {
             // Get item for base unit
-            $item = \App\Models\Item::findOrFail($validated['item_id']);
+            $item = Item::findOrFail($validated['item_id']);
             
             // Determine unit info based on unit_id
             $actualUnitId = $validated['unit_id'];
             if ($validated['unit_id'] == 0) {
                 // Satuan default (belum di-set konversi)
                 // Buat atau dapatkan ItemUnit default untuk item ini
-                $defaultUnit = \App\Models\ItemUnit::firstOrCreate(
+                $defaultUnit = ItemUnit::firstOrCreate(
                     [
                         'item_id' => $item->id,
                         'name' => $item->unit,
@@ -173,7 +174,7 @@ class StockRequestController extends Controller
                 $conversionFactor = 1;
             } else {
                 // Get item unit to calculate base quantity
-                $itemUnit = \App\Models\ItemUnit::findOrFail($validated['unit_id']);
+                $itemUnit = ItemUnit::findOrFail($validated['unit_id']);
                 $unitName = $itemUnit->name;
                 $conversionFactor = $itemUnit->conversion_factor;
             }

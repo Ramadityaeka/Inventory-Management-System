@@ -144,7 +144,7 @@
         </div>
         <div class="summary-card">
             <h3 style="color: #0dcaf0;">{{ number_format($stats['total_quantity']) }}</h3>
-            <p>Total Jumlah Barang</p>
+            <p>Total Stok Barang</p>
         </div>
         <div class="summary-card">
             <h3 style="color: #198754;">Rp {{ number_format($stats['total_stock_value'], 0, ',', '.') }}</h3>
@@ -162,7 +162,7 @@
                     <th width="9%">Kode</th>
                     <th width="18%">Nama Barang</th>
                     <th width="10%">Kategori</th>
-                    <th width="7%">Jumlah</th>
+                    <th width="7%">Stok</th>
                     <th width="6%">Satuan</th>
                     <th width="15%">Harga/Satuan</th>
                     <th width="15%">Harga Total</th>

@@ -60,6 +60,102 @@ class WarehouseController extends Controller
             ->with('success', 'Warehouse created successfully.');
     }
 
+    public function show(Warehouse $warehouse)
+    {
+        try {
+            // Ensure warehouse exists and load relations
+            $warehouse->load(['stocks.item.category', 'stocks.item.itemUnits']);
+            
+            // Process stocks with defensive programming
+            $processedStocks = collect();
+            
+            foreach ($warehouse->stocks as $stock) {
+                // Skip if item doesn't exist
+                if (!$stock->item) {
+                    continue;
+                }
+
+                // Get base unit safely
+                $baseUnit = 'PCS';
+                try {
+                    if ($stock->item->itemUnits && count($stock->item->itemUnits) > 0) {
+                        $baseUnitModel = $stock->item->itemUnits->firstWhere('is_base_unit', true);
+                        if ($baseUnitModel && isset($baseUnitModel->unit_name)) {
+                            $baseUnit = $baseUnitModel->unit_name;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Keep default PCS if error
+                }
+
+                $quantity = $stock->quantity ?? 0;
+                $minStock = $stock->min_stock ?? 0;
+                
+                $processedStocks->push([
+                    'id' => $stock->id ?? 0,
+                    'item_id' => $stock->item_id ?? 0,
+                    'item_name' => $stock->item->name ?? 'N/A',
+                    'item_code' => $stock->item->code ?? 'N/A',
+                    'category_name' => optional($stock->item->category)->name ?? 'Tanpa Kategori',
+                    'quantity' => $quantity,
+                    'min_stock' => $minStock,
+                    'max_stock' => $stock->max_stock ?? 0,
+                    'status' => $quantity <= 0 ? 'out_of_stock' : ($quantity <= $minStock ? 'low_stock' : 'normal'),
+                    'base_unit' => $baseUnit,
+                    'last_updated' => $stock->updated_at ?? now(),
+                ]);
+            }
+            
+            // Sort by item name
+            $stocks = $processedStocks->sortBy('item_name')->values();
+
+            // Calculate statistics with safe defaults
+            $stats = [
+                'total_items' => $stocks->count(),
+                'total_stock' => $stocks->sum('quantity'),
+                'out_of_stock' => $stocks->where('status', 'out_of_stock')->count(),
+                'low_stock' => $stocks->where('status', 'low_stock')->count(),
+                'normal_stock' => $stocks->where('status', 'normal')->count(),
+            ];
+
+            // Get recent stock movements for this warehouse (check both warehouse_id and unit_id)
+            try {
+                $recentMovements = DB::table('stock_movements')
+                    ->join('items', 'stock_movements.item_id', '=', 'items.id')
+                    ->leftJoin('users', 'stock_movements.created_by', '=', 'users.id')
+                    ->where(function($query) use ($warehouse) {
+                        $query->where('stock_movements.warehouse_id', $warehouse->id)
+                              ->orWhere('stock_movements.unit_id', $warehouse->id);
+                    })
+                    ->select(
+                        'stock_movements.*',
+                        // alias movement_type as type so views expecting ->type work
+                        DB::raw('stock_movements.movement_type as type'),
+                        'items.name as item_name',
+                        'items.code as item_code',
+                        DB::raw('COALESCE(users.name, "System") as user_name')
+                    )
+                    ->orderBy('stock_movements.created_at', 'desc')
+                    ->limit(10)
+                    ->get();
+            } catch (\Exception $e) {
+                \Log::warning('Error fetching stock movements: ' . $e->getMessage());
+                $recentMovements = collect();
+            }
+
+            return view('admin.warehouses.show', compact('warehouse', 'stocks', 'stats', 'recentMovements'));
+            
+        } catch (\Exception $e) {
+            \Log::error('Error in WarehouseController@show: ' . $e->getMessage(), [
+                'warehouse_id' => $warehouse->id ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->route('admin.warehouses.index')
+                ->with('error', 'Terjadi kesalahan saat memuat detail unit. Silakan coba lagi.');
+        }
+    }
+
     public function edit(Warehouse $warehouse)
     {
         return view('admin.warehouses.edit', compact('warehouse'));

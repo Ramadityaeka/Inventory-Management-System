@@ -142,15 +142,16 @@
                             </div>
                         @endforeach
                     </div>
-                @error('warehouses')
-                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                @enderror
-            @else
-                <div class="text-center py-4">
-                    <i class="bi bi-building text-muted fs-1 mb-3"></i>
-                    <p class="text-muted mb-0">Tidak Unit yang tersedia.</p>
-                </div>
-            @endif
+                    @error('warehouses')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
+                @else
+                    <div class="text-center py-4">
+                        <i class="bi bi-building text-muted fs-1 mb-3"></i>
+                        <p class="text-muted mb-0">Tidak Unit yang tersedia.</p>
+                    </div>
+                @endif
+            </div>
         </div>
     </div>
 
@@ -160,19 +161,17 @@
             <h6 class="mb-0">Status</h6>
         </div>
         <div class="card-body">
-            <div class="form-check">
+            <div class="form-check mb-4">
                 <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" checked>
                 <label class="form-check-label" for="is_active">
                     User aktif
                 </label>
                 <div class="form-text">User yang aktif dapat login ke sistem</div>
             </div>
-        </div>
-    </div>
 
-    <!-- Action Buttons -->
-    <div class="card">
-        <div class="card-body">
+            <hr class="my-4">
+
+            <!-- Action Buttons -->
             <div class="d-flex justify-content-end gap-2">
                 <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">
                     <i class="bi bi-x-circle me-1"></i>Batal

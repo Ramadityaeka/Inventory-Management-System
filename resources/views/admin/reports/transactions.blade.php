@@ -7,13 +7,16 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h3 mb-0">📊 Laporan Transaksi Barang Masuk & Keluar</h1>
                 <div>
-                    <button type="button" class="btn btn-danger" onclick="exportPdf()">
-                        <i class="fas fa-file-pdf"></i> Export PDF
-                    </button>
+                    <h4 class="mb-1">Laporan Transaksi Barang Masuk & Keluar</h4>
+                    <p class="text-muted mb-0">Data transaksi barang masuk dan keluar dari seluruh gudang</p>
+                </div>
+                <div>
                     <button type="button" class="btn btn-success" onclick="exportExcel()">
-                        <i class="fas fa-file-excel"></i> Export Excel
+                        <i class="bi bi-file-earmark-excel"></i> Export Excel
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="exportPdf()">
+                        <i class="bi bi-file-earmark-pdf"></i> Export PDF
                     </button>
                 </div>
             </div>
@@ -21,9 +24,9 @@
     </div>
 
     <!-- Filter Card -->
-    <div class="card mb-4">
+    <div class="card mb-4 border-0 shadow-sm">
         <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="fas fa-filter"></i> Filter Laporan</h5>
+            <h6 class="mb-0"><i class="bi bi-funnel"></i> Filter Laporan</h6>
         </div>
         <div class="card-body">
             <form method="GET" action="{{ route('admin.reports.transactions') }}" id="filterForm">
@@ -127,10 +130,10 @@
                 <div class="row mt-3">
                     <div class="col-12">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> Terapkan Filter
+                            <i class="bi bi-search"></i> Terapkan Filter
                         </button>
                         <a href="{{ route('admin.reports.transactions') }}" class="btn btn-secondary">
-                            <i class="fas fa-redo"></i> Reset Filter
+                            <i class="bi bi-arrow-clockwise"></i> Reset Filter
                         </a>
                     </div>
                 </div>
@@ -139,57 +142,57 @@
     </div>
 
     <!-- Summary Cards -->
-    <div class="row mb-4">
+    <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card bg-success text-white">
+            <div class="card bg-success text-white border-0 shadow-sm">
                 <div class="card-body">
-                    <h5>Total Transaksi</h5>
-                    <h2>{{ number_format($transactions->total()) }}</h2>
+                    <h6>Total Transaksi</h6>
+                    <h3>{{ number_format($transactions->total()) }}</h3>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-info text-white">
+            <div class="card bg-info text-white border-0 shadow-sm">
                 <div class="card-body">
-                    <h5>Disetujui</h5>
-                    <h2>{{ number_format($transactions->where('status', 'approved')->count()) }}</h2>
+                    <h6>Disetujui</h6>
+                    <h3>{{ number_format($transactions->where('status', 'approved')->count()) }}</h3>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-warning text-white">
+            <div class="card bg-warning text-white border-0 shadow-sm">
                 <div class="card-body">
-                    <h5>Menunggu</h5>
-                    <h2>{{ number_format($transactions->where('status', 'pending')->count()) }}</h2>
+                    <h6>Menunggu</h6>
+                    <h3>{{ number_format($transactions->where('status', 'pending')->count()) }}</h3>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-danger text-white">
+            <div class="card bg-danger text-white border-0 shadow-sm">
                 <div class="card-body">
-                    <h5>Ditolak</h5>
-                    <h2>{{ number_format($transactions->where('status', 'rejected')->count()) }}</h2>
+                    <h6>Ditolak</h6>
+                    <h3>{{ number_format($transactions->where('status', 'rejected')->count()) }}</h3>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Transactions Table -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">Data Transaksi</h5>
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-table"></i> Data Transaksi</h6>
         </div>
-        <div class="card-body">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-dark">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
                         <tr>
-                            <th>No</th>
+                            <th width="50">No</th>
                             <th>Gudang</th>
                             <th>Nama Barang</th>
-                            <th>Barang masuk</th>
+                            <th class="text-end">Stok</th>
                             <th>Satuan</th>
-                            <th>Sisa Stok</th>
+                            <th class="text-end">Sisa Stok</th>
                             <th>Keterangan</th>
                             <th>Status</th>
                             <th>Diproses Oleh</th>
@@ -203,29 +206,45 @@
                                     ->where('item_id', $transaction->item_id)
                                     ->first();
                                 $remainingStock = $currentStock ? $currentStock->quantity : 0;
-                                $approval = $transaction->approvals->first();
+                                
+                                // Handle both Submission and StockRequest models
+                                if($transaction->transaction_type == 'in') {
+                                    // Submission (Barang Masuk)
+                                    $approval = $transaction->approvals ? $transaction->approvals->first() : null;
+                                } else {
+                                    // StockRequest (Barang Keluar)
+                                    $approval = null;
+                                }
                             @endphp
                             <tr>
                                 <td>{{ $transactions->firstItem() + $index }}</td>
                                 <td>
-                                    <span class="badge bg-info">{{ $transaction->warehouse->name }}</span>
+                                    <span class="badge bg-info">{{ $transaction->warehouse->name ?? '-' }}</span>
                                 </td>
                                 <td>
                                     <strong>{{ $transaction->item->name }}</strong><br>
                                     <small class="text-muted">{{ $transaction->item->code }}</small>
                                 </td>
-                                <td>
-                                    <span class="badge bg-success">{{ number_format($transaction->quantity) }}</span>
+                                <td class="text-end">
+                                    @if($transaction->transaction_type == 'in')
+                                        <span class="badge bg-success">{{ number_format($transaction->quantity) }}</span>
+                                    @else
+                                        <span class="badge bg-danger">-{{ number_format($transaction->base_quantity) }}</span>
+                                    @endif
                                 </td>
                                 <td>{{ $transaction->item->unit }}</td>
-                                <td>
+                                <td class="text-end">
                                     <strong>{{ number_format($remainingStock) }}</strong>
                                 </td>
                                 <td>
-                                    @if($transaction->notes)
-                                        {{ Str::limit($transaction->notes, 50) }}
+                                    @if($transaction->transaction_type == 'in')
+                                        @if($transaction->notes)
+                                            {{ Str::limit($transaction->notes, 50) }}
+                                        @else
+                                            <small class="text-muted">Penerimaan dari {{ $transaction->supplier->name ?? '-' }}</small>
+                                        @endif
                                     @else
-                                        <small class="text-muted">Penerimaan dari {{ $transaction->supplier->name ?? '-' }}</small>
+                                        {{ Str::limit($transaction->notes ?? 'Permintaan barang keluar', 50) }}
                                     @endif
                                 </td>
                                 <td>
@@ -238,21 +257,28 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if($approval)
+                                    @if($transaction->transaction_type == 'in' && $approval)
                                         <strong>{{ $approval->admin->name }}</strong><br>
                                         <small class="text-muted">{{ $approval->admin->role }}</small>
+                                    @elseif($transaction->transaction_type == 'out' && $transaction->approver)
+                                        <strong>{{ $transaction->approver->name }}</strong><br>
+                                        <small class="text-muted">{{ $transaction->approver->role }}</small>
                                     @else
                                         -
                                     @endif
                                 </td>
                                 <td>
-                                    {{ formatDateIndoLong($transaction->submitted_at) }} WIB
+                                    @if($transaction->transaction_type == 'in')
+                                        {{ formatDateIndoLong($transaction->submitted_at) }} WIB
+                                    @else
+                                        {{ formatDateIndoLong($transaction->approved_at ?? $transaction->created_at) }} WIB
+                                    @endif
                                 </td>
                             </tr>
                         @empty
                             <tr>
                                 <td colspan="10" class="text-center py-4">
-                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                    <i class="bi bi-inbox fs-3 text-muted mb-3"></i>
                                     <p class="text-muted">Tidak ada data transaksi</p>
                                 </td>
                             </tr>
@@ -260,11 +286,10 @@
                     </tbody>
                 </table>
             </div>
-
-            <!-- Pagination -->
-            <div class="mt-3">
-                {{ $transactions->links('vendor.pagination.bootstrap-5') }}
-            </div>
+        </div>
+        <!-- Pagination -->
+        <div class="card-footer">
+            {{ $transactions->links('vendor.pagination.bootstrap-5') }}
         </div>
     </div>
 </div>
@@ -370,4 +395,73 @@ document.addEventListener('DOMContentLoaded', function() {
     position: relative;
 }
 </style>
+
+@push('scripts')
+<script>
+function exportPdf() {
+    const params = new URLSearchParams(window.location.search);
+    window.location.href = '{{ route("admin.reports.transactions.pdf") }}?' + params.toString();
+}
+
+function exportExcel() {
+    const params = new URLSearchParams(window.location.search);
+    window.location.href = '{{ route("admin.reports.transactions.excel") }}?' + params.toString();
+}
+
+// Autocomplete untuk Nama Barang
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('item_name_input');
+    const suggestionsDiv = document.getElementById('item_suggestions');
+    let debounceTimer;
+
+    input.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+
+        debounceTimer = setTimeout(() => {
+            fetch('{{ route("admin.reports.transactions.search-items") }}?q=' + encodeURIComponent(query))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        suggestionsDiv.innerHTML = data.map(item => 
+                            `<div class="autocomplete-item" data-name="${item.name}">
+                                <strong>${item.name}</strong>
+                                <small class="text-muted"> - ${item.code}</small>
+                            </div>`
+                        ).join('');
+                        suggestionsDiv.style.display = 'block';
+
+                        // Event listener untuk setiap item
+                        document.querySelectorAll('.autocomplete-item').forEach(item => {
+                            item.addEventListener('click', function() {
+                                input.value = this.getAttribute('data-name');
+                                suggestionsDiv.style.display = 'none';
+                            });
+                        });
+                    } else {
+                        suggestionsDiv.innerHTML = '<div class="autocomplete-item text-muted">Tidak ada hasil</div>';
+                        suggestionsDiv.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching items:', error);
+                    suggestionsDiv.style.display = 'none';
+                });
+        }, 300);
+    });
+
+    // Hide suggestions ketika klik di luar
+    document.addEventListener('click', function(e) {
+        if (e.target !== input) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+});
+</script>
+@endpush
 @endsection

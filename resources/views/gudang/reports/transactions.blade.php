@@ -8,7 +8,7 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h4 class="mb-1">📊 Laporan Transaksi</h4>
+                    <h4 class="mb-1">Laporan Transaksi</h4>
                     <p class="text-muted mb-0">Data transaksi penerimaan barang di unit Anda</p>
                 </div>
                 <div>

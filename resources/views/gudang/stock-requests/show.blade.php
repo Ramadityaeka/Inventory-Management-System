@@ -69,7 +69,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="text-muted small">Warehouse</label>
-                        <p class="mb-0">{{ $stockRequest->warehouse->name }}</p>
+                        <p class="mb-0">{{ $stockRequest->warehouse->name ?? '-' }}</p>
                     </div>
                 </div>
 

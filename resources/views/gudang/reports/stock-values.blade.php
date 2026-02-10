@@ -8,7 +8,7 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h4 class="mb-1">📦 Laporan Stok & Nilai</h4>
+                    <h4 class="mb-1">Laporan Stok & Nilai</h4>
                     <p class="text-muted mb-0">Data inventori dengan nilai harga terkini</p>
                 </div>
                 <div>

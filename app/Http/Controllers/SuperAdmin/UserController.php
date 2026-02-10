@@ -231,7 +231,26 @@ class UserController extends Controller
             return redirect()->route('admin.users.index')
                 ->with('error', 'You cannot delete your own account.');
         }
-        // Permanently remove user and related pivot/notifications in a transaction
+
+        // Check if user has related records that prevent deletion
+        $hasStockMovements = $user->stockMovements()->exists();
+        $hasSubmissions = $user->submissions()->exists();
+        $hasApprovals = $user->approvals()->exists();
+        $hasTransfers = $user->transfers()->exists();
+        $hasReviewedTransfers = $user->reviewedTransfers()->exists();
+        $hasApprovedTransfers = $user->approvedTransfers()->exists();
+        $hasReceivedTransfers = $user->receivedTransfers()->exists();
+        $hasStockRequests = $user->stockRequests()->exists();
+        $hasApprovedStockRequests = $user->approvedStockRequests()->exists();
+
+        if ($hasStockMovements || $hasSubmissions || $hasApprovals || $hasTransfers || 
+            $hasReviewedTransfers || $hasApprovedTransfers || $hasReceivedTransfers ||
+            $hasStockRequests || $hasApprovedStockRequests) {
+            return redirect()->route('admin.users.index')
+                ->with('error', 'User tidak dapat dihapus karena masih memiliki data transaksi. Nonaktifkan user sebagai gantinya.');
+        }
+
+        // Soft delete user and related data in a transaction
         DB::transaction(function () use ($user) {
             // Detach any warehouse relations
             try {
@@ -240,15 +259,15 @@ class UserController extends Controller
                 // ignore if relation not set
             }
 
-            // Delete user notifications
+            // Soft delete user notifications
             Notification::where('user_id', $user->id)->delete();
 
-            // Finally delete the user record
+            // Soft delete the user record
             $user->delete();
         });
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'User deleted successfully.');
+            ->with('success', 'User berhasil dihapus.');
     }
 
     public function toggleStatus(Request $request, User $user)

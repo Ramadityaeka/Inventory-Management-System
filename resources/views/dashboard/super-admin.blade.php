@@ -347,7 +347,7 @@
             <div class="card-header bg-light">
                 <div class="d-flex justify-content-between align-items-center">
                     <h6 class="mb-0">
-                        <i class="bi bi-building text-primary me-2"></i>Status Gudang
+                        <i class="bi bi-building text-primary me-2"></i>Status unit
                     </h6>
                 </div>
             </div>
@@ -361,18 +361,23 @@
                             })->count();
                         @endphp
                         <div class="col-12 col-md-6 col-lg-4">
-                            <div class="card border {{ $outOfStockCount > 0 ? 'border-danger' : 'border-success' }} h-100">
+                            <div class="card border {{ $outOfStockCount > 0 ? 'border-danger' : 'border-success' }} h-100 hover-card clickable-card" onclick="window.location='{{ route('admin.warehouses.show', $warehouse) }}'" style="cursor: pointer;">
                                 <div class="card-body">
                                     <div class="d-flex align-items-start justify-content-between mb-2">
                                         <div>
                                             <h6 class="mb-1">{{ $warehouse->name }}</h6>
                                             <small class="text-muted">{{ $warehouse->location ?? 'N/A' }}</small>
                                         </div>
-                                        @if($outOfStockCount > 0)
-                                            <span class="badge bg-danger">{{ $outOfStockCount }} habis</span>
-                                        @else
-                                            <span class="badge bg-success"><i class="bi bi-check"></i></span>
-                                        @endif
+                                        <div class="d-flex flex-column align-items-end gap-1">
+                                            @if($outOfStockCount > 0)
+                                                <span class="badge bg-danger">{{ $outOfStockCount }} habis</span>
+                                            @else
+                                                <span class="badge bg-success"><i class="bi bi-check"></i></span>
+                                            @endif
+                                            <small class="text-primary">
+                                                <i class="bi bi-arrow-right-circle"></i>
+                                            </small>
+                                        </div>
                                     </div>
                                     <div class="mt-3">
                                         <div class="d-flex justify-content-between mb-2">

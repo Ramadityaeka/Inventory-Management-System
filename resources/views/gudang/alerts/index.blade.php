@@ -134,7 +134,7 @@
                                 
                                 <div class="mb-2">
                                     <small class="text-muted">
-                                        <i class="bi bi-building me-1"></i>{{ $alert->warehouse->name }}
+                                        <i class="bi bi-building me-1"></i>{{ $alert->warehouse->name ?? '-' }}
                                     </small>
                                 </div>
                                 

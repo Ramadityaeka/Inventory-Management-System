@@ -250,7 +250,7 @@
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div>
                                                 <h6 class="mb-1">{{ $submission->item ? $submission->item->name : $submission->item_name }}</h6>
-                                                <small class="text-muted">{{ $submission->warehouse->name }}</small>
+                                                <small class="text-muted">{{ $submission->warehouse->name ?? '-' }}</small>
                                                 <div class="mt-1">
                                                     <span class="badge bg-info me-2">{{ number_format($submission->quantity) }} {{ $submission->unit }}</span>
                                                     @if($submission->status == 'pending')

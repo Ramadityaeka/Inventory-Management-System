@@ -6,6 +6,30 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $item_id
+ * @property int $unit_id
+ * @property int $warehouse_id
+ * @property int $staff_id
+ * @property int $quantity
+ * @property string $unit_name
+ * @property int $conversion_factor
+ * @property int $base_quantity
+ * @property string $purpose
+ * @property string|null $notes
+ * @property string $status
+ * @property int|null $approved_by
+ * @property string|null $rejection_reason
+ * @property \Carbon\Carbon|null $approved_at
+ * @property \Carbon\Carbon $created_at
+ * @property \Carbon\Carbon $updated_at
+ * 
+ * @property-read \App\Models\Item $item
+ * @property-read \App\Models\Warehouse $warehouse
+ * @property-read \App\Models\User $staff
+ * @property-read \App\Models\User|null $approver
+ */
 class StockRequest extends Model
 {
     use HasFactory;
@@ -13,22 +37,6 @@ class StockRequest extends Model
     const STATUS_PENDING = 'pending';
     const STATUS_APPROVED = 'approved';
     const STATUS_REJECTED = 'rejected';
-
-    /**
-     * @property int $id
-     * @property int $item_id
-     * @property int $warehouse_id
-     * @property int $staff_id
-     * @property int $quantity
-     * @property string $purpose
-     * @property string|null $notes
-     * @property string $status
-     * @property int|null $approved_by
-     * @property string|null $rejection_reason
-     * @property \Carbon\Carbon|null $approved_at
-     * @property \Carbon\Carbon $created_at
-     * @property \Carbon\Carbon $updated_at
-     */
 
     protected $fillable = [
         'item_id',

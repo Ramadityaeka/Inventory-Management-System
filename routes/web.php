@@ -92,6 +92,11 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/stock-values/pdf', [\App\Http\Controllers\SuperAdmin\StockValueReportController::class, 'exportPdf'])->name('reports.stock-values.pdf');
         Route::get('reports/stock-values/excel', [\App\Http\Controllers\SuperAdmin\StockValueReportController::class, 'exportExcel'])->name('reports.stock-values.excel');
         Route::get('reports/stock-values/search-items', [\App\Http\Controllers\SuperAdmin\StockValueReportController::class, 'searchItems'])->name('reports.stock-values.search-items');
+        
+        // Stock Summary Report Routes
+        Route::get('reports/stock-summary', [\App\Http\Controllers\SuperAdmin\StockSummaryReportController::class, 'index'])->name('reports.stock-summary');
+        Route::get('reports/stock-summary/pdf', [\App\Http\Controllers\SuperAdmin\StockSummaryReportController::class, 'exportPdf'])->name('reports.stock-summary.pdf');
+        Route::get('reports/stock-summary/excel', [\App\Http\Controllers\SuperAdmin\StockSummaryReportController::class, 'exportExcel'])->name('reports.stock-summary.excel');
     });
 
     // Admin Gudang Routes
@@ -129,9 +134,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports', [GudangReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/transactions', [GudangReportController::class, 'transactions'])->name('reports.transactions');
         Route::get('/reports/stock-values', [GudangReportController::class, 'stockValues'])->name('reports.stock-values');
+        Route::get('/reports/stock-summary', [GudangReportController::class, 'stockSummary'])->name('reports.stock-summary');
         Route::get('/reports/monthly', [GudangReportController::class, 'monthly'])->name('reports.monthly');
         Route::get('/reports/transactions/export', [GudangReportController::class, 'exportTransactions'])->name('reports.transactions.export');
         Route::get('/reports/stock-values/export', [GudangReportController::class, 'exportStockValues'])->name('reports.stock-values.export');
+        Route::get('/reports/stock-summary/excel', [GudangReportController::class, 'exportStockSummaryExcel'])->name('reports.stock-summary.excel');
+        Route::get('/reports/stock-summary/pdf', [GudangReportController::class, 'exportStockSummaryPdf'])->name('reports.stock-summary.pdf');
         Route::post('/reports/transactions/export-pdf', [GudangReportController::class, 'exportTransactionsPdf'])->name('reports.transactions.exportPdf');
         Route::post('/reports/stock-values/export-pdf', [GudangReportController::class, 'exportStockValuesPdf'])->name('reports.stock-values.exportPdf');
     });

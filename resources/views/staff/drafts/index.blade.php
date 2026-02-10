@@ -47,7 +47,7 @@
                                         <td>{{ $draft->item->name }}</td>
                                         <td>{{ number_format($draft->quantity) }}</td>
                                         <td>{{ $draft->supplier->name }}</td>
-                                        <td>{{ $draft->warehouse->name }}</td>
+                                        <td>{{ $draft->warehouse->name ?? '-' }}</td>
                                         <td>
                                             <div class="btn-group" role="group">
                                                 <a href="{{ route('staff.receive-items.edit', $draft) }}" 

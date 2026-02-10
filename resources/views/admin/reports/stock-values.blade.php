@@ -7,13 +7,16 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h3 mb-0">📦 Laporan Daftar Stok Barang & Nilai</h1>
                 <div>
-                    <button type="button" class="btn btn-danger" onclick="exportPdf()">
-                        <i class="fas fa-file-pdf"></i> Export PDF
+                    <h4 class="mb-1">Laporan Stok & Nilai Barang</h4>
+                    <p class="text-muted mb-0">Data inventori dengan nilai harga dan total stok</p>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-success me-2" onclick="exportExcel()">
+                        <i class="bi bi-file-earmark-excel"></i> Export Excel
                     </button>
-                    <button type="button" class="btn btn-success" onclick="exportExcel()">
-                        <i class="fas fa-file-excel"></i> Export Excel
+                    <button type="button" class="btn btn-danger" onclick="exportPdf()">
+                        <i class="bi bi-file-earmark-pdf"></i> Export PDF
                     </button>
                 </div>
             </div>
@@ -21,9 +24,9 @@
     </div>
 
     <!-- Filter Card -->
-    <div class="card mb-4">
-        <div class="card-header bg-success text-white">
-            <h5 class="mb-0"><i class="fas fa-filter"></i> Filter Laporan</h5>
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h6 class="mb-0"><i class="bi bi-funnel"></i> Filter Laporan</h6>
         </div>
         <div class="card-body">
             <form method="GET" action="{{ route('admin.reports.stock-values') }}" id="filterForm">
@@ -76,11 +79,11 @@
 
                 <div class="row mt-3">
                     <div class="col-12">
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-search"></i> Terapkan Filter
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Terapkan Filter
                         </button>
                         <a href="{{ route('admin.reports.stock-values') }}" class="btn btn-secondary">
-                            <i class="fas fa-redo"></i> Reset Filter
+                            <i class="bi bi-x-circle"></i> Reset
                         </a>
                     </div>
                 </div>
@@ -89,52 +92,52 @@
     </div>
 
     <!-- Summary Cards -->
-    <div class="row mb-4">
+    <div class="row g-3 mb-4">
         <div class="col-md-4">
-            <div class="card bg-primary text-white">
+            <div class="card border-0 shadow-sm bg-primary text-white">
                 <div class="card-body">
-                    <h5>Total Jenis Barang</h5>
-                    <h2>{{ number_format($totalItems) }}</h2>
+                    <h6 class="mb-2">Total Jenis Barang</h6>
+                    <h3 class="mb-0">{{ number_format($totalItems) }}</h3>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card bg-info text-white">
+            <div class="card border-0 shadow-sm bg-info text-white">
                 <div class="card-body">
-                    <h5>Total Jumlah Barang</h5>
-                    <h2>{{ number_format($totalQuantity) }}</h2>
+                    <h6 class="mb-2">Total Stok Barang</h6>
+                    <h3 class="mb-0">{{ number_format($totalQuantity) }}</h3>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card bg-success text-white">
+            <div class="card border-0 shadow-sm bg-success text-white">
                 <div class="card-body">
-                    <h5>Total Nilai Keseluruhan</h5>
-                    <h2>Rp {{ number_format($totalStockValue, 0, ',', '.') }}</h2>
+                    <h6 class="mb-2">Total Nilai Keseluruhan</h6>
+                    <h3 class="mb-0">Rp {{ number_format($totalStockValue, 0, ',', '.') }}</h3>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Stock Values Table -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">Data Stok & Nilai Barang</h5>
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light">
+            <h6 class="mb-0">Data Stok & Nilai Barang ({{ $stocks->total() }} item)</h6>
         </div>
-        <div class="card-body">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-dark">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
                         <tr>
-                            <th>No</th>
+                            <th width="50">No</th>
                             <th>Gudang</th>
-                            <th>Kode</th>
+                            <th>Kode Barang</th>
                             <th>Nama Barang</th>
                             <th>Kategori</th>
-                            <th>Jumlah</th>
+                            <th class="text-end">Stok</th>
                             <th>Satuan</th>
-                            <th>Harga/Satuan</th>
-                            <th>Harga Total</th>
+                            <th class="text-end">Harga/Satuan</th>
+                            <th class="text-end">Harga Total</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -156,22 +159,22 @@
                                 <td>
                                     <span class="badge bg-secondary">{{ $data['item']->category->name }}</span>
                                 </td>
-                                <td>
+                                <td class="text-end">
                                     <strong>{{ number_format($data['display_quantity']) }}</strong>
                                 </td>
                                 <td>
                                     {{ $data['item']->unit }}
                                 </td>
-                                <td>
+                                <td class="text-end">
                                     @if($data['unit_price'] > 0)
                                         Rp {{ number_format($data['unit_price'], 0, ',', '.') }}
                                     @else
                                         <span class="text-muted">-</span>
                                     @endif
                                 </td>
-                                <td>
+                                <td class="text-end">
                                     @if($data['total_value'] > 0)
-                                        <strong>Rp {{ number_format($data['total_value'], 0, ',', '.') }}</strong>
+                                        <strong class="text-success">Rp {{ number_format($data['total_value'], 0, ',', '.') }}</strong>
                                     @else
                                         <span class="text-muted">-</span>
                                     @endif
@@ -179,35 +182,37 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center py-4">
-                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                                    <p class="text-muted">Tidak ada data stok</p>
+                                <td colspan="9" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                                    Tidak ada data stok
                                 </td>
                             </tr>
                         @endforelse
                     </tbody>
                     @if($stocksData->count() > 0)
-                        <tfoot class="table-secondary">
-                            <tr>
-                                <td colspan="5" class="text-end"><strong>TOTAL KESELURUHAN:</strong></td>
-                                <td><strong>{{ number_format($totalQuantity) }}</strong></td>
-                                <td>item</td>
-                                <td></td>
-                                <td><strong>Rp {{ number_format($totalStockValue, 0, ',', '.') }}</strong></td>
+                        <tfoot class="table-light">
+                            <tr class="fw-bold">
+                                <td colspan="5" class="text-end">TOTAL:</td>
+                                <td class="text-end">{{ number_format($totalQuantity) }}</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td class="text-end text-success">Rp {{ number_format($totalStockValue, 0, ',', '.') }}</td>
                             </tr>
                         </tfoot>
                     @endif
                 </table>
             </div>
-
-            <!-- Pagination -->
-            <div class="mt-3">
+        </div>
+        @if($stocks->hasPages())
+            <div class="card-footer">
                 {{ $stocks->links('vendor.pagination.bootstrap-5') }}
             </div>
-        </div>
+        @endif
     </div>
 </div>
+@endsection
 
+@push('scripts')
 <script>
 function exportPdf() {
     const params = new URLSearchParams(window.location.search);
@@ -309,4 +314,4 @@ document.addEventListener('DOMContentLoaded', function() {
     position: relative;
 }
 </style>
-@endsection
+@endpush

@@ -598,4 +598,264 @@ class GudangReportController extends Controller
             'stats'
         ));
     }
+
+    /**
+     * Display stock summary report
+     */
+    public function stockSummary(Request $request)
+    {
+        $user = auth()->user();
+        $warehouseIds = $user->warehouses()->pluck('warehouses.id');
+
+        if ($warehouseIds->isEmpty()) {
+            return redirect()->route('dashboard')
+                ->with('error', 'Anda belum ditugaskan ke gudang manapun.');
+        }
+
+        // Base query untuk mengelompokkan per barang
+        $query = Item::query()
+            ->select([
+                'items.id',
+                'items.code',
+                'items.name',
+                'items.unit',
+                'items.category_id',
+                'categories.name as category_name'
+            ])
+            ->with('itemUnits')
+            ->leftJoin('categories', 'items.category_id', '=', 'categories.id');
+
+        // Apply filters
+        if ($request->filled('category_id')) {
+            $query->where('items.category_id', $request->category_id);
+        }
+
+        if ($request->filled('item_name')) {
+            $query->where('items.name', 'LIKE', '%' . $request->item_name . '%');
+        }
+
+        if ($request->filled('item_code')) {
+            $query->where('items.code', 'LIKE', '%' . $request->item_code . '%');
+        }
+
+        $items = $query->orderBy('items.code')->get();
+
+        // Build summary data
+        $summaryData = [];
+        $year = $request->filled('year') ? $request->year : null;
+        $month = $request->filled('month') ? $request->month : null;
+
+        foreach ($items as $item) {
+            // Get unit information
+            $firstUnit = $item->itemUnits->first();
+            $unitName = $firstUnit ? $firstUnit->name : ($item->unit ?? '-');
+
+            // Loop through user's warehouses
+            $stocks = Stock::where('item_id', $item->id)
+                ->whereIn('warehouse_id', $warehouseIds)
+                ->where('quantity', '>', 0)
+                ->with('warehouse')
+                ->get();
+            
+            foreach ($stocks as $stock) {
+                // Calculate stock in/out for this specific warehouse
+                $whStockIn = Submission::where('item_id', $item->id)
+                    ->where('warehouse_id', $stock->warehouse_id)
+                    ->where('status', 'approved')
+                    ->whereNotNull('submitted_at')
+                    ->when($year, fn($q) => $q->whereYear('submitted_at', $year))
+                    ->when($month, fn($q) => $q->whereMonth('submitted_at', $month))
+                    ->sum('quantity') ?? 0;
+                    
+                $whStockOut = \App\Models\StockRequest::where('item_id', $item->id)
+                    ->where('warehouse_id', $stock->warehouse_id)
+                    ->where('status', 'approved')
+                    ->when($year, fn($q) => $q->whereYear('approved_at', $year))
+                    ->when($month, fn($q) => $q->whereMonth('approved_at', $month))
+                    ->sum('base_quantity') ?? 0;
+                
+                $summaryData[] = [
+                    'item_id' => $item->id,
+                    'warehouse_id' => $stock->warehouse_id,
+                    'warehouse_name' => $stock->warehouse->name ?? '-',
+                    'code' => $item->code,
+                    'name' => $item->name,
+                    'category' => $item->category_name ?? '-',
+                    'unit' => $unitName,
+                    'stock_in' => $whStockIn,
+                    'stock_out' => $whStockOut,
+                    'current_stock' => $stock->quantity,
+                ];
+            }
+        }
+
+        // Convert to collection for pagination
+        $collection = collect($summaryData);
+        
+        // Paginate
+        $perPage = 50;
+        $currentPage = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
+        $currentPageItems = $collection->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        
+        $summary = new \Illuminate\Pagination\LengthAwarePaginator(
+            $currentPageItems,
+            $collection->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        // Calculate totals
+        $totals = [
+            'total_stock_in' => $collection->sum('stock_in'),
+            'total_stock_out' => $collection->sum('stock_out'),
+            'total_current_stock' => $collection->sum('current_stock'),
+            'total_items' => $collection->count(),
+        ];
+
+        // Get filter options
+        $categories = Category::orderBy('name')->get();
+        $warehouses = $user->warehouses;
+        
+        // Get years from submissions
+        $years = Submission::whereIn('warehouse_id', $warehouseIds)
+            ->selectRaw('YEAR(submitted_at) as year')
+            ->whereNotNull('submitted_at')
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->pluck('year');
+
+        return view('gudang.reports.stock-summary', compact(
+            'summary',
+            'categories',
+            'warehouses',
+            'years',
+            'totals'
+        ));
+    }
+
+    /**
+     * Export stock summary report to Excel
+     */
+    public function exportStockSummaryExcel(Request $request)
+    {
+        $user = auth()->user();
+        $warehouseIds = $user->warehouses()->pluck('warehouses.id')->toArray();
+
+        if (empty($warehouseIds)) {
+            return redirect()->back()
+                ->with('error', 'Anda belum ditugaskan ke gudang manapun.');
+        }
+
+        $filters = [
+            'warehouse_ids' => $warehouseIds,
+            'category_id' => $request->category_id,
+            'item_name' => $request->item_name,
+            'item_code' => $request->item_code,
+            'year' => $request->year,
+            'month' => $request->month,
+        ];
+
+        $filename = 'laporan-ringkasan-stok-' . date('Y-m-d-His') . '.xlsx';
+
+        return Excel::download(new \App\Exports\StockSummaryReportExport($filters), $filename);
+    }
+
+    /**
+     * Export stock summary report to PDF
+     */
+    public function exportStockSummaryPdf(Request $request)
+    {
+        $user = auth()->user();
+        $warehouseIds = $user->warehouses()->pluck('warehouses.id');
+
+        if ($warehouseIds->isEmpty()) {
+            return redirect()->back()
+                ->with('error', 'Anda belum ditugaskan ke gudang manapun.');
+        }
+
+        // Build same data as index
+        $query = Item::query()
+            ->select([
+                'items.id',
+                'items.code',
+                'items.name',
+                'items.unit',
+                'items.category_id',
+                'categories.name as category_name'
+            ])
+            ->with('itemUnits')
+            ->leftJoin('categories', 'items.category_id', '=', 'categories.id');
+
+        if ($request->filled('category_id')) {
+            $query->where('items.category_id', $request->category_id);
+        }
+
+        if ($request->filled('item_name')) {
+            $query->where('items.name', 'LIKE', '%' . $request->item_name . '%');
+        }
+
+        if ($request->filled('item_code')) {
+            $query->where('items.code', 'LIKE', '%' . $request->item_code . '%');
+        }
+
+        $items = $query->orderBy('items.code')->get();
+
+        $summaryData = [];
+        $year = $request->filled('year') ? $request->year : null;
+        $month = $request->filled('month') ? $request->month : null;
+
+        foreach ($items as $item) {
+            $firstUnit = $item->itemUnits->first();
+            $unitName = $firstUnit ? $firstUnit->name : ($item->unit ?? '-');
+
+            $stocks = Stock::where('item_id', $item->id)
+                ->whereIn('warehouse_id', $warehouseIds)
+                ->where('quantity', '>', 0)
+                ->with('warehouse')
+                ->get();
+            
+            foreach ($stocks as $stock) {
+                $whStockIn = Submission::where('item_id', $item->id)
+                    ->where('warehouse_id', $stock->warehouse_id)
+                    ->where('status', 'approved')
+                    ->whereNotNull('submitted_at')
+                    ->when($year, fn($q) => $q->whereYear('submitted_at', $year))
+                    ->when($month, fn($q) => $q->whereMonth('submitted_at', $month))
+                    ->sum('quantity') ?? 0;
+                    
+                $whStockOut = \App\Models\StockRequest::where('item_id', $item->id)
+                    ->where('warehouse_id', $stock->warehouse_id)
+                    ->where('status', 'approved')
+                    ->when($year, fn($q) => $q->whereYear('approved_at', $year))
+                    ->when($month, fn($q) => $q->whereMonth('approved_at', $month))
+                    ->sum('base_quantity') ?? 0;
+                
+                $summaryData[] = [
+                    'warehouse_name' => $stock->warehouse->name ?? '-',
+                    'code' => $item->code,
+                    'name' => $item->name,
+                    'category' => $item->category_name ?? '-',
+                    'unit' => $unitName,
+                    'stock_in' => $whStockIn,
+                    'stock_out' => $whStockOut,
+                    'current_stock' => $stock->quantity,
+                ];
+            }
+        }
+
+        $totals = [
+            'total_items' => count($summaryData),
+            'total_stock_in' => collect($summaryData)->sum('stock_in'),
+            'total_stock_out' => collect($summaryData)->sum('stock_out'),
+            'total_current_stock' => collect($summaryData)->sum('current_stock'),
+        ];
+
+        $filters = $request->all();
+
+        $pdf = Pdf::loadView('gudang.reports.stock-summary-pdf', compact('summaryData', 'totals', 'filters'))
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->download('laporan-ringkasan-stok-' . date('Y-m-d-His') . '.pdf');
+    }
 }

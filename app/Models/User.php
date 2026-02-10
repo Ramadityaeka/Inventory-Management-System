@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -20,7 +21,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     const ROLE_SUPER_ADMIN = 'super_admin';
     const ROLE_ADMIN_GUDANG = 'admin_gudang';
@@ -99,9 +100,34 @@ class User extends Authenticatable
         return $this->hasMany(Transfer::class, 'requested_by');
     }
 
+    public function reviewedTransfers(): HasMany
+    {
+        return $this->hasMany(Transfer::class, 'reviewed_by');
+    }
+
+    public function approvedTransfers(): HasMany
+    {
+        return $this->hasMany(Transfer::class, 'approved_by');
+    }
+
+    public function receivedTransfers(): HasMany
+    {
+        return $this->hasMany(Transfer::class, 'received_by');
+    }
+
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class, 'created_by');
+    }
+
+    public function stockRequests(): HasMany
+    {
+        return $this->hasMany(StockRequest::class, 'staff_id');
+    }
+
+    public function approvedStockRequests(): HasMany
+    {
+        return $this->hasMany(StockRequest::class, 'approved_by');
     }
 
     // Scopes
