@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 10, 2026 at 10:32 AM
+-- Generation Time: Feb 11, 2026 at 02:19 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -873,8 +873,6 @@ INSERT INTO `user_warehouses` (`id`, `user_id`, `warehouse_id`, `created_at`) VA
 (25, 9, 7, '2026-02-02 04:34:46'),
 (26, 11, 7, '2026-02-02 06:28:14'),
 (28, 4, 10, '2026-02-04 01:15:10'),
-(29, 4, 11, '2026-02-10 03:58:25'),
-(30, 2, 11, '2026-02-10 03:58:39'),
 (32, 15, 10, '2026-02-10 07:47:49'),
 (33, 14, 10, '2026-02-10 07:47:59');
 
