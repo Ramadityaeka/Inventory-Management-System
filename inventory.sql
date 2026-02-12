@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 11, 2026 at 11:35 AM
+-- Generation Time: Feb 12, 2026 at 03:08 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -497,8 +497,7 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('nPeZuastkJVGCoToI0lHYic3B89rL25JT0pugfDv', 6, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'YTo1OntzOjY6Il90b2tlbiI7czo0MDoiMjdDSEdndGZ2QU84bm1Bblhjb0dnVnNNcVljQTdNM0kxVHJYOFI1bSI7czozOiJ1cmwiO2E6MTp7czo4OiJpbnRlbmRlZCI7czo0MDoiaHR0cDovLzEyNy4wLjAuMTo4MDAwL2FkbWluL3VzZXJzL2NyZWF0ZSI7fXM6OToiX3ByZXZpb3VzIjthOjE6e3M6MzoidXJsIjtzOjM4OiJodHRwOi8vMTI3LjAuMC4xOjgwMDAvYWRtaW4vd2FyZWhvdXNlcyI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fXM6NTA6ImxvZ2luX3dlYl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjtpOjY7fQ==', 1770805975),
-('vJBxVMRd7lAWgH08vtrMojHvAqPvwGyFR6blAUZc', 12, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/126.0.0.0', 'YTo1OntzOjY6Il90b2tlbiI7czo0MDoicDRtZU90dFVLVnY2YTNWQ1dIODU0aWxYYm1Wdm1PMm1MZlN0S2FLYiI7czozOiJ1cmwiO2E6MTp7czo4OiJpbnRlbmRlZCI7czo0NDoiaHR0cDovLzEyNy4wLjAuMTo4MDAwL3N0YWZmL3N0b2NrLXJlcXVlc3RzLzMiO31zOjk6Il9wcmV2aW91cyI7YToxOntzOjM6InVybCI7czozMzoiaHR0cDovLzEyNy4wLjAuMTo4MDAwL2FkbWluL3VzZXJzIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTI7fQ==', 1770806010);
+('1WEvvJV29cNJpNOCMH2aXkRa1SIwhiuBGc3Z3ztI', 6, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/126.0.0.0', 'YTo1OntzOjY6Il90b2tlbiI7czo0MDoiQ3VFVlU2MFp1TXFnMVdERFNtQnNHMmVlZ0tGUFJPWHFQaGJEUW9qMSI7czozOiJ1cmwiO2E6MTp7czo4OiJpbnRlbmRlZCI7czozMToiaHR0cDovLzEyNy4wLjAuMTo4MDAwL2Rhc2hib2FyZCI7fXM6OToiX3ByZXZpb3VzIjthOjE6e3M6MzoidXJsIjtzOjQ4OiJodHRwOi8vMTI3LjAuMC4xOjgwMDAvYWRtaW4vcmVwb3J0cy90cmFuc2FjdGlvbnMiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX1zOjUwOiJsb2dpbl93ZWJfNTliYTM2YWRkYzJiMmY5NDAxNTgwZjAxNGM3ZjU4ZWE0ZTMwOTg5ZCI7aTo2O30=', 1770860611);
 
 -- --------------------------------------------------------
 
@@ -599,14 +598,6 @@ CREATE TABLE `stock_movements` (
   `created_by` bigint(20) UNSIGNED NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `stock_movements`
---
-
-INSERT INTO `stock_movements` (`id`, `item_id`, `unit_id`, `warehouse_id`, `movement_type`, `quantity`, `reference_type`, `reference_id`, `notes`, `created_by`, `created_at`) VALUES
-(9, 6, 5, 7, 'out', -5, 'stock_request', 3, 'Penggunaan barang approved - -', 11, '2026-02-11 02:21:13'),
-(10, 6, 5, 7, 'adjustment', 3, 'manual_adjustment', 11, 'kebanyakan (Penambahan oleh Hari Tri Subagyo)', 11, '2026-02-11 02:41:59');
 
 -- --------------------------------------------------------
 
@@ -797,7 +788,7 @@ INSERT INTO `units` (`id`, `code`, `name`, `location`, `address`, `pic_name`, `p
 (7, 'GD-07', 'Bagian Pengelolaan Tindak Lanjut Hasil Pengawasan dan Kepatuhan Internal', 'Jakarta Selatan', NULL, 'Heri effendi', NULL, 1, '2026-01-14 19:00:00', '2026-01-21 19:00:00'),
 (8, 'GD-08', 'Kelompok Kerja Hukum Kepegawaian dan Organisasi', 'Jakarta Selatan', NULL, 'Sudahwan', NULL, 1, '2026-01-14 19:00:00', '2026-01-21 19:00:00'),
 (9, 'GD-09', 'Kelompok Kerja Rencana dan Keuangan', 'Jakarta Selatan', NULL, 'Sophni', NULL, 1, '2026-01-14 19:00:00', '2026-01-21 19:00:00'),
-(10, 'GD-010', 'Klinik', 'Jakarta Selatan', NULL, 'Amalinda', NULL, 1, '2026-02-10 07:39:36', '2026-02-10 07:39:36'),
+(10, 'GD-010', 'Klinik', 'Jakarta Selatan', NULL, 'Amalinda', NULL, 1, '2026-02-10 07:39:36', '2026-02-12 01:43:05'),
 (11, 'GD-011', 'Rumah Tangga', 'jakarta selatan', NULL, 'Anwar Rusdi', NULL, 1, '2026-02-11 10:32:55', '2026-02-11 10:32:55');
 
 -- --------------------------------------------------------
