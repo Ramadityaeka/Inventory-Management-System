@@ -98,7 +98,7 @@ class StockRequestManagementController extends Controller
                 'quantity' => -$stockRequest->base_quantity,  // Negative for stock out (in base unit)
                 'reference_type' => 'stock_request',
                 'reference_id' => $stockRequest->id,
-                'notes' => 'Penggunaan barang approved - ' . $stockRequest->purpose,
+                'notes' => 'Penggunaan barang approved - Request #' . $stockRequest->id . ' oleh ' . $stockRequest->staff->name,
                 'created_by' => auth()->id(),
             ]);
             

@@ -44,12 +44,22 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
             'approver'
         ])->where('status', 'approved');
 
+        // Get Stock Adjustments (Penyesuaian Stok)
+        $adjustmentsQuery = \App\Models\StockMovement::with([
+            'item.category',
+            'warehouse',
+            'creator'
+        ])->where('movement_type', 'adjustment');
+
         // Apply filters to both
         if (isset($this->filters['category_id']) && !empty($this->filters['category_id'])) {
             $submissionsQuery->whereHas('item', function($q) {
                 $q->where('category_id', $this->filters['category_id']);
             });
             $stockRequestsQuery->whereHas('item', function($q) {
+                $q->where('category_id', $this->filters['category_id']);
+            });
+            $adjustmentsQuery->whereHas('item', function($q) {
                 $q->where('category_id', $this->filters['category_id']);
             });
         }
@@ -61,6 +71,9 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
             $stockRequestsQuery->whereHas('item', function($q) {
                 $q->where('name', 'LIKE', '%' . $this->filters['item_name'] . '%');
             });
+            $adjustmentsQuery->whereHas('item', function($q) {
+                $q->where('name', 'LIKE', '%' . $this->filters['item_name'] . '%');
+            });
         }
 
         if (isset($this->filters['item_code']) && !empty($this->filters['item_code'])) {
@@ -70,27 +83,34 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
             $stockRequestsQuery->whereHas('item', function($q) {
                 $q->where('code', 'LIKE', '%' . $this->filters['item_code'] . '%');
             });
+            $adjustmentsQuery->whereHas('item', function($q) {
+                $q->where('code', 'LIKE', '%' . $this->filters['item_code'] . '%');
+            });
         }
 
         if (isset($this->filters['year']) && !empty($this->filters['year'])) {
             $submissionsQuery->whereYear('submitted_at', $this->filters['year']);
             $stockRequestsQuery->whereYear('created_at', $this->filters['year']);
+            $adjustmentsQuery->whereYear('created_at', $this->filters['year']);
         }
 
         if (isset($this->filters['month']) && !empty($this->filters['month'])) {
             $submissionsQuery->whereMonth('submitted_at', $this->filters['month']);
             $stockRequestsQuery->whereMonth('created_at', $this->filters['month']);
+            $adjustmentsQuery->whereMonth('created_at', $this->filters['month']);
         }
 
         if (isset($this->filters['warehouse_id']) && !empty($this->filters['warehouse_id'])) {
             $submissionsQuery->where('warehouse_id', $this->filters['warehouse_id']);
             $stockRequestsQuery->where('warehouse_id', $this->filters['warehouse_id']);
+            $adjustmentsQuery->where('warehouse_id', $this->filters['warehouse_id']);
         }
 
         // Support for multiple warehouse IDs (for admin gudang)
         if (isset($this->filters['warehouse_ids']) && !empty($this->filters['warehouse_ids'])) {
             $submissionsQuery->whereIn('warehouse_id', $this->filters['warehouse_ids']);
             $stockRequestsQuery->whereIn('warehouse_id', $this->filters['warehouse_ids']);
+            $adjustmentsQuery->whereIn('warehouse_id', $this->filters['warehouse_ids']);
         }
 
         // Apply status filter only to submissions
@@ -115,36 +135,74 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
             });
         }
 
-        return $submissions->concat($stockRequests)->sortByDesc('transaction_date');
+        // Get adjustments (only when status is empty or approved)
+        $adjustments = collect([]);
+        if (!isset($this->filters['status']) || empty($this->filters['status']) || $this->filters['status'] == 'approved') {
+            $adjustments = $adjustmentsQuery->get()->map(function($item) {
+                $item->transaction_type = 'adjustment';
+                $item->transaction_date = $item->created_at;
+                $item->status = 'approved';
+                return $item;
+            });
+        }
+
+        // Merge all transactions and sort
+        $allTransactions = $submissions->concat($stockRequests)->concat($adjustments)->sortByDesc('transaction_date');
+        
+        // Calculate historical stock (stock after each transaction)
+        $currentStocks = [];
+        foreach ($allTransactions as $transaction) {
+            $key = $transaction->item_id . '_' . $transaction->warehouse_id;
+            if (!isset($currentStocks[$key])) {
+                $stock = Stock::where('item_id', $transaction->item_id)
+                             ->where('warehouse_id', $transaction->warehouse_id)
+                             ->first();
+                $currentStocks[$key] = $stock ? $stock->quantity : 0;
+            }
+        }
+        
+        // Calculate stock_after for each transaction (working backwards from current)
+        $runningStocks = $currentStocks;
+        foreach ($allTransactions as $transaction) {
+            $key = $transaction->item_id . '_' . $transaction->warehouse_id;
+            
+            // The stock after this transaction is the current running stock
+            $transaction->stock_after = $runningStocks[$key];
+            
+            // Update running stock by reversing this transaction
+            if ($transaction->transaction_type == 'in') {
+                $runningStocks[$key] -= $transaction->quantity;
+            } elseif ($transaction->transaction_type == 'out') {
+                $runningStocks[$key] += ($transaction->base_quantity ?? $transaction->quantity);
+            } elseif ($transaction->transaction_type == 'adjustment') {
+                $runningStocks[$key] -= $transaction->quantity;
+            }
+        }
+        
+        return $allTransactions;
     }
 
     public function headings(): array
     {
         return [
             'No',
+            'Tanggal',
             'Unit',
             'Nama Barang',
             'Barang Masuk',
             'Barang Keluar',
             'Satuan',
-            'Stok Saat Ini',
-            'Keterangan',
+            'Stok Setelah Transaksi',
+            'Kategori',
             'Diajukan Oleh',
             'Status',
-            'Diproses Oleh',
-            'Waktu'
+            'Diproses Oleh'
         ];
     }
 
     public function map($transaction): array
-    {
-        static $index = 0;
+    { static $index = 0;
         $index++;
-
-        $currentStock = Stock::where('warehouse_id', $transaction->warehouse_id)
-            ->where('item_id', $transaction->item_id)
-            ->first();
-        $remainingStock = $currentStock ? $currentStock->quantity : 0;
 
         // Handle different transaction types
         if ($transaction->transaction_type == 'in') {
@@ -159,37 +217,49 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
             
             $barangMasuk = (int) $transaction->quantity;
             $barangKeluar = 0;
-            $keterangan = $transaction->notes ?: ('Penerimaan dari ' . ($transaction->supplier->name ?? '-'));
-            $keterangan = str_replace([',', '"', "\n", "\r"], [' ', '', ' ', ' '], $keterangan);
+            $diajukanOleh = $transaction->staff ? $transaction->staff->name : '-';
             $diproses = $approval ? $approval->admin->name : '-';
             $transactionDate = $transaction->submitted_at ? 
-                $transaction->submitted_at->timezone('Asia/Jakarta')->format('d-m-Y H:i') : '-';
+                $transaction->submitted_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : '-';
+        } elseif ($transaction->transaction_type == 'adjustment') {
+            // Adjustment
+            $statusText = 'Adjustment';
+            if ($transaction->quantity > 0) {
+                $barangMasuk = (int) $transaction->quantity;
+                $barangKeluar = 0;
+            } else {
+                $barangMasuk = 0;
+                $barangKeluar = abs((int) $transaction->quantity);
+            }
+            $diajukanOleh = $transaction->creator ? $transaction->creator->name : '-';
+            $diproses = $transaction->creator ? $transaction->creator->name : '-';
+            $transactionDate = $transaction->created_at ? 
+                $transaction->created_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : '-';
         } else {
             // Barang Keluar (StockRequest)
             $barangMasuk = 0;
             $barangKeluar = (int) ($transaction->base_quantity ?? $transaction->quantity);
             $statusText = 'Disetujui';
-            $keterangan = $transaction->purpose ?? 'Penggunaan barang';
-            $keterangan = str_replace([',', '"', "\n", "\r"], [' ', '', ' ', ' '], $keterangan);
+            $diajukanOleh = $transaction->staff ? $transaction->staff->name : '-';
             $diproses = $transaction->approver ? $transaction->approver->name : '-';
             $transactionDate = $transaction->approved_at ? 
-                $transaction->approved_at->timezone('Asia/Jakarta')->format('d-m-Y H:i') : 
-                ($transaction->created_at ? $transaction->created_at->timezone('Asia/Jakarta')->format('d-m-Y H:i') : '-');
+                $transaction->approved_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : 
+                ($transaction->created_at ? $transaction->created_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : '-');
         }
 
         return [
             $index,
+            $transactionDate,
             $transaction->warehouse->name ?? '-',
             $transaction->item->name ?? '-',
             $barangMasuk,
             $barangKeluar,
             $transaction->item->unit ?? '-',
-            (int) $remainingStock,
-            $keterangan,
-            $transaction->staff ? $transaction->staff->name : '-',
+            (int) ($transaction->stock_after ?? 0),
+            $transaction->item->category->name ?? '-',
+            $diajukanOleh,
             $statusText,
-            $diproses,
-            $transactionDate
+            $diproses
         ];
     }
 

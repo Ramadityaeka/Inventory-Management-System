@@ -300,13 +300,17 @@
                                  data-bs-toggle="modal" 
                                  data-bs-target="#photoModal"
                                  data-photo-src="{{ asset('storage/' . $submission->invoice_photo) }}"
-                                 data-photo-title="Foto Invoice">
+                                 data-photo-title="Foto Invoice"
+                                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23e9ecef%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%236c757d%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 font-size=%2216%22%3EGambar tidak tersedia%3C/text%3E%3C/svg%3E'; console.error('Invoice photo not found:', '{{ asset('storage/' . $submission->invoice_photo) }}');">
                             <div class="position-absolute top-0 end-0 m-1">
                                 <span class="badge bg-dark bg-opacity-75">
                                     <i class="bi bi-zoom-in"></i>
                                 </span>
                             </div>
                         </div>
+                        <small class="text-muted d-block mt-2 text-center">
+                            <i class="bi bi-info-circle"></i> Klik untuk memperbesar
+                        </small>
                     @endif
                 @else
                     <div class="text-center text-muted py-4">
@@ -327,29 +331,33 @@
             <div class="card-body">
                 @if($submission->photos && $submission->photos->count() > 0)
                     <div class="row g-2">
-                        @foreach($submission->photos as $photo)
+                        @foreach($submission->photos as $index => $photo)
                             <div class="col-6">
                                 <div class="position-relative">
                                     <img src="{{ asset('storage/' . $photo->file_path) }}" 
-                                         alt="Foto Kondisi Barang" 
+                                         alt="Foto Kondisi Barang {{ $index + 1 }}" 
                                          class="img-fluid rounded shadow-sm photo-thumbnail" 
                                          style="height: 120px; width: 100%; object-fit: cover; cursor: pointer;"
                                          data-bs-toggle="modal" 
                                          data-bs-target="#photoModal"
                                          data-photo-src="{{ asset('storage/' . $photo->file_path) }}"
-                                         data-photo-title="Foto Kondisi Barang">
+                                         data-photo-title="Foto Kondisi Barang {{ $index + 1 }}"
+                                         onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23e9ecef%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%236c757d%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 font-size=%2216%22%3EGambar tidak tersedia%3C/text%3E%3C/svg%3E'; this.style.cursor='not-allowed'; console.error('Photo not found:', '{{ asset('storage/' . $photo->file_path) }}');">
                                     <div class="position-absolute top-0 end-0 m-1">
                                         <span class="badge bg-dark bg-opacity-75">
                                             <i class="bi bi-zoom-in"></i>
                                         </span>
                                     </div>
                                 </div>
-                                <small class="text-muted d-block mt-1 text-center">
-                                    {{ $photo->file_name ?? basename($photo->file_path) }}
+                                <small class="text-muted d-block mt-1 text-center" style="font-size: 0.75rem;">
+                                    {{ $photo->file_name ?? 'Foto ' . ($index + 1) }}
                                 </small>
                             </div>
                         @endforeach
                     </div>
+                    <small class="text-muted d-block mt-3 text-center">
+                        <i class="bi bi-info-circle"></i> Klik foto untuk memperbesar
+                    </small>
                 @else
                     <div class="text-center text-muted py-4">
                         <i class="bi bi-image fs-1 opacity-50"></i>
@@ -390,12 +398,37 @@
 <div class="modal fade" id="photoModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header bg-dark text-white">
                 <h5 class="modal-title" id="photoModalTitle">Foto</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body text-center">
-                <img id="photoModalImage" src="" alt="Photo" class="img-fluid rounded">
+            <div class="modal-body text-center p-0 bg-dark position-relative" style="min-height: 400px;">
+                <!-- Loading Spinner -->
+                <div id="photoLoadingSpinner" class="position-absolute top-50 start-50 translate-middle" style="z-index: 10;">
+                    <div class="spinner-border text-light" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                
+                <!-- Image -->
+                <img id="photoModalImage" 
+                     src="" 
+                     alt="Photo" 
+                     class="img-fluid"
+                     style="display: none; max-height: 80vh; width: auto; margin: auto;">
+                
+                <!-- Error Message -->
+                <div id="photoErrorMessage" class="alert alert-warning m-3" style="display: none;">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Gagal memuat gambar.</strong><br>
+                    <small>Pastikan file foto masih tersedia di server.</small>
+                </div>
+            </div>
+            <div class="modal-footer bg-dark text-white">
+                <a id="photoDownloadLink" href="" download class="btn btn-sm btn-outline-light">
+                    <i class="bi bi-download me-1"></i>Download
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-light" data-bs-dismiss="modal">Tutup</button>
             </div>
         </div>
     </div>
@@ -489,27 +522,114 @@
 
 @section('scripts')
 <script>
-// Photo modal functionality
+// Photo modal functionality with loading and error handling
 document.addEventListener('DOMContentLoaded', function() {
     const photoModal = document.getElementById('photoModal');
     const photoModalImage = document.getElementById('photoModalImage');
     const photoModalTitle = document.getElementById('photoModalTitle');
+    const photoLoadingSpinner = document.getElementById('photoLoadingSpinner');
+    const photoErrorMessage = document.getElementById('photoErrorMessage');
+    const photoDownloadLink = document.getElementById('photoDownloadLink');
+
+    if (!photoModal || !photoModalImage || !photoModalTitle) {
+        console.error('Photo modal elements not found');
+        return;
+    }
+
+    // Function to show loading state
+    function showLoading() {
+        photoLoadingSpinner.style.display = 'block';
+        photoModalImage.style.display = 'none';
+        photoErrorMessage.style.display = 'none';
+    }
+
+    // Function to show image
+    function showImage() {
+        photoLoadingSpinner.style.display = 'none';
+        photoModalImage.style.display = 'block';
+        photoErrorMessage.style.display = 'none';
+    }
+
+    // Function to show error
+    function showError() {
+        photoLoadingSpinner.style.display = 'none';
+        photoModalImage.style.display = 'none';
+        photoErrorMessage.style.display = 'block';
+    }
 
     // Handle photo click
     document.querySelectorAll('.photo-thumbnail').forEach(function(img) {
-        img.addEventListener('click', function() {
+        img.addEventListener('click', function(e) {
+            e.preventDefault();
             const src = this.getAttribute('data-photo-src');
-            const title = this.getAttribute('data-photo-title');
+            const title = this.getAttribute('data-photo-title') || 'Foto';
             
-            photoModalImage.src = src;
-            photoModalTitle.textContent = title;
+            console.log('Opening photo:', src); // Debug log
+            
+            if (src) {
+                // Show loading state
+                showLoading();
+                
+                // Set title and download link
+                photoModalTitle.textContent = title;
+                photoDownloadLink.href = src;
+                
+                // Create a new image to preload
+                const tempImg = new Image();
+                
+                tempImg.onload = function() {
+                    console.log('Image loaded successfully');
+                    photoModalImage.src = src;
+                    showImage();
+                };
+                
+                tempImg.onerror = function() {
+                    console.error('Failed to load image:', src);
+                    showError();
+                };
+                
+                tempImg.src = src;
+                
+                // Show modal using Bootstrap 5 API
+                const modal = new bootstrap.Modal(photoModal);
+                modal.show();
+            } else {
+                console.error('Photo source not found');
+                alert('URL foto tidak ditemukan');
+            }
+        });
+        
+        // Add error handling for thumbnail images that fail to load
+        img.addEventListener('error', function() {
+            console.error('Failed to load thumbnail:', this.src);
+            // Replace with placeholder
+            this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23e9ecef" width="400" height="300"/%3E%3Ctext fill="%236c757d" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle" font-size="16"%3EGambar tidak tersedia%3C/text%3E%3C/svg%3E';
+            this.style.cursor = 'not-allowed';
+            this.removeAttribute('data-bs-toggle');
+            this.removeAttribute('data-bs-target');
         });
     });
 
     // Clear modal when hidden
-    photoModal.addEventListener('hidden.bs.modal', function() {
-        photoModalImage.src = '';
-    });
+    if (photoModal) {
+        photoModal.addEventListener('hidden.bs.modal', function() {
+            photoModalImage.src = '';
+            showLoading();
+        });
+    }
+    
+    // Log all photo sources for debugging
+    const photoSources = Array.from(document.querySelectorAll('.photo-thumbnail'))
+        .map(img => ({
+            title: img.getAttribute('data-photo-title'),
+            src: img.getAttribute('data-photo-src')
+        }));
+    
+    if (photoSources.length > 0) {
+        console.log('Available photos:', photoSources);
+    } else {
+        console.warn('No photos found on this page');
+    }
 });
 
 // Form validation for reject modal
@@ -558,12 +678,17 @@ document.addEventListener('DOMContentLoaded', function() {
 .photo-thumbnail {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     border: 2px solid transparent;
+    object-fit: cover;
 }
 
 .photo-thumbnail:hover {
     transform: scale(1.05);
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     border-color: #007bff;
+}
+
+.photo-thumbnail[data-bs-toggle="modal"] {
+    cursor: zoom-in !important;
 }
 
 /* Avatar styling */
@@ -599,6 +724,33 @@ document.addEventListener('DOMContentLoaded', function() {
     border-radius: 0.75rem;
     border: none;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Photo Modal Specific Styles */
+#photoModal .modal-dialog {
+    max-width: 90vw;
+}
+
+#photoModal .modal-body {
+    background: #212529;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#photoModal img {
+    cursor: zoom-in;
+    transition: transform 0.3s ease;
+}
+
+#photoModal img:hover {
+    transform: scale(1.02);
+}
+
+/* Loading spinner styling */
+#photoLoadingSpinner .spinner-border {
+    width: 3rem;
+    height: 3rem;
 }
 
 /* Form control improvements */
@@ -640,6 +792,12 @@ document.addEventListener('DOMContentLoaded', function() {
     border-width: 2px;
 }
 
+/* Photo badge overlay */
+.position-absolute .badge {
+    font-size: 0.75rem;
+    pointer-events: none;
+}
+
 /* Responsive improvements */
 @media (max-width: 768px) {
     .fs-4 {
@@ -655,6 +813,24 @@ document.addEventListener('DOMContentLoaded', function() {
         flex-direction: column;
         gap: 1rem !important;
     }
+    
+    #photoModal .modal-dialog {
+        max-width: 95vw;
+        margin: 0.5rem;
+    }
+    
+    #photoModal img {
+        max-height: 70vh !important;
+    }
+}
+
+/* Animation for modal */
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+    transform: none;
 }
 </style>
 @endsection

@@ -35,12 +35,22 @@ class TransactionReportController extends Controller
             'approver'
         ])->where('status', 'approved');
 
+        // Get Stock Adjustments (Penyesuaian Stok)
+        $adjustmentsQuery = \App\Models\StockMovement::with([
+            'item.category',
+            'warehouse',
+            'creator'
+        ])->where('movement_type', 'adjustment');
+
         // Apply filters to submissions
         if ($request->filled('category_id')) {
             $submissionsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('category_id', $request->category_id);
+            });
+            $adjustmentsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
         }
@@ -100,8 +110,51 @@ class TransactionReportController extends Controller
             });
         }
 
+        // Get adjustments (only when status is empty or approved)
+        $adjustments = collect([]);
+        if (!$request->filled('status') || $request->status == 'approved') {
+            $adjustments = $adjustmentsQuery->get()->map(function($item) {
+                $item->transaction_type = 'adjustment';
+                $item->transaction_date = $item->created_at;
+                // For display purposes, set status as approved since adjustments are immediate
+                $item->status = 'approved';
+                return $item;
+            });
+        }
+
         // Merge and sort
-        $allTransactions = $submissions->concat($stockRequests)->sortByDesc('transaction_date');
+        $allTransactions = $submissions->concat($stockRequests)->concat($adjustments)->sortByDesc('transaction_date');
+        
+        // Calculate historical stock (stock after each transaction)
+        // Get current stocks for all items/warehouses in the transaction list
+        $currentStocks = [];
+        foreach ($allTransactions as $transaction) {
+            $key = $transaction->item_id . '_' . $transaction->warehouse_id;
+            if (!isset($currentStocks[$key])) {
+                $stock = \App\Models\Stock::where('item_id', $transaction->item_id)
+                             ->where('warehouse_id', $transaction->warehouse_id)
+                             ->first();
+                $currentStocks[$key] = $stock ? $stock->quantity : 0;
+            }
+        }
+        
+        // Calculate stock_after for each transaction (working backwards from current)
+        $runningStocks = $currentStocks; // Start with current stocks
+        foreach ($allTransactions as $transaction) {
+            $key = $transaction->item_id . '_' . $transaction->warehouse_id;
+            
+            // The stock after this transaction is the current running stock
+            $transaction->stock_after = $runningStocks[$key];
+            
+            // Update running stock by reversing this transaction
+            if ($transaction->transaction_type == 'in') {
+                $runningStocks[$key] -= $transaction->quantity;
+            } elseif ($transaction->transaction_type == 'out') {
+                $runningStocks[$key] += ($transaction->base_quantity ?? $transaction->quantity);
+            } elseif ($transaction->transaction_type == 'adjustment') {
+                $runningStocks[$key] -= $transaction->quantity;
+            }
+        }
         
         // Manual pagination
         $perPage = 50;
@@ -123,11 +176,18 @@ class TransactionReportController extends Controller
         $admins = User::whereIn('role', ['super_admin', 'admin_gudang'])->orderBy('name')->get();
         
         // Calculate statistics
+        $adjustmentsIn = $adjustments->filter(function($item) {
+            return $item->quantity > 0;
+        });
+        $adjustmentsOut = $adjustments->filter(function($item) {
+            return $item->quantity < 0;
+        });
+        
         $stats = [
             'total_transactions' => $allTransactions->count(),
-            'total_stock_in' => $submissions->where('status', 'approved')->sum('quantity'),
-            'total_stock_out' => $stockRequests->sum('base_quantity'),
-            'approved_count' => $submissions->where('status', 'approved')->count() + $stockRequests->count(),
+            'total_stock_in' => $submissions->where('status', 'approved')->sum('quantity') + $adjustmentsIn->sum('quantity'),
+            'total_stock_out' => $stockRequests->sum('base_quantity') + abs($adjustmentsOut->sum('quantity')),
+            'approved_count' => $submissions->where('status', 'approved')->count() + $stockRequests->count() + $adjustments->count(),
             'pending_count' => $submissions->where('status', 'pending')->count(),
             'rejected_count' => $submissions->where('status', 'rejected')->count(),
         ];
@@ -169,12 +229,22 @@ class TransactionReportController extends Controller
             'approver'
         ])->where('status', 'approved');
 
+        // Get Stock Adjustments (Penyesuaian Stok)
+        $adjustmentsQuery = \App\Models\StockMovement::with([
+            'item.category',
+            'warehouse',
+            'creator'
+        ])->where('movement_type', 'adjustment');
+
         // Apply same filters
         if ($request->filled('category_id')) {
             $submissionsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('category_id', $request->category_id);
+            });
+            $adjustmentsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
         }
@@ -186,6 +256,9 @@ class TransactionReportController extends Controller
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('name', 'LIKE', '%' . $request->item_name . '%');
             });
+            $adjustmentsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('name', 'LIKE', '%' . $request->item_name . '%');
+            });
         }
 
         if ($request->filled('item_code')) {
@@ -195,21 +268,27 @@ class TransactionReportController extends Controller
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('code', 'LIKE', '%' . $request->item_code . '%');
             });
+            $adjustmentsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('code', 'LIKE', '%' . $request->item_code . '%');
+            });
         }
 
         if ($request->filled('year')) {
             $submissionsQuery->whereYear('submitted_at', $request->year);
             $stockRequestsQuery->whereYear('created_at', $request->year);
+            $adjustmentsQuery->whereYear('created_at', $request->year);
         }
 
         if ($request->filled('month')) {
             $submissionsQuery->whereMonth('submitted_at', $request->month);
             $stockRequestsQuery->whereMonth('created_at', $request->month);
+            $adjustmentsQuery->whereMonth('created_at', $request->month);
         }
 
         if ($request->filled('warehouse_id')) {
             $submissionsQuery->where('warehouse_id', $request->warehouse_id);
             $stockRequestsQuery->where('warehouse_id', $request->warehouse_id);
+            $adjustmentsQuery->where('warehouse_id', $request->warehouse_id);
         }
 
         // Apply status filter only to submissions
@@ -234,14 +313,65 @@ class TransactionReportController extends Controller
             });
         }
 
-        $transactions = $submissions->concat($stockRequests)->sortByDesc('transaction_date');
+        // Get adjustments (only when status is empty or approved)
+        $adjustments = collect([]);
+        if (!$request->filled('status') || $request->status == 'approved') {
+            $adjustments = $adjustmentsQuery->get()->map(function($item) {
+                $item->transaction_type = 'adjustment';
+                $item->transaction_date = $item->created_at;
+                $item->status = 'approved';
+                return $item;
+            });
+        }
+
+        // Merge and sort
+        $allTransactions = $submissions->concat($stockRequests)->concat($adjustments)->sortByDesc('transaction_date');
+        
+        // Calculate historical stock (stock after each transaction)
+        $currentStocks = [];
+        foreach ($allTransactions as $transaction) {
+            $key = $transaction->item_id . '_' . $transaction->warehouse_id;
+            if (!isset($currentStocks[$key])) {
+                $stock = \App\Models\Stock::where('item_id', $transaction->item_id)
+                             ->where('warehouse_id', $transaction->warehouse_id)
+                             ->first();
+                $currentStocks[$key] = $stock ? $stock->quantity : 0;
+            }
+        }
+        
+        // Calculate stock_after for each transaction (working backwards from current)
+        $runningStocks = $currentStocks;
+        foreach ($allTransactions as $transaction) {
+            $key = $transaction->item_id . '_' . $transaction->warehouse_id;
+            
+            // The stock after this transaction is the current running stock
+            $transaction->stock_after = $runningStocks[$key];
+            
+            // Update running stock by reversing this transaction
+            if ($transaction->transaction_type == 'in') {
+                $runningStocks[$key] -= $transaction->quantity;
+            } elseif ($transaction->transaction_type == 'out') {
+                $runningStocks[$key] += ($transaction->base_quantity ?? $transaction->quantity);
+            } elseif ($transaction->transaction_type == 'adjustment') {
+                $runningStocks[$key] -= $transaction->quantity;
+            }
+        }
+        
+        $transactions = $allTransactions;
 
         // Calculate statistics
+        $adjustmentsIn = $adjustments->filter(function($item) {
+            return $item->quantity > 0;
+        });
+        $adjustmentsOut = $adjustments->filter(function($item) {
+            return $item->quantity < 0;
+        });
+        
         $stats = [
-            'total_transactions' => $transactions->count(),
-            'total_stock_in' => $submissions->where('status', 'approved')->sum('quantity'),
-            'total_stock_out' => $stockRequests->sum('base_quantity'),
-            'approved_count' => $transactions->where('status', 'approved')->count(),
+            'total_transactions' => $allTransactions->count(),
+            'total_stock_in' => $submissions->where('status', 'approved')->sum('quantity') + $adjustmentsIn->sum('quantity'),
+            'total_stock_out' => $stockRequests->sum('base_quantity') + abs($adjustmentsOut->sum('quantity')),
+            'approved_count' => $submissions->where('status', 'approved')->count() + $stockRequests->count() + $adjustments->count(),
             'pending_count' => $submissions->where('status', 'pending')->count(),
             'rejected_count' => $submissions->where('status', 'rejected')->count(),
         ];

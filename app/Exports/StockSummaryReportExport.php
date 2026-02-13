@@ -71,6 +71,16 @@ class StockSummaryReportExport implements FromCollection, WithHeadings, WithMapp
                 ? $this->filters['year'] : null;
             $month = isset($this->filters['month']) && !empty($this->filters['month']) 
                 ? $this->filters['month'] : null;
+            
+            // If warehouse_id is provided as filter, use it; otherwise use warehouse_ids
+            $filterWarehouseIds = null;
+            if ($warehouseId) {
+                // Single warehouse filter (both super admin and gudang user can use this)
+                $filterWarehouseIds = [$warehouseId];
+            } elseif ($warehouseIds) {
+                // Multiple warehouses (for gudang users)
+                $filterWarehouseIds = is_array($warehouseIds) ? $warehouseIds : $warehouseIds->toArray();
+            }
 
             foreach ($items as $item) {
                 // Get unit information - use first unit from itemUnits or fallback to item.unit property
@@ -78,88 +88,46 @@ class StockSummaryReportExport implements FromCollection, WithHeadings, WithMapp
                 $unitName = $firstUnit ? $firstUnit->name : ($item->unit ?? '-');
 
                 // Get stock per warehouse
-                if ($warehouseId) {
-                    // Filtered by specific warehouse (super admin single warehouse filter)
-                    // Query untuk barang masuk (approved submissions)
-                    $stockIn = Submission::where('item_id', $item->id)
+                $stocksQuery = Stock::where('item_id', $item->id)
+                    ->where('quantity', '>', 0)
+                    ->with('warehouse');
+                
+                // Apply warehouse filter if exists
+                if ($filterWarehouseIds) {
+                    $stocksQuery->whereIn('warehouse_id', $filterWarehouseIds);
+                }
+                
+                $stocks = $stocksQuery->get();
+                
+                foreach ($stocks as $stock) {
+                    // Recalculate stock in/out for this specific warehouse
+                    $whStockIn = \App\Models\Submission::where('item_id', $item->id)
+                        ->where('warehouse_id', $stock->warehouse_id)
                         ->where('status', 'approved')
                         ->whereNotNull('submitted_at')
-                        ->where('warehouse_id', $warehouseId)
                         ->when($year, fn($q) => $q->whereYear('submitted_at', $year))
                         ->when($month, fn($q) => $q->whereMonth('submitted_at', $month))
                         ->sum('quantity') ?? 0;
-
-                    // Query untuk barang keluar (approved stock requests)
-                    $stockOut = StockRequest::where('item_id', $item->id)
+                        
+                    $whStockOut = \App\Models\StockRequest::where('item_id', $item->id)
+                        ->where('warehouse_id', $stock->warehouse_id)
                         ->where('status', 'approved')
-                        ->where('warehouse_id', $warehouseId)
                         ->when($year, fn($q) => $q->whereYear('approved_at', $year))
                         ->when($month, fn($q) => $q->whereMonth('approved_at', $month))
                         ->sum('base_quantity') ?? 0;
                     
-                    $currentStock = Stock::where('item_id', $item->id)
-                        ->where('warehouse_id', $warehouseId)
-                        ->sum('quantity') ?? 0;
-                    
-                    $warehouse = \App\Models\Warehouse::find($warehouseId);
-                    
-                    if ($currentStock > 0) {
-                        $summaryData->push((object)[
-                            'warehouse_name' => $warehouse ? $warehouse->name : '-',
-                            'code' => $item->code,
-                            'name' => $item->name,
-                            'category' => $item->category_name ?? '-',
-                            'unit_in' => $unitName,
-                            'stock_in' => $stockIn,
-                            'unit_out' => $unitName,
-                            'stock_out' => $stockOut,
-                            'unit_stock' => $unitName,
-                            'current_stock' => $currentStock,
-                        ]);
-                    }
-                } else {
-                    // Show all warehouses with stock (or filtered by warehouse_ids for gudang)
-                    $stocksQuery = Stock::where('item_id', $item->id)
-                        ->where('quantity', '>', 0)
-                        ->with('warehouse');
-                    
-                    // If warehouse_ids provided (gudang user), filter by those warehouses
-                    if ($warehouseIds) {
-                        $stocksQuery->whereIn('warehouse_id', $warehouseIds);
-                    }
-                    
-                    $stocks = $stocksQuery->get();
-                    
-                    foreach ($stocks as $stock) {
-                        // Recalculate stock in/out for this specific warehouse
-                        $whStockIn = \App\Models\Submission::where('item_id', $item->id)
-                            ->where('warehouse_id', $stock->warehouse_id)
-                            ->where('status', 'approved')
-                            ->whereNotNull('submitted_at')
-                            ->when($year, fn($q) => $q->whereYear('submitted_at', $year))
-                            ->when($month, fn($q) => $q->whereMonth('submitted_at', $month))
-                            ->sum('quantity') ?? 0;
-                            
-                        $whStockOut = \App\Models\StockRequest::where('item_id', $item->id)
-                            ->where('warehouse_id', $stock->warehouse_id)
-                            ->where('status', 'approved')
-                            ->when($year, fn($q) => $q->whereYear('approved_at', $year))
-                            ->when($month, fn($q) => $q->whereMonth('approved_at', $month))
-                            ->sum('base_quantity') ?? 0;
-                        
-                        $summaryData->push((object)[
-                            'warehouse_name' => $stock->warehouse->name ?? '-',
-                            'code' => $item->code,
-                            'name' => $item->name,
-                            'category' => $item->category_name ?? '-',
-                            'unit_in' => $unitName,
-                            'stock_in' => $whStockIn,
-                            'unit_out' => $unitName,
-                            'stock_out' => $whStockOut,
-                            'unit_stock' => $unitName,
-                            'current_stock' => $stock->quantity,
-                        ]);
-                    }
+                    $summaryData->push((object)[
+                        'warehouse_name' => $stock->warehouse->name ?? '-',
+                        'code' => $item->code,
+                        'name' => $item->name,
+                        'category' => $item->category_name ?? '-',
+                        'unit_in' => $unitName,
+                        'stock_in' => $whStockIn,
+                        'unit_out' => $unitName,
+                        'stock_out' => $whStockOut,
+                        'unit_stock' => $unitName,
+                        'current_stock' => $stock->quantity,
+                    ]);
                 }
             }
 

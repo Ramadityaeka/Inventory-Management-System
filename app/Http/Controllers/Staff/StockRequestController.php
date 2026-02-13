@@ -147,8 +147,6 @@ class StockRequestController extends Controller
             'warehouse_id' => 'required|exists:warehouses,id',
             'quantity' => 'required|integer|min:1',
             'unit_id' => 'required|integer',
-            'purpose' => 'required|string|max:255',
-            'notes' => 'nullable|string|max:1000',
         ]);
 
         DB::transaction(function () use ($validated) {
@@ -216,9 +214,9 @@ class StockRequestController extends Controller
                 'unit_name' => $unitName,
                 'conversion_factor' => $conversionFactor,
                 'base_quantity' => $baseQuantity,
-                'purpose' => $validated['purpose'],
-                'notes' => $validated['notes'] ?? null,
                 'status' => StockRequest::STATUS_PENDING,
+                'purpose' => 'Request penggunaan barang', // Default purpose
+                'notes' => null,
             ]);
             
             // Dispatch event untuk notifikasi admin gudang
@@ -264,5 +262,54 @@ class StockRequestController extends Controller
         
         return redirect()->route('staff.stock-requests.my-requests')
             ->with('success', 'Request penggunaan barang berhasil dibatalkan.');
+    }
+
+    /**
+     * Upload proof of received goods
+     */
+    public function uploadProof(Request $request, StockRequest $stockRequest)
+    {
+        // Authorization check
+        if ($stockRequest->staff_id !== auth()->id()) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        // Can only upload proof for approved requests
+        if ($stockRequest->status !== StockRequest::STATUS_APPROVED) {
+            return redirect()->back()
+                ->with('error', 'Hanya request yang sudah disetujui yang dapat mengupload bukti penerimaan.');
+        }
+
+        // Check if proof already uploaded
+        if ($stockRequest->received_proof_image) {
+            return redirect()->back()
+                ->with('error', 'Bukti penerimaan sudah pernah diupload.');
+        }
+
+        $validated = $request->validate([
+            'proof_image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+        ], [
+            'proof_image.required' => 'Gambar bukti penerimaan wajib diupload.',
+            'proof_image.image' => 'File harus berupa gambar.',
+            'proof_image.mimes' => 'Format gambar harus: jpeg, png, atau jpg.',
+            'proof_image.max' => 'Ukuran gambar maksimal 2MB.',
+        ]);
+
+        try {
+            // Store the image
+            $path = $request->file('proof_image')->store('stock-request-proofs', 'public');
+
+            // Update stock request
+            $stockRequest->update([
+                'received_proof_image' => $path,
+                'received_at' => now(),
+            ]);
+
+            return redirect()->back()
+                ->with('success', 'Bukti penerimaan barang berhasil diupload.');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Gagal upload bukti penerimaan: ' . $e->getMessage());
+        }
     }
 }

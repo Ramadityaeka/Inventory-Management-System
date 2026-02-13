@@ -16,11 +16,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $unit_name
  * @property int $conversion_factor
  * @property int $base_quantity
+ * @property string $status
  * @property string $purpose
  * @property string|null $notes
- * @property string $status
  * @property int|null $approved_by
  * @property string|null $rejection_reason
+ * @property string|null $received_proof_image
+ * @property \Carbon\Carbon|null $received_at
  * @property \Carbon\Carbon|null $approved_at
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
@@ -47,17 +49,20 @@ class StockRequest extends Model
         'unit_name',
         'conversion_factor',
         'base_quantity',
+        'status',
         'purpose',
         'notes',
-        'status',
         'approved_by',
         'rejection_reason',
         'approved_at',
+        'received_proof_image',
+        'received_at',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
         'approved_at' => 'datetime',
+        'received_at' => 'datetime',
     ];
 
     // Relationships

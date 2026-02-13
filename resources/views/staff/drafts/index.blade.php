@@ -54,15 +54,15 @@
                                                    class="btn btn-sm btn-warning">
                                                     <i class="bi bi-pencil"></i> Edit
                                                 </a>
-                                                <form method="POST" action="{{ route('staff.drafts.destroy', $draft) }}" 
-                                                      class="d-inline" 
-                                                      onsubmit="return confirm('Yakin ingin menghapus draft ini?')">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-danger">
-                                                        <i class="bi bi-trash"></i> Hapus
-                                                    </button>
-                                                </form>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-danger"
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#deleteModal"
+                                                        data-draft-id="{{ $draft->id }}"
+                                                        data-item-name="{{ $draft->item_name }}"
+                                                        onclick="setDeleteModalData(this)">
+                                                    <i class="bi bi-trash"></i> Hapus
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -87,4 +87,61 @@
         </div>
     </div>
 </div>
+
+<!-- Delete Draft Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-trash me-2"></i>Konfirmasi Hapus Draft
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                </div>
+                <h6 class="text-center mb-3">Apakah Anda yakin ingin menghapus draft ini?</h6>
+                
+                <div class="alert alert-info">
+                    <strong>Barang:</strong> <span id="modalDraftItemName"></span>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Perhatian:</strong> Data draft akan dihapus permanen dan tidak dapat dikembalikan.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Batal
+                </button>
+                <form id="deleteForm" method="POST" class="d-inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Ya, Hapus Draft
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+function setDeleteModalData(button) {
+    const draftId = button.getAttribute('data-draft-id');
+    const itemName = button.getAttribute('data-item-name');
+    
+    // Update modal content
+    document.getElementById('modalDraftItemName').textContent = itemName;
+    
+    // Update form action
+    const form = document.getElementById('deleteForm');
+    form.action = `/staff/drafts/${draftId}`;
+}
+</script>
+@endpush
 @endsection

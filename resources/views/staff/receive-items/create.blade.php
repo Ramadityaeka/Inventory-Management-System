@@ -346,28 +346,66 @@
         
         const file = this.files[0];
         if (file) {
-            if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (file.type.startsWith('image/')) {
+                    // Preview for images
                     previewContainer.innerHTML = `
-                        <div class="card" style="max-width: 300px;">
-                            <img src="${e.target.result}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                        <div class="card mt-3" style="max-width: 400px;">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-image"></i> Preview Gambar</span>
+                                <button type="button" class="btn btn-sm btn-outline-light" onclick="clearInvoicePreview()">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                            <img src="${e.target.result}" class="card-img-top" style="max-height: 400px; object-fit: contain; background: #f8f9fa;">
                             <div class="card-body p-2 text-center">
-                                <small class="text-muted">${file.name}</small>
+                                <small class="text-muted"><i class="bi bi-file-earmark-image"></i> ${file.name}</small>
+                                <br>
+                                <small class="text-muted">${(file.size / 1024).toFixed(2)} KB</small>
                             </div>
                         </div>
                     `;
-                };
-                reader.readAsDataURL(file);
-            } else {
-                previewContainer.innerHTML = `
-                    <div class="alert alert-info">
-                        <i class="bi bi-file-pdf"></i> ${file.name} (PDF)
-                    </div>
-                `;
-            }
+                } else if (file.type === 'application/pdf') {
+                    // Preview for PDF
+                    previewContainer.innerHTML = `
+                        <div class="card mt-3">
+                            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-file-pdf"></i> Preview PDF</span>
+                                <button type="button" class="btn btn-sm btn-outline-light" onclick="clearInvoicePreview()">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                            <div class="card-body p-0">
+                                <embed src="${e.target.result}" type="application/pdf" width="100%" height="500px" 
+                                       style="border: none;">
+                            </div>
+                            <div class="card-footer text-center">
+                                <small class="text-muted"><i class="bi bi-file-earmark-pdf"></i> ${file.name}</small>
+                                <br>
+                                <small class="text-muted">${(file.size / 1024).toFixed(2)} KB</small>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Unsupported file type
+                    previewContainer.innerHTML = `
+                        <div class="alert alert-warning mt-3">
+                            <i class="bi bi-exclamation-triangle"></i> 
+                            Format file tidak didukung untuk preview: ${file.name}
+                        </div>
+                    `;
+                }
+            };
+            reader.readAsDataURL(file);
         }
     });
+    
+    // Function to clear invoice preview
+    window.clearInvoicePreview = function() {
+        document.getElementById('invoice-preview-container').innerHTML = '';
+        document.getElementById('invoice_photo').value = '';
+    };
 
     // Preview item photos
     document.getElementById('photos').addEventListener('change', function(e) {

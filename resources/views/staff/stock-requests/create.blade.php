@@ -42,9 +42,9 @@
                     @csrf
                     
                     <div class="mb-3">
-                        <label for="warehouse_id" class="form-label">Warehouse <span class="text-danger">*</span></label>
+                        <label for="warehouse_id" class="form-label">Unit / Gudang <span class="text-danger">*</span></label>
                         <select name="warehouse_id" id="warehouse_id" class="form-select @error('warehouse_id') is-invalid @enderror" required>
-                            <option value="">Select Warehouse</option>
+                            <option value="">Pilih Unit / Gudang</option>
                             @foreach($warehouses as $warehouse)
                                 <option value="{{ $warehouse->id }}" {{ old('warehouse_id', request('warehouse_id')) == $warehouse->id ? 'selected' : '' }}>
                                     {{ $warehouse->name }}
@@ -57,9 +57,9 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="item_id" class="form-label">Item <span class="text-danger">*</span></label>
+                        <label for="item_id" class="form-label">Barang <span class="text-danger">*</span></label>
                         <select name="item_id" id="item_id" class="form-select @error('item_id') is-invalid @enderror" required>
-                            <option value="">Select Item</option>
+                            <option value="">Pilih Barang</option>
                             @foreach($items as $item)
                                 <option value="{{ $item['id'] }}" 
                                         data-unit="{{ $item['unit'] }}"
@@ -89,7 +89,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
+                        <label for="quantity" class="form-label">Jumlah <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <input type="number" 
                                    name="quantity" 
@@ -105,30 +105,6 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                         <small id="base-quantity-info" class="form-text text-muted"></small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="purpose" class="form-label">Purpose/Reason <span class="text-danger">*</span></label>
-                        <textarea name="purpose" 
-                                  id="purpose" 
-                                  class="form-control @error('purpose') is-invalid @enderror" 
-                                  rows="3" 
-                                  required>{{ old('purpose') }}</textarea>
-                        @error('purpose')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        <small class="form-text text-muted">Explain why you need this item</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="notes" class="form-label">Additional Notes</label>
-                        <textarea name="notes" 
-                                  id="notes" 
-                                  class="form-control @error('notes') is-invalid @enderror" 
-                                  rows="2">{{ old('notes') }}</textarea>
-                        @error('notes')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
                     </div>
 
                     <div class="d-flex justify-content-end gap-2">
@@ -151,8 +127,8 @@
                 <ul class="mb-0 ps-3">
                     <li>Select the warehouse where the item is located</li>
                     <li>Choose the item you need from the dropdown</li>
+                    <li>Select the unit for the request</li>
                     <li>Enter the quantity you want to request</li>
-                    <li>Provide a clear reason for your request</li>
                     <li>Your request will be reviewed by admin gudang</li>
                     <li>You'll receive a notification when your request is processed</li>
                 </ul>

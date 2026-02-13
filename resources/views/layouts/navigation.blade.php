@@ -123,6 +123,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('gudang.reports.stock-summary') ? 'active' : '' }}" href="{{ route('gudang.reports.stock-summary') }}">
+                            <i class="bi bi-clipboard-data me-2"></i>Laporan Ringkasan Stok
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('gudang.reports.stock-values') ? 'active' : '' }}" href="{{ route('gudang.reports.stock-values') }}">
                             <i class="bi bi-currency-dollar me-2"></i>Laporan Stok & Nilai
                         </a>

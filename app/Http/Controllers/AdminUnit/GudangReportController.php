@@ -83,12 +83,23 @@ class GudangReportController extends Controller
         ])->whereIn('warehouse_id', $warehouseIds)
           ->where('status', 'approved');
 
+        // Get Stock Adjustments (Penyesuaian Stok)
+        $adjustmentsQuery = \App\Models\StockMovement::with([
+            'item.category',
+            'warehouse',
+            'creator'
+        ])->whereIn('warehouse_id', $warehouseIds)
+          ->where('movement_type', 'adjustment');
+
         // Filter by Category
         if ($request->filled('category_id')) {
             $submissionsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('category_id', $request->category_id);
+            });
+            $adjustmentsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
         }
@@ -101,6 +112,9 @@ class GudangReportController extends Controller
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('name', 'LIKE', '%' . $request->item_name . '%');
             });
+            $adjustmentsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('name', 'LIKE', '%' . $request->item_name . '%');
+            });
         }
 
         // Filter by Item Code
@@ -111,18 +125,23 @@ class GudangReportController extends Controller
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('code', 'LIKE', '%' . $request->item_code . '%');
             });
+            $adjustmentsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('code', 'LIKE', '%' . $request->item_code . '%');
+            });
         }
 
         // Filter by Year
         if ($request->filled('year')) {
             $submissionsQuery->whereYear('submitted_at', $request->year);
             $stockRequestsQuery->whereYear('created_at', $request->year);
+            $adjustmentsQuery->whereYear('created_at', $request->year);
         }
 
         // Filter by Month
         if ($request->filled('month')) {
             $submissionsQuery->whereMonth('submitted_at', $request->month);
             $stockRequestsQuery->whereMonth('created_at', $request->month);
+            $adjustmentsQuery->whereMonth('created_at', $request->month);
         }
 
         // Apply status filter only to submissions
@@ -147,8 +166,51 @@ class GudangReportController extends Controller
             });
         }
 
+        // Get adjustments (only when status is empty or approved)
+        $adjustments = collect([]);
+        if (!$request->filled('status') || $request->status == 'approved') {
+            $adjustments = $adjustmentsQuery->get()->map(function($item) {
+                $item->transaction_type = 'adjustment';
+                $item->transaction_date = $item->created_at;
+                // For display purposes, set status as approved since adjustments are immediate
+                $item->status = 'approved';
+                return $item;
+            });
+        }
+
         // Merge and sort
-        $allTransactions = $submissions->concat($stockRequests)->sortByDesc('transaction_date');
+        $allTransactions = $submissions->concat($stockRequests)->concat($adjustments)->sortByDesc('transaction_date');
+        
+        // Calculate historical stock (stock after each transaction)
+        // Get current stocks for all items/warehouses in the transaction list
+        $currentStocks = [];
+        foreach ($allTransactions as $transaction) {
+            $key = $transaction->item_id . '_' . $transaction->warehouse_id;
+            if (!isset($currentStocks[$key])) {
+                $stock = \App\Models\Stock::where('item_id', $transaction->item_id)
+                             ->where('warehouse_id', $transaction->warehouse_id)
+                             ->first();
+                $currentStocks[$key] = $stock ? $stock->quantity : 0;
+            }
+        }
+        
+        // Calculate stock_after for each transaction (working backwards from current)
+        $runningStocks = $currentStocks; // Start with current stocks
+        foreach ($allTransactions as $transaction) {
+            $key = $transaction->item_id . '_' . $transaction->warehouse_id;
+            
+            // The stock after this transaction is the current running stock
+            $transaction->stock_after = $runningStocks[$key];
+            
+            // Update running stock by reversing this transaction
+            if ($transaction->transaction_type == 'in') {
+                $runningStocks[$key] -= $transaction->quantity;
+            } elseif ($transaction->transaction_type == 'out') {
+                $runningStocks[$key] += ($transaction->base_quantity ?? $transaction->quantity);
+            } elseif ($transaction->transaction_type == 'adjustment') {
+                $runningStocks[$key] -= $transaction->quantity;
+            }
+        }
         
         // Manual pagination
         $perPage = 50;
@@ -169,11 +231,18 @@ class GudangReportController extends Controller
         $items = Item::orderBy('name')->get();
         
         // Calculate statistics
+        $adjustmentsIn = $adjustments->filter(function($item) {
+            return $item->quantity > 0;
+        });
+        $adjustmentsOut = $adjustments->filter(function($item) {
+            return $item->quantity < 0;
+        });
+        
         $stats = [
             'total_transactions' => $allTransactions->count(),
-            'total_stock_in' => $submissions->where('status', 'approved')->sum('quantity'),
-            'total_stock_out' => $stockRequests->sum('base_quantity'),
-            'approved_count' => $submissions->where('status', 'approved')->count() + $stockRequests->count(),
+            'total_stock_in' => $submissions->where('status', 'approved')->sum('quantity') + $adjustmentsIn->sum('quantity'),
+            'total_stock_out' => $stockRequests->sum('base_quantity') + abs($adjustmentsOut->sum('quantity')),
+            'approved_count' => $submissions->where('status', 'approved')->count() + $stockRequests->count() + $adjustments->count(),
             'pending_count' => $submissions->where('status', 'pending')->count(),
             'rejected_count' => $submissions->where('status', 'rejected')->count(),
         ];
@@ -644,15 +713,23 @@ class GudangReportController extends Controller
         $summaryData = [];
         $year = $request->filled('year') ? $request->year : null;
         $month = $request->filled('month') ? $request->month : null;
+        
+        // Filter by specific warehouse if provided
+        $filterWarehouseIds = $warehouseIds;
+        if ($request->filled('warehouse_id')) {
+            $filterWarehouseIds = $warehouseIds->filter(function($id) use ($request) {
+                return $id == $request->warehouse_id;
+            });
+        }
 
         foreach ($items as $item) {
             // Get unit information
             $firstUnit = $item->itemUnits->first();
             $unitName = $firstUnit ? $firstUnit->name : ($item->unit ?? '-');
 
-            // Loop through user's warehouses
+            // Loop through user's warehouses (filtered if applicable)
             $stocks = Stock::where('item_id', $item->id)
-                ->whereIn('warehouse_id', $warehouseIds)
+                ->whereIn('warehouse_id', $filterWarehouseIds)
                 ->where('quantity', '>', 0)
                 ->with('warehouse')
                 ->get();
@@ -749,6 +826,7 @@ class GudangReportController extends Controller
 
         $filters = [
             'warehouse_ids' => $warehouseIds,
+            'warehouse_id' => $request->warehouse_id,
             'category_id' => $request->category_id,
             'item_name' => $request->item_name,
             'item_code' => $request->item_code,
@@ -804,13 +882,21 @@ class GudangReportController extends Controller
         $summaryData = [];
         $year = $request->filled('year') ? $request->year : null;
         $month = $request->filled('month') ? $request->month : null;
+        
+        // Filter by specific warehouse if provided
+        $filterWarehouseIds = $warehouseIds;
+        if ($request->filled('warehouse_id')) {
+            $filterWarehouseIds = $warehouseIds->filter(function($id) use ($request) {
+                return $id == $request->warehouse_id;
+            });
+        }
 
         foreach ($items as $item) {
             $firstUnit = $item->itemUnits->first();
             $unitName = $firstUnit ? $firstUnit->name : ($item->unit ?? '-');
 
             $stocks = Stock::where('item_id', $item->id)
-                ->whereIn('warehouse_id', $warehouseIds)
+                ->whereIn('warehouse_id', $filterWarehouseIds)
                 ->where('quantity', '>', 0)
                 ->with('warehouse')
                 ->get();

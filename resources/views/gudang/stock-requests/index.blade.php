@@ -87,7 +87,6 @@
                                     <th>Barang</th>
                                     <th>Kuantitas Barang</th>
                                     <th>Unit</th>
-                                    <th>Alasan</th>
                                     <th>Status</th>
                                     <th>aksi</th>
                                 </tr>
@@ -104,11 +103,6 @@
                                         </td>
                                         <td>{{ $request->quantity }} {{ $request->item ? $request->item->unit : 'unit' }}</td>
                                         <td>{{ $request->warehouse ? $request->warehouse->name : 'Warehouse Deleted' }}</td>
-                                        <td>
-                                            <span class="d-inline-block text-truncate" style="max-width: 150px;" title="{{ $request->purpose }}">
-                                                {{ $request->purpose }}
-                                            </span>
-                                        </td>
                                         <td>
                                             @if($request->status === 'pending')
                                                 <span class="badge bg-warning">

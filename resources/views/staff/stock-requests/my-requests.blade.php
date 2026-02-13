@@ -1,18 +1,18 @@
 @extends('layouts.app')
 
-@section('page-title', 'My Stock Requests')
+@section('page-title', 'Permintaan Stok')
 
 @section('content')
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="mb-0">My Stock Requests</h4>
+            <h4 class="mb-0">Permintaan Stok</h4>
             <div>
                 <a href="{{ route('staff.stock-requests.index') }}" class="btn btn-secondary me-2">
-                    <i class="bi bi-box-seam me-1"></i>View Stock
+                    <i class="bi bi-box-seam me-1"></i>Lihat stok barang
                 </a>
                 <a href="{{ route('staff.stock-requests.create') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle me-1"></i>New Request
+                    <i class="bi bi-plus-circle me-1"></i>Buat Permintaan Baru
                 </a>
             </div>
         </div>
@@ -40,7 +40,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-white">Pending</h6>
+                        <h6 class="text-white">Menunggu</h6>
                         <h3 class="mb-0">{{ $stats['pending'] }}</h3>
                     </div>
                     <i class="bi bi-clock-history display-4 opacity-50"></i>
@@ -53,7 +53,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-white">Approved</h6>
+                        <h6 class="text-white">Diterima</h6>
                         <h3 class="mb-0">{{ $stats['approved'] }}</h3>
                     </div>
                     <i class="bi bi-check-circle display-4 opacity-50"></i>
@@ -66,7 +66,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-white">Rejected</h6>
+                        <h6 class="text-white">Ditolak</h6>
                         <h3 class="mb-0">{{ $stats['rejected'] }}</h3>
                     </div>
                     <i class="bi bi-x-circle display-4 opacity-50"></i>
@@ -85,9 +85,9 @@
                         <label class="form-label">Status</label>
                         <select name="status" class="form-select">
                             <option value="">All Status</option>
-                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
-                            <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
-                            <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Rejected</option>
+                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Menunggu</option>
+                            <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Diterima</option>
+                            <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Ditolak</option>
                         </select>
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
@@ -103,14 +103,13 @@
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th>Request ID</th>
-                                    <th>Date</th>
-                                    <th>Item</th>
-                                    <th>Quantity</th>
-                                    <th>Warehouse</th>
-                                    <th>Purpose</th>
+                                    <th>ID Permintaan</th>
+                                    <th>Tanggal</th>
+                                    <th>Barang</th>
+                                    <th>Jumlah</th>
+                                    <th>Unit / Gudang</th>
                                     <th>Status</th>
-                                    <th>Action</th>
+                                    <th>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -124,11 +123,6 @@
                                         </td>
                                         <td>{{ $request->quantity }} {{ $request->item->unit }}</td>
                                         <td>{{ $request->warehouse->name }}</td>
-                                        <td>
-                                            <span class="d-inline-block text-truncate" style="max-width: 150px;" title="{{ $request->purpose }}">
-                                                {{ $request->purpose }}
-                                            </span>
-                                        </td>
                                         <td>
                                             @if($request->status === 'pending')
                                                 <span class="badge bg-warning">
@@ -149,16 +143,15 @@
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                             @if($request->status === 'pending')
-                                                <form action="{{ route('staff.stock-requests.destroy', $request) }}" 
-                                                      method="POST" 
-                                                      class="d-inline"
-                                                      onsubmit="return confirm('Are you sure you want to cancel this request?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-danger">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                                </form>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-danger" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#cancelModal"
+                                                        data-request-id="{{ $request->id }}"
+                                                        data-item-name="{{ $request->item->name }}"
+                                                        onclick="setModalData(this)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
                                             @endif
                                         </td>
                                     </tr>
@@ -173,9 +166,9 @@
                 @else
                     <div class="text-center py-5">
                         <i class="bi bi-inbox display-1 text-muted"></i>
-                        <p class="text-muted mt-3">You haven't made any stock requests yet.</p>
+                        <p class="text-muted mt-3">Belum ada permintaan barang.</p>
                         <a href="{{ route('staff.stock-requests.create') }}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle me-1"></i>Create First Request
+                            <i class="bi bi-plus-circle me-1"></i>Buat Permintaan Baru
                         </a>
                     </div>
                 @endif
@@ -183,4 +176,61 @@
         </div>
     </div>
 </div>
+
+<!-- Cancel Request Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Konfirmasi Pembatalan
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="bi bi-question-circle text-warning" style="font-size: 3rem;"></i>
+                </div>
+                <h6 class="text-center mb-3">Apakah Anda yakin ingin membatalkan permintaan ini?</h6>
+                
+                <div class="alert alert-info">
+                    <strong>Barang:</strong> <span id="modalItemName"></span>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Perhatian:</strong> Tindakan ini tidak dapat dibatalkan.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Tidak
+                </button>
+                <form id="cancelForm" method="POST" class="d-inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Ya, Batalkan Permintaan
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+function setModalData(button) {
+    const requestId = button.getAttribute('data-request-id');
+    const itemName = button.getAttribute('data-item-name');
+    
+    // Update modal content
+    document.getElementById('modalItemName').textContent = itemName;
+    
+    // Update form action
+    const form = document.getElementById('cancelForm');
+    form.action = `/staff/stock-requests/${requestId}`;
+}
+</script>
+@endpush
 @endsection

@@ -26,22 +26,22 @@
                         <ul class="dropdown-menu dropdown-menu-end">
                             @if($notifications->where('is_read', true)->count() > 0)
                                 <li>
-                                    <form action="{{ route('notifications.delete-all-read') }}" method="POST" class="m-0">
-                                        @csrf
-                                        <button type="submit" class="dropdown-item" onclick="return confirm('Hapus semua notifikasi yang sudah dibaca?')">
-                                            <i class="bi bi-check-circle me-2"></i>Hapus Yang Sudah Dibaca
-                                        </button>
-                                    </form>
+                                    <button type="button" 
+                                            class="dropdown-item" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteReadModal">
+                                        <i class="bi bi-check-circle me-2"></i>Hapus Yang Sudah Dibaca
+                                    </button>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                             @endif
                             <li>
-                                <form action="{{ route('notifications.delete-all') }}" method="POST" class="m-0">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Hapus SEMUA notifikasi? Tindakan ini tidak dapat dibatalkan!')">
-                                        <i class="bi bi-trash me-2"></i>Hapus Semua Notifikasi
-                                    </button>
-                                </form>
+                                <button type="button" 
+                                        class="dropdown-item text-danger" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#deleteAllModal">
+                                    <i class="bi bi-trash me-2"></i>Hapus Semua Notifikasi
+                                </button>
                             </li>
                         </ul>
                     </div>
@@ -324,3 +324,75 @@
     }
 </script>
 @endpush
+
+<!-- Delete Read Notifications Modal -->
+<div class="modal fade" id="deleteReadModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="bi bi-check-circle me-2"></i>Konfirmasi Hapus Notifikasi Terbaca
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="bi bi-question-circle text-warning" style="font-size: 3rem;"></i>
+                </div>
+                <h6 class="text-center mb-3">Hapus semua notifikasi yang sudah dibaca?</h6>
+                
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Notifikasi yang belum dibaca tidak akan terhapus.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Batal
+                </button>
+                <form action="{{ route('notifications.delete-all-read') }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-check-circle me-1"></i>Ya, Hapus Yang Terbaca
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete All Notifications Modal -->
+<div class="modal fade" id="deleteAllModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-trash me-2"></i>Konfirmasi Hapus Semua Notifikasi
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                </div>
+                <h6 class="text-center mb-3">Hapus SEMUA notifikasi?</h6>
+                
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Perhatian:</strong> Tindakan ini tidak dapat dibatalkan! Semua notifikasi (yang dibaca dan belum dibaca) akan dihapus permanen.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Batal
+                </button>
+                <form action="{{ route('notifications.delete-all') }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Ya, Hapus Semua
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

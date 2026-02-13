@@ -170,7 +170,7 @@
                             <th>Barang Masuk</th>
                             <th>Barang Keluar</th>
                             <th>Satuan</th>
-                            <th>Stok Saat Ini</th>
+                            <th>Stok Setelah Transaksi</th>
                             <th>Kategori</th>
                             <th>Diajukan Oleh</th>
                             <th class="text-center">Status</th>
@@ -184,6 +184,8 @@
                                 <td>
                                     @if($transaction->transaction_type == 'in')
                                         <small>{{ $transaction->submitted_at ? $transaction->submitted_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : '-' }}</small>
+                                    @elseif($transaction->transaction_type == 'adjustment')
+                                        <small>{{ $transaction->created_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') }}</small>
                                     @else
                                         <small>{{ ($transaction->approved_at ?? $transaction->created_at)->timezone('Asia/Jakarta')->format('d/m/Y H:i') }}</small>
                                     @endif
@@ -198,6 +200,9 @@
                                 <td>
                                     @if($transaction->transaction_type == 'in')
                                         <span class="badge bg-success">{{ number_format($transaction->quantity, 0, ',', '.') }}</span>
+                                    @elseif($transaction->transaction_type == 'adjustment' && $transaction->quantity > 0)
+                                        <span class="badge bg-info">{{ number_format($transaction->quantity, 0, ',', '.') }}</span>
+                                        <br><small class="text-muted">Adjustment</small>
                                     @else
                                         -
                                     @endif
@@ -205,22 +210,25 @@
                                 <td>
                                     @if($transaction->transaction_type == 'out')
                                         <span class="badge bg-danger">{{ number_format($transaction->base_quantity ?? $transaction->quantity, 0, ',', '.') }}</span>
+                                    @elseif($transaction->transaction_type == 'adjustment' && $transaction->quantity < 0)
+                                        <span class="badge bg-warning text-dark">{{ number_format(abs($transaction->quantity), 0, ',', '.') }}</span>
+                                        <br><small class="text-muted">Adjustment</small>
                                     @else
                                         -
                                     @endif
                                 </td>
                                 <td>{{ $transaction->item->unit ?? $transaction->unit }}</td>
                                 <td>
-                                    @php
-                                        $currentStock = \App\Models\Stock::where('warehouse_id', $transaction->warehouse_id)
-                                            ->where('item_id', $transaction->item_id)
-                                            ->first();
-                                        $remainingStock = $currentStock ? $currentStock->quantity : 0;
-                                    @endphp
-                                    <strong>{{ number_format($remainingStock, 0, ',', '.') }}</strong>
+                                    <strong>{{ number_format($transaction->stock_after ?? 0, 0, ',', '.') }}</strong>
                                 </td>
                                 <td>{{ $transaction->item->category->name ?? '-' }}</td>
-                                <td>{{ $transaction->staff->name ?? '-' }}</td>
+                                <td>
+                                    @if($transaction->transaction_type == 'adjustment')
+                                        {{ $transaction->creator->name ?? '-' }}
+                                    @else
+                                        {{ $transaction->staff->name ?? '-' }}
+                                    @endif
+                                </td>
                                 <td class="text-center">
                                     @if($transaction->transaction_type == 'in')
                                         @if($transaction->status == 'approved')
@@ -230,6 +238,8 @@
                                         @else
                                             <span class="badge bg-warning text-dark">Menunggu</span>
                                         @endif
+                                    @elseif($transaction->transaction_type == 'adjustment')
+                                        <span class="badge bg-info">Adjustment</span>
                                     @else
                                         <span class="badge bg-success">Disetujui</span>
                                     @endif
@@ -242,6 +252,8 @@
                                         @else
                                             -
                                         @endif
+                                    @elseif($transaction->transaction_type == 'adjustment')
+                                        {{ $transaction->creator->name ?? '-' }}
                                     @else
                                         @if($transaction->approver)
                                             {{ $transaction->approver->name }}

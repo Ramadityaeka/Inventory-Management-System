@@ -165,63 +165,91 @@
             <thead>
                 <tr>
                     <th width="3%">No</th>
-                    <th width="10%">Gudang</th>
-                    <th width="17%">Nama Barang</th>
+                    <th width="9%">Tanggal</th>
+                    <th width="10%">Unit</th>
+                    <th width="18%">Nama Barang</th>
                     <th width="7%">Barang Masuk</th>
-                    <th width="5%">Satuan</th>
-                    <th width="7%">Sisa Stok</th>
-                    <th width="20%">Keterangan</th>
+                    <th width="7%">Barang Keluar</th>
+                    <th width="6%">Satuan</th>
+                    <th width="8%">Stok Setelah</th>
+                    <th width="10%">Kategori</th>
                     <th width="8%">Status</th>
-                    <th width="13%">Diproses Oleh</th>
-                    <th width="10%">Waktu</th>
+                    <th width="14%">Diproses Oleh</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($transactions as $index => $transaction)
-                    @php
-                        $currentStock = \App\Models\Stock::where('warehouse_id', $transaction->warehouse_id)
-                            ->where('item_id', $transaction->item_id)
-                            ->first();
-                        $remainingStock = $currentStock ? $currentStock->quantity : 0;
-                        $approval = $transaction->approvals->first();
-                    @endphp
                     <tr>
                         <td class="text-center">{{ $index + 1 }}</td>
-                        <td><span class="badge badge-info">{{ $transaction->warehouse->name }}</span></td>
-                        <td>
-                            <strong>{{ $transaction->item->name }}</strong><br>
-                            <small style="color: #666;">{{ $transaction->item->code }}</small>
-                        </td>
                         <td class="text-center">
-                            <span class="badge badge-success">{{ number_format($transaction->quantity) }}</span>
-                        </td>
-                        <td class="text-center">{{ $transaction->item->unit }}</td>
-                        <td class="text-center"><strong>{{ number_format($remainingStock) }}</strong></td>
-                        <td>
-                            @if($transaction->notes)
-                                {{ strlen($transaction->notes) > 60 ? substr($transaction->notes, 0, 60) . '...' : $transaction->notes }}
+                            @if($transaction->transaction_type == 'in')
+                                {{ $transaction->submitted_at ? $transaction->submitted_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : '-' }}
+                            @elseif($transaction->transaction_type == 'adjustment')
+                                {{ $transaction->created_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') }}
                             @else
-                                <small>Penerimaan dari {{ $transaction->supplier->name ?? '-' }}</small>
+                                {{ ($transaction->approved_at ?? $transaction->created_at)->timezone('Asia/Jakarta')->format('d/m/Y H:i') }}
+                            @endif
+                        </td>
+                        <td>{{ $transaction->warehouse->name ?? '-' }}</td>
+                        <td>
+                            <strong>{{ $transaction->item->name ?? '-' }}</strong>
+                            @if($transaction->item && $transaction->item->code)
+                                <br><small style="color: #666;">{{ $transaction->item->code }}</small>
                             @endif
                         </td>
                         <td class="text-center">
-                            @if($transaction->status == 'approved')
-                                <span class="badge badge-success">Disetujui</span>
-                            @elseif($transaction->status == 'rejected')
-                                <span class="badge badge-danger">Ditolak</span>
-                            @else
-                                <span class="badge badge-warning">Menunggu</span>
-                            @endif
-                        </td>
-                        <td>
-                            @if($approval)
-                                <strong>{{ $approval->admin->name }}</strong>
+                            @if($transaction->transaction_type == 'in')
+                                <span class="badge badge-success">{{ number_format($transaction->quantity) }}</span>
+                            @elseif($transaction->transaction_type == 'adjustment' && $transaction->quantity > 0)
+                                <span class="badge badge-info">{{ number_format($transaction->quantity) }}</span>
                             @else
                                 -
                             @endif
                         </td>
                         <td class="text-center">
-                            {{ formatDateIndo($transaction->submitted_at, 'd/m/Y H:i') }}
+                            @if($transaction->transaction_type == 'out')
+                                <span class="badge badge-danger">{{ number_format($transaction->base_quantity ?? $transaction->quantity) }}</span>
+                            @elseif($transaction->transaction_type == 'adjustment' && $transaction->quantity < 0)
+                                <span class="badge badge-warning">{{ number_format(abs($transaction->quantity)) }}</span>
+                            @else
+                                -
+                            @endif
+                        </td>
+                        <td class="text-center">{{ $transaction->item->unit ?? '-' }}</td>
+                        <td class="text-center"><strong>{{ number_format($transaction->stock_after ?? 0) }}</strong></td>
+                        <td>{{ $transaction->item->category->name ?? '-' }}</td>
+                        <td class="text-center">
+                            @if($transaction->transaction_type == 'in')
+                                @if($transaction->status == 'approved')
+                                    <span class="badge badge-success">Disetujui</span>
+                                @elseif($transaction->status == 'rejected')
+                                    <span class="badge badge-danger">Ditolak</span>
+                                @else
+                                    <span class="badge badge-warning">Menunggu</span>
+                                @endif
+                            @elseif($transaction->transaction_type == 'adjustment')
+                                <span class="badge badge-info">Adjustment</span>
+                            @else
+                                <span class="badge badge-success">Disetujui</span>
+                            @endif
+                        </td>
+                        <td>
+                            @if($transaction->transaction_type == 'in')
+                                @php $approval = $transaction->approvals->first(); @endphp
+                                @if($approval)
+                                    {{ $approval->admin->name }}
+                                @else
+                                    -
+                                @endif
+                            @elseif($transaction->transaction_type == 'adjustment')
+                                {{ $transaction->creator->name ?? '-' }}
+                            @else
+                                @if($transaction->approver)
+                                    {{ $transaction->approver->name }}
+                                @else
+                                    -
+                                @endif
+                            @endif
                         </td>
                     </tr>
                 @endforeach

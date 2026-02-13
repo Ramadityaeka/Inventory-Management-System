@@ -118,9 +118,15 @@ class StockController extends Controller
             }
 
             // Check if item is active
-            $item = Item::findOrFail($validated['item_id']);
+            $item = Item::with('itemUnits')->findOrFail($validated['item_id']);
             if (!$item->is_active) {
                 return redirect()->back()->with('error', 'Cannot add stock for inactive item.');
+            }
+
+            // Get base unit for stock movement
+            $baseUnit = $item->itemUnits->first();
+            if (!$baseUnit) {
+                return redirect()->back()->with('error', 'Item does not have any units configured.');
             }
 
             // Get or create stock record
@@ -137,6 +143,7 @@ class StockController extends Controller
             // Record stock movement
             StockMovement::create([
                 'item_id' => $validated['item_id'],
+                'unit_id' => $baseUnit->id,
                 'warehouse_id' => $validated['warehouse_id'],
                 'movement_type' => StockMovement::MOVEMENT_TYPE_ADJUSTMENT,
                 'quantity' => $validated['quantity'],
@@ -285,7 +292,7 @@ class StockController extends Controller
             DB::beginTransaction();
 
             // Get stock
-            $stock = Stock::with(['item', 'warehouse'])->findOrFail($validated['stock_id']);
+            $stock = Stock::with(['item.itemUnits', 'warehouse'])->findOrFail($validated['stock_id']);
 
             // Check if user has access to this warehouse
             if (!auth()->user()->warehouses->contains($stock->warehouse_id)) {
@@ -298,6 +305,12 @@ class StockController extends Controller
                 $reasonText = $reason === 'discontinued' ? 'tidak diproduksi lagi' : 
                              ($reason === 'wrong_input' ? 'salah input' : 'musiman (inactive)');
                 return redirect()->back()->with('error', "Tidak dapat melakukan adjustment. Barang {$stock->item->name} sudah dinonaktifkan ({$reasonText}).");
+            }
+
+            // Get base unit for stock movement
+            $baseUnit = $stock->item->itemUnits->first();
+            if (!$baseUnit) {
+                return redirect()->back()->with('error', 'Item does not have any units configured.');
             }
 
             // Calculate new quantity
@@ -320,6 +333,7 @@ class StockController extends Controller
             // Record stock movement
             StockMovement::create([
                 'item_id' => $stock->item_id,
+                'unit_id' => $baseUnit->id,
                 'warehouse_id' => $stock->warehouse_id,
                 'movement_type' => StockMovement::MOVEMENT_TYPE_ADJUSTMENT,
                 'quantity' => $quantity,
@@ -338,6 +352,54 @@ class StockController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Failed to adjust stock: ' . $e->getMessage());
+        }
+    }
+
+    public function adjust(Request $request, Item $item)
+    {
+        $validated = $request->validate([
+            'warehouse_id' => 'required|exists:warehouses,id',
+            'quantity' => 'required|integer|not_in:0',
+            'notes' => 'required|string|max:500',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            if (!auth()->user()->warehouses->contains($validated['warehouse_id'])) {
+                return redirect()->back()->with('error', 'Anda tidak memiliki akses ke unit ini.');
+            }
+
+            if (!$item->is_active) {
+                $reason = $item->inactive_reason;
+                $reasonText = $reason === 'discontinued' ? 'tidak diproduksi lagi' : ($reason === 'wrong_input' ? 'salah input' : 'musanan (inactive)');
+                return redirect()->back()->with('error', "Tidak dapat melakukan penyesuaian. Barang {$item->name} sudah dinonaktifkan ({$reasonText}).");
+            }
+
+            $stock = Stock::firstOrCreate(['item_id' => $item->id, 'warehouse_id' => $validated['warehouse_id']], ['quantity' => 0, 'last_updated' => now()]);
+            $baseUnit = $item->itemUnits->first();
+            if (!$baseUnit) return redirect()->back()->with('error', 'Item tidak memiliki satuan.');
+
+            $quantity = $validated['quantity'];
+            if ($quantity < 0 && ($stock->quantity + $quantity) < 0) {
+                return redirect()->back()->with('error', 'Stok tidak mencukupi. Stok saat ini: ' . number_format($stock->quantity));
+            }
+
+            $oldQuantity = $stock->quantity;
+            $stock->quantity += $quantity;
+            $stock->last_updated = now();
+            $stock->save();
+
+            StockMovement::create(['item_id' => $item->id, 'unit_id' => $baseUnit->id, 'warehouse_id' => $validated['warehouse_id'], 'movement_type' => StockMovement::MOVEMENT_TYPE_ADJUSTMENT, 'quantity' => $quantity, 'reference_type' => 'manual_adjustment', 'reference_id' => auth()->id(), 'notes' => $validated['notes'] . ' (Penyesuaian oleh ' . auth()->user()->name . ')', 'created_by' => auth()->id()]);
+
+            DB::commit();
+
+            $actionText = $quantity > 0 ? 'ditambahkan' : 'dikurangi';
+            $absQuantity = abs($quantity);
+            return redirect()->back()->with('success', "Stok {$item->name} berhasil {$actionText} sebanyak {$absQuantity} {$item->unit}. Stok sebelumnya: " . number_format($oldQuantity) . ", Stok sekarang: " . number_format($stock->quantity));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal melakukan penyesuaian stok: ' . $e->getMessage());
         }
     }
 }

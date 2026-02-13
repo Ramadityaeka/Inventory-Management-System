@@ -120,6 +120,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/stocks', [StockController::class, 'store'])->name('stocks.store');
         Route::get('/stocks/history/{item}', [StockController::class, 'history'])->name('stocks.history');
         Route::post('/stocks/adjust', [StockController::class, 'adjustment'])->name('stocks.adjust');
+        Route::post('/stocks/{item}/adjust', [StockController::class, 'adjust'])->name('stocks.adjust-item');
         Route::get('/stocks/movement', [StockController::class, 'movement'])->name('stock.movement');
         
         // Transfers
@@ -170,6 +171,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/stock-requests', [StockRequestController::class, 'store'])->name('stock-requests.store');
         Route::get('/stock-requests/{stockRequest}', [StockRequestController::class, 'show'])->name('stock-requests.show');
         Route::delete('/stock-requests/{stockRequest}', [StockRequestController::class, 'destroy'])->name('stock-requests.destroy');
+        Route::post('/stock-requests/{stockRequest}/upload-proof', [StockRequestController::class, 'uploadProof'])->name('stock-requests.upload-proof');
     });
 });
 
