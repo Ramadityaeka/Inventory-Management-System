@@ -46,9 +46,34 @@ class StockValueReportController extends Controller
             $query->where('warehouse_id', $request->warehouse_id);
         }
 
+        // Calculate totals from ALL data (before pagination)
+        // Clone the query to get all records for total calculation
+        $allStocks = (clone $query)->get();
+        
+        $totalQuantity = 0;
+        $totalStockValue = 0;
+        
+        foreach ($allStocks as $stock) {
+            $totalQuantity += $stock->quantity;
+            
+            // Get latest approved submission for this item and warehouse to get unit price
+            $latestSubmission = \App\Models\Submission::where('item_id', $stock->item_id)
+                ->where('warehouse_id', $stock->warehouse_id)
+                ->where('status', 'approved')
+                ->whereNotNull('unit_price')
+                ->orderBy('submitted_at', 'desc')
+                ->first();
+
+            $unitPrice = $latestSubmission ? $latestSubmission->unit_price : 0;
+            $totalStockValue += ($stock->quantity * $unitPrice);
+        }
+        
+        $totalItems = $allStocks->count();
+
+        // Now paginate for display
         $stocks = $query->orderBy('updated_at', 'desc')->paginate(50);
 
-        // Calculate stock values and additional data
+        // Calculate stock values and additional data for current page
         $stocksData = $stocks->map(function($stock) use ($request) {
             // Get latest approved submission for this item and warehouse to get unit price
             $latestSubmission = \App\Models\Submission::where('item_id', $stock->item_id)
@@ -71,11 +96,6 @@ class StockValueReportController extends Controller
                 'total_value' => $totalValue,
             ];
         });
-
-        // Calculate totals
-        $totalStockValue = $stocksData->sum('total_value');
-        $totalItems = $stocksData->count();
-        $totalQuantity = $stocksData->sum('quantity');
 
         // Get filter options
         $categories = Category::orderBy('name')->get();

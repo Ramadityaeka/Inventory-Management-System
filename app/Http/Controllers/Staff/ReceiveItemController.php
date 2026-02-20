@@ -41,24 +41,68 @@ class ReceiveItemController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'item_id' => 'nullable|exists:items,id',
-            'item_name' => 'required|string|max:255',
-            'item_code' => 'nullable|string|max:50',
-            'category_id' => 'nullable|exists:categories,id',
-            'quantity' => 'required|integer|min:1',
-            'unit' => 'required|string|max:50',
-            'conversion_factor' => 'nullable|integer|min:1',
-            'unit_price' => 'nullable|numeric|min:0',
-            'supplier_id' => 'required|exists:suppliers,id',
-            'warehouse_id' => 'required|exists:warehouses,id',
-            'nota_number' => 'nullable|string|max:100',
-            'receive_date' => 'nullable|date|before_or_equal:today',
-            'notes' => 'nullable|string|max:1000',
-            'invoice_photo' => 'nullable|image|mimes:jpeg,png,jpg,pdf|max:5120',
-            'photos.*' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'is_draft' => 'boolean'
+        // Log incoming request
+        \Log::info('ReceiveItem Store - Request received', [
+            'user' => auth()->user()->name,
+            'item_id' => $request->item_id,
+            'item_name' => $request->item_name,
+            'warehouse_id' => $request->warehouse_id,
+            'quantity' => $request->quantity,
+            'unit' => $request->unit,
+            'is_draft' => $request->is_draft,
+            'all_input' => $request->except(['_token', 'photos', 'invoice_photo'])
         ]);
+
+        try {
+            $validated = $request->validate([
+                'item_id' => 'nullable|exists:items,id',
+                'item_name' => 'required|string|max:255',
+                'item_code' => 'nullable|string|max:50',
+                'category_id' => 'nullable|exists:categories,id',
+                'quantity' => 'required|integer|min:1',
+                'unit' => 'required|string|max:50',
+                'conversion_factor' => 'nullable|integer|min:1',
+                'unit_price' => 'nullable|numeric|min:0',
+                'supplier_id' => 'nullable|exists:suppliers,id',
+                'warehouse_id' => 'required|exists:warehouses,id',
+                'nota_number' => 'nullable|string|max:100',
+                'receive_date' => 'nullable|date|before_or_equal:today',
+                'notes' => 'nullable|string|max:1000',
+                'invoice_photo' => 'nullable|image|mimes:jpeg,png,jpg,pdf|max:5120',
+                'photos.*' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'is_draft' => 'nullable|in:0,1'
+            ]);
+            
+            \Log::info('ReceiveItem Store - Validation passed', ['validated' => $validated]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('ReceiveItem Store - Validation failed', [
+                'errors' => $e->errors(),
+                'input' => $request->except(['_token', 'photos', 'invoice_photo'])
+            ]);
+            throw $e;
+        }
+
+        // Validasi conditional: jika barang baru (item_id kosong), maka category_id dan item_code harus ada
+        if (!$request->filled('item_id')) {
+            \Log::info('ReceiveItem Store - New item detected, checking category and code');
+            
+            if (!$request->filled('category_id')) {
+                \Log::warning('ReceiveItem Store - Category missing for new item');
+                return back()->withErrors([
+                    'category_id' => 'Kategori harus dipilih untuk barang baru.'
+                ])->withInput();
+            }
+            if (!$request->filled('item_code')) {
+                \Log::warning('ReceiveItem Store - Item code missing for new item');
+                return back()->withErrors([
+                    'item_code' => 'Kode barang harus diisi untuk barang baru.'
+                ])->withInput();
+            }
+        }
+
+        // Normalize unit: trim whitespace and capitalize first letter
+        $validated['unit'] = trim($validated['unit']);
+        $validated['unit'] = ucfirst(strtolower($validated['unit']));
 
         DB::beginTransaction();
         try {
@@ -69,23 +113,40 @@ class ReceiveItemController extends Controller
             if ($itemId) {
                 $item = Item::with('units')->find($itemId);
                 if ($item) {
-                    // Validasi unit: harus base unit atau salah satu dari alternative units
+                    // Validasi unit: harus base unit atau salah satu dari alternative units (case-insensitive)
                     $validUnits = [$item->unit];
                     foreach ($item->units as $unit) {
                         $validUnits[] = $unit->name;
                     }
                     
-                    if (!in_array($validated['unit'], $validUnits)) {
+                    // Case-insensitive comparison
+                    $unitMatch = null;
+                    foreach ($validUnits as $validUnit) {
+                        if (strcasecmp($validated['unit'], $validUnit) === 0) {
+                            $unitMatch = $validUnit;
+                            $validated['unit'] = $validUnit; // Use the exact case from database
+                            break;
+                        }
+                    }
+                    
+                    if (!$unitMatch) {
+                        \Log::warning('ReceiveItem Store - Invalid unit for item', [
+                            'item_id' => $itemId,
+                            'provided_unit' => $validated['unit'],
+                            'valid_units' => $validUnits
+                        ]);
                         return back()->withErrors([
                             'unit' => "Satuan '{$validated['unit']}' tidak valid untuk barang ini. Satuan yang tersedia: " . implode(', ', $validUnits)
                         ])->withInput();
                     }
                     
                     // Dapatkan conversion_factor berdasarkan unit yang dipilih
-                    if ($validated['unit'] === $item->unit) {
+                    if (strcasecmp($validated['unit'], $item->unit) === 0) {
                         $conversionFactor = 1;
                     } else {
-                        $selectedUnit = $item->units->firstWhere('name', $validated['unit']);
+                        $selectedUnit = $item->units->filter(function ($unit) use ($validated) {
+                            return strcasecmp($unit->name, $validated['unit']) === 0;
+                        })->first();
                         if ($selectedUnit) {
                             $conversionFactor = $selectedUnit->conversion_factor;
                         }
@@ -161,6 +222,9 @@ class ReceiveItemController extends Controller
                 $invoicePhotoPath = $request->file('invoice_photo')->store('invoice-photos', 'public');
             }
 
+            // Handle is_draft: 1 = draft, 0 or not set = direct submission
+            $isDraft = $request->input('is_draft', '0') === '1';
+
             $submission = Submission::create([
                 'item_id' => $itemId,
                 'item_name' => $validated['item_name'],
@@ -178,8 +242,8 @@ class ReceiveItemController extends Controller
                 'notes' => $validated['notes'] ?? null,
                 'invoice_photo' => $invoicePhotoPath,
                 'status' => 'pending',
-                'is_draft' => $request->boolean('is_draft', false),
-                'submitted_at' => $request->boolean('is_draft') ? null : now(),
+                'is_draft' => $isDraft,
+                'submitted_at' => $isDraft ? null : now(),
             ]);
 
             // Upload photos if provided
@@ -204,15 +268,35 @@ class ReceiveItemController extends Controller
 
             DB::commit();
 
+            \Log::info('ReceiveItem Store - Success', [
+                'submission_id' => $submission->id,
+                'item_name' => $submission->item_name,
+                'warehouse_id' => $submission->warehouse_id,
+                'is_draft' => $submission->is_draft,
+                'status' => $submission->status
+            ]);
+
             $message = $submission->is_draft 
                 ? 'Draft berhasil disimpan.' 
                 : 'Submission berhasil dibuat dan menunggu verifikasi.';
 
-            return redirect()->route('staff.receive-items.index')
-                ->with('success', $message);
+            // Redirect ke drafts jika draft, ke receive-items index jika tidak
+            if ($submission->is_draft) {
+                return redirect()->route('staff.drafts')
+                    ->with('success', $message);
+            } else {
+                return redirect()->route('staff.receive-items.index')
+                    ->with('success', $message);
+            }
 
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            \Log::error('ReceiveItem Store - Exception caught', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()])
                 ->withInput();
         }
@@ -253,13 +337,17 @@ class ReceiveItemController extends Controller
             'unit' => 'required|string|max:50',
             'conversion_factor' => 'nullable|integer|min:1',
             'unit_price' => 'nullable|numeric|min:0',
-            'supplier_id' => 'required|exists:suppliers,id',
+            'supplier_id' => 'nullable|exists:suppliers,id',
             'warehouse_id' => 'required|exists:warehouses,id',
             'notes' => 'nullable|string|max:1000',
             'invoice_photo' => 'nullable|image|mimes:jpeg,png,jpg,pdf|max:5120',
             'photos.*' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'is_draft' => 'boolean'
+            'is_draft' => 'nullable|in:0,1'
         ]);
+
+        // Normalize unit: trim whitespace and capitalize first letter
+        $validated['unit'] = trim($validated['unit']);
+        $validated['unit'] = ucfirst(strtolower($validated['unit']));
 
         DB::beginTransaction();
         try {
@@ -310,6 +398,9 @@ class ReceiveItemController extends Controller
             // Check if submission was draft before update
             $wasDraft = $submission->is_draft;
 
+            // Handle is_draft: 1 = draft, 0 or not set = direct submission
+            $isDraft = $request->input('is_draft', '0') === '1';
+
             $submission->update([
                 'item_id' => $validated['item_id'] ?? null,
                 'item_name' => $validated['item_name'],
@@ -323,8 +414,8 @@ class ReceiveItemController extends Controller
                 'warehouse_id' => $validated['warehouse_id'],
                 'notes' => $validated['notes'] ?? null,
                 'invoice_photo' => $invoicePhotoPath,
-                'is_draft' => $request->boolean('is_draft', false),
-                'submitted_at' => $request->boolean('is_draft') ? null : now(),
+                'is_draft' => $isDraft,
+                'submitted_at' => $isDraft ? null : now(),
             ]);
 
             // Upload new photos if provided
@@ -350,8 +441,14 @@ class ReceiveItemController extends Controller
                 ? 'Draft berhasil diupdate.' 
                 : 'Submission berhasil disubmit dan menunggu verifikasi.';
 
-            return redirect()->route('staff.receive-items.index')
-                ->with('success', $message);
+            // Redirect ke drafts jika draft, ke receive-items index jika tidak
+            if ($submission->is_draft) {
+                return redirect()->route('staff.drafts')
+                    ->with('success', $message);
+            } else {
+                return redirect()->route('staff.receive-items.index')
+                    ->with('success', $message);
+            }
 
         } catch (\Exception $e) {
             DB::rollBack();

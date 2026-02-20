@@ -302,12 +302,33 @@ class GudangReportController extends Controller
             });
         }
 
-        $stocks = $query->orderBy('updated_at', 'desc')->paginate(50);
-
-        // Calculate total value
+        // Calculate totals from ALL data (before pagination)
+        // Clone the query to get all records for total calculation
+        $allStocks = (clone $query)->get();
+        
         $totalQuantity = 0;
         $totalValue = 0;
+        
+        foreach ($allStocks as $stock) {
+            $totalQuantity += $stock->quantity;
+            
+            $latestSubmission = Submission::where('item_id', $stock->item_id)
+                ->where('warehouse_id', $stock->warehouse_id)
+                ->whereNotNull('unit_price')
+                ->whereNotNull('submitted_at')
+                ->orderBy('submitted_at', 'desc')
+                ->first();
 
+            $unitPrice = $latestSubmission ? $latestSubmission->unit_price : 0;
+            $totalValue += ($stock->quantity * $unitPrice);
+        }
+        
+        $totalItems = $allStocks->count();
+
+        // Now paginate for display
+        $stocks = $query->orderBy('updated_at', 'desc')->paginate(50);
+
+        // Add unit price and total value to each stock in current page
         foreach ($stocks as $stock) {
             $latestSubmission = Submission::where('item_id', $stock->item_id)
                 ->where('warehouse_id', $stock->warehouse_id)
@@ -319,9 +340,6 @@ class GudangReportController extends Controller
             $unitPrice = $latestSubmission ? $latestSubmission->unit_price : 0;
             $stock->latest_unit_price = $unitPrice;
             $stock->total_value = $stock->quantity * $unitPrice;
-
-            $totalQuantity += $stock->quantity;
-            $totalValue += $stock->total_value;
         }
 
         // Get filter options
@@ -335,7 +353,8 @@ class GudangReportController extends Controller
             'categories',
             'items',
             'totalQuantity',
-            'totalValue'
+            'totalValue',
+            'totalItems'
         ));
     }
 

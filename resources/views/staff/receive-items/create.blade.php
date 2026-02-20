@@ -10,13 +10,33 @@
 </div>
 
 @if($errors->any())
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <strong>Terjadi kesalahan:</strong>
-        <ul class="mb-0 mt-2">
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border: 3px solid #dc3545; background-color: #f8d7da;">
+        <strong style="font-size: 1.2em;">⚠️ Terjadi kesalahan:</strong>
+        <ul class="mb-0 mt-2" style="font-size: 1.1em;">
             @foreach($errors->all() as $error)
-                <li>{{ $error }}</li>
+                <li><strong>{{ $error }}</strong></li>
             @endforeach
         </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <script>
+        // Scroll to error message
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Log errors to console for debugging
+        console.error('Form validation errors:', @json($errors->all()));
+    </script>
+@endif
+
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>✓ {{ session('success') }}</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border: 3px solid #dc3545;">
+        <strong style="font-size: 1.2em;">⚠️ {{ session('error') }}</strong>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
@@ -91,16 +111,26 @@
                 <div class="col-md-3 mb-3">
                     <label for="unit" class="form-label">Satuan <span class="text-danger">*</span></label>
                     <select class="form-select @error('unit') is-invalid @enderror" 
-                            id="unit" name="unit" required>
+                            id="unit" name="unit_select" required>
                         <option value="">Pilih Satuan</option>
-                        <!-- Options will be dynamically loaded based on selected item -->
+                        <option value="Pcs" selected>Pcs</option>
+                        <!-- Options will be dynamically loaded -->
                     </select>
+                    <input type="text" class="form-control mt-2 @error('unit') is-invalid @enderror" 
+                           id="custom_unit" name="unit" 
+                           value="{{ old('unit', 'Pcs') }}"
+                           placeholder="Ketik satuan custom..." 
+                           style="display: none;"
+                           maxlength="50">
+                    <div id="unit-warning" class="alert alert-warning mt-2" style="display: none; padding: 8px;">
+                        <i class="bi bi-exclamation-triangle"></i> <span id="unit-warning-text"></span>
+                    </div>
                     <input type="hidden" id="conversion_factor" name="conversion_factor" value="1">
                     <div class="form-text" id="unit-help-text">
-                        <i class="bi bi-info-circle"></i> Pilih barang terlebih dahulu untuk melihat satuan yang tersedia
+                        <i class="bi bi-info-circle"></i> Pilih dari daftar atau pilih "Lainnya" untuk input manual
                     </div>
                     @error('unit')
-                        <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
                 </div>
             </div>
@@ -145,8 +175,7 @@
                 <div class="col-md-6 mb-3">
                     <label for="supplier_id" class="form-label">
                         Supplier 
-                        <span class="text-danger" id="supplier-required">*</span>
-                        <span class="text-muted small" id="supplier-optional" style="display: none;">(Opsional untuk barang keluar)</span>
+                        <span class="text-muted small">(Opsional)</span>
                     </label>
                     <select class="form-select @error('supplier_id') is-invalid @enderror" 
                             id="supplier_id" name="supplier_id">
@@ -488,6 +517,7 @@
                         suggestionsList.style.display = 'block';
                         itemIdInput.value = '';
                         showNewItemFields();
+                        resetUnitDropdown();
                     }
                 })
                 .catch(error => {
@@ -502,6 +532,7 @@
         categoryField.style.display = 'block';
         itemCodeInput.required = true;
         categoryIdInput.required = true;
+        resetUnitDropdown();
     }
 
     function hideNewItemFields() {
@@ -513,6 +544,10 @@
         categoryIdInput.value = '';
         document.getElementById('category_search').value = '';
         document.getElementById('selected-category').innerHTML = '';
+        // Reset custom unit input if it was shown
+        document.getElementById('custom_unit').style.display = 'none';
+        document.getElementById('custom_unit').required = false;
+        document.getElementById('unit').required = true;
     }
 
     // Category search
@@ -624,6 +659,10 @@
         if (itemIdInput.value) {
             itemIdInput.value = '';
             resetUnitDropdown();
+            // Also reset custom unit input
+            document.getElementById('custom_unit').style.display = 'none';
+            document.getElementById('custom_unit').required = false;
+            document.getElementById('unit').required = true;
         }
     });
 
@@ -640,12 +679,21 @@
                 const unitSelect = document.getElementById('unit');
                 const unitHelpText = document.getElementById('unit-help-text');
                 const conversionFactorInput = document.getElementById('conversion_factor');
+                const customUnitInput = document.getElementById('custom_unit');
                 
                 // Clear existing options
                 unitSelect.innerHTML = '<option value="">Pilih Satuan</option>';
                 
+                // Reset custom input
+                customUnitInput.style.display = 'none';
+                customUnitInput.required = false;
+                unitSelect.required = true;
+                
                 if (data.units && data.units.length > 0) {
                     // Add units to dropdown
+                    let defaultUnitSet = false;
+                    let defaultUnitValue = '';
+                    
                     data.units.forEach(unit => {
                         const option = document.createElement('option');
                         option.value = unit.name;
@@ -653,19 +701,33 @@
                         option.dataset.conversionFactor = unit.conversion_factor;
                         
                         // Select base unit by default if no old value
-                        if (unit.is_base && !unitSelect.querySelector(`option[value="${unit.name}"]`)) {
+                        if (unit.is_base && !defaultUnitSet) {
                             option.selected = true;
+                            defaultUnitSet = true;
+                            defaultUnitValue = unit.name;
                             conversionFactorInput.value = unit.conversion_factor;
                         }
                         
                         unitSelect.appendChild(option);
                     });
                     
+                    // IMPORTANT: Sync the default selected value to hidden input
+                    if (defaultUnitValue) {
+                        customUnitInput.value = defaultUnitValue;
+                        console.log('After loading units, synced default unit to hidden input:', defaultUnitValue);
+                    }
+                    
+                    // Add custom option at the end
+                    const customOption = document.createElement('option');
+                    customOption.value = '__custom__';
+                    customOption.textContent = '➕ Lainnya (Input Manual)';
+                    unitSelect.appendChild(customOption);
+                    
                     // Update help text
                     unitHelpText.innerHTML = `
                         <i class="bi bi-info-circle"></i> 
                         Satuan yang tersedia untuk barang ini. 
-                        Satuan dasar: <strong>${data.base_unit}</strong>
+                        Satuan dasar: <strong>${data.base_unit}</strong>. Pilih "Lainnya" untuk input manual.
                     `;
                 } else {
                     // Fallback: show all units if no custom units defined
@@ -673,7 +735,7 @@
                     unitHelpText.innerHTML = `
                         <i class="bi bi-info-circle"></i> 
                         Barang ini belum memiliki satuan khusus. 
-                        Gunakan satuan dasar: <strong>${data.base_unit || 'Pcs'}</strong>
+                        Gunakan satuan dasar: <strong>${data.base_unit || 'Pcs'}</strong> atau pilih "Lainnya" untuk input manual.
                     `;
                 }
             })
@@ -688,6 +750,7 @@
         const unitSelect = document.getElementById('unit');
         const unitHelpText = document.getElementById('unit-help-text');
         const conversionFactorInput = document.getElementById('conversion_factor');
+        const customUnitInput = document.getElementById('custom_unit');
         
         unitSelect.innerHTML = `
             <option value="">Pilih Satuan</option>
@@ -710,21 +773,253 @@
             <option value="Sak">Sak</option>
             <option value="Set">Set</option>
             <option value="Unit">Unit</option>
+            <option value="__custom__">➕ Lainnya (Input Manual)</option>
         `;
         conversionFactorInput.value = 1;
-        unitHelpText.innerHTML = '<i class="bi bi-info-circle"></i> Pilih barang terlebih dahulu untuk melihat satuan yang tersedia';
+        customUnitInput.value = 'Pcs'; // Set default value
+        customUnitInput.style.display = 'none';
+        customUnitInput.required = false;
+        unitSelect.required = true;
+        unitHelpText.innerHTML = '<i class="bi bi-info-circle"></i> Pilih dari daftar atau pilih "Lainnya" untuk input manual';
     }
 
-    // Update conversion factor when unit changes
+    // Handle unit selection - toggle between dropdown and custom input
     document.getElementById('unit').addEventListener('change', function() {
+        const customUnitInput = document.getElementById('custom_unit');
+        const unitWarning = document.getElementById('unit-warning');
         const selectedOption = this.options[this.selectedIndex];
         const conversionFactor = selectedOption.dataset.conversionFactor || 1;
         document.getElementById('conversion_factor').value = conversionFactor;
+        
+        console.log('Unit dropdown changed:', this.value); // Debug log
+        
+        if (this.value === '__custom__') {
+            // Show custom input field
+            customUnitInput.style.display = 'block';
+            customUnitInput.required = true;
+            customUnitInput.value = ''; // Clear previous value
+            customUnitInput.focus();
+            unitWarning.style.display = 'none'; // Hide warning initially
+            this.required = false;
+        } else if (this.value !== '') {
+            // Hide custom input and sync dropdown value
+            customUnitInput.style.display = 'none';
+            customUnitInput.required = false;
+            customUnitInput.value = this.value; // Sync the value from dropdown
+            unitWarning.style.display = 'none';
+            this.required = true;
+            console.log('Synced unit to hidden input:', customUnitInput.value); // Debug log
+        } else {
+            // Empty selection
+            customUnitInput.style.display = 'none';
+            customUnitInput.required = false;
+            customUnitInput.value = '';
+            unitWarning.style.display = 'none';
+        }
+    });
+
+    // Validate and normalize custom unit input
+    document.getElementById('custom_unit').addEventListener('input', function() {
+        const unitSelect = document.getElementById('unit');
+        const unitWarning = document.getElementById('unit-warning');
+        const unitWarningText = document.getElementById('unit-warning-text');
+        
+        // Trim whitespace and normalize
+        let inputValue = this.value.trim();
+        
+        // Auto-capitalize: first letter uppercase, rest lowercase (Title Case untuk kata pertama)
+        if (inputValue.length > 0) {
+            inputValue = inputValue.charAt(0).toUpperCase() + inputValue.slice(1).toLowerCase();
+            // Update the input value with normalized version
+            this.value = inputValue;
+        }
+        
+        if (inputValue.length === 0) {
+            unitWarning.style.display = 'none';
+            return;
+        }
+        
+        // Check if unit already exists in dropdown (case-insensitive)
+        let existsInDropdown = false;
+        let exactMatch = '';
+        
+        for (let i = 0; i < unitSelect.options.length; i++) {
+            const optionValue = unitSelect.options[i].value;
+            if (optionValue !== '__custom__' && optionValue !== '') {
+                if (optionValue.toLowerCase() === inputValue.toLowerCase()) {
+                    existsInDropdown = true;
+                    exactMatch = optionValue;
+                    break;
+                }
+            }
+        }
+        
+        if (existsInDropdown) {
+            // Show warning: unit already exists
+            unitWarningText.innerHTML = `Satuan "<strong>${exactMatch}</strong>" sudah tersedia di daftar pilihan. Sebaiknya pilih dari dropdown.`;
+            unitWarning.style.display = 'block';
+            unitWarning.className = 'alert alert-danger mt-2';
+        } else {
+            // Check for similar units (potential typos)
+            let similarUnit = checkSimilarUnit(inputValue, unitSelect);
+            
+            if (similarUnit) {
+                unitWarningText.innerHTML = `Apakah maksud Anda "<strong>${similarUnit}</strong>"? Satuan yang Anda ketik mirip dengan yang ada di daftar.`;
+                unitWarning.style.display = 'block';
+                unitWarning.className = 'alert alert-warning mt-2';
+            } else {
+                // Show confirmation: new unit
+                unitWarningText.innerHTML = `Satuan baru "<strong>${inputValue}</strong>" akan ditambahkan. Pastikan tidak ada typo.`;
+                unitWarning.style.display = 'block';
+                unitWarning.className = 'alert alert-info mt-2';
+            }
+        }
+    });
+
+    // Check for similar units (Levenshtein distance / simple similarity)
+    function checkSimilarUnit(input, selectElement) {
+        const inputLower = input.toLowerCase();
+        const threshold = 2; // Max difference in characters
+        
+        for (let i = 0; i < selectElement.options.length; i++) {
+            const optionValue = selectElement.options[i].value;
+            if (optionValue !== '__custom__' && optionValue !== '') {
+                const optionLower = optionValue.toLowerCase();
+                
+                // Check if lengths are similar and strings are similar
+                if (Math.abs(inputLower.length - optionLower.length) <= threshold) {
+                    const distance = levenshteinDistance(inputLower, optionLower);
+                    if (distance > 0 && distance <= threshold) {
+                        return optionValue;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    // Calculate Levenshtein distance (edit distance)
+    function levenshteinDistance(str1, str2) {
+        const len1 = str1.length;
+        const len2 = str2.length;
+        const matrix = [];
+
+        for (let i = 0; i <= len1; i++) {
+            matrix[i] = [i];
+        }
+
+        for (let j = 0; j <= len2; j++) {
+            matrix[0][j] = j;
+        }
+
+        for (let i = 1; i <= len1; i++) {
+            for (let j = 1; j <= len2; j++) {
+                if (str1.charAt(i - 1) === str2.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1, // substitution
+                        matrix[i][j - 1] + 1,     // insertion
+                        matrix[i - 1][j] + 1      // deletion
+                    );
+                }
+            }
+        }
+
+        return matrix[len1][len2];
+    }
+
+    // Form validation before submit
+    document.getElementById('receiveItemForm').addEventListener('submit', function(e) {
+        const unitSelect = document.getElementById('unit');
+        const customUnitInput = document.getElementById('custom_unit');
+        
+        // If custom unit is shown
+        if (customUnitInput.style.display !== 'none' && customUnitInput.required) {
+            const inputValue = customUnitInput.value.trim();
+            
+            // Check if empty
+            if (inputValue.length === 0) {
+                e.preventDefault();
+                alert('Mohon isi satuan atau pilih dari daftar yang tersedia.');
+                customUnitInput.focus();
+                return false;
+            }
+            
+            // Check if exists in dropdown (case-insensitive)
+            for (let i = 0; i < unitSelect.options.length; i++) {
+                const optionValue = unitSelect.options[i].value;
+                if (optionValue !== '__custom__' && optionValue !== '') {
+                    if (optionValue.toLowerCase() === inputValue.toLowerCase()) {
+                        e.preventDefault();
+                        if (confirm(`Satuan "${optionValue}" sudah ada di daftar pilihan.\n\nKlik OK untuk memilih dari daftar, atau Cancel untuk tetap melanjutkan dengan satuan baru.`)) {
+                            // Select the existing unit
+                            unitSelect.value = optionValue;
+                            customUnitInput.style.display = 'none';
+                            customUnitInput.required = false;
+                            customUnitInput.value = optionValue;
+                            unitSelect.required = true;
+                            document.getElementById('unit-warning').style.display = 'none';
+                        }
+                        return false;
+                    }
+                }
+            }
+            
+            // Final confirmation for new custom unit
+            const similarUnit = checkSimilarUnit(inputValue, unitSelect);
+            if (similarUnit) {
+                if (!confirm(`Satuan yang Anda ketik mirip dengan "${similarUnit}".\n\nApakah Anda yakin ingin menggunakan "${inputValue}"?\n\nKlik OK untuk melanjutkan, atau Cancel untuk memperbaiki.`)) {
+                    e.preventDefault();
+                    customUnitInput.focus();
+                    return false;
+                }
+            }
+        }
     });
 
     // Load units if item_id is already set (e.g., from old input)
     @if(old('item_id'))
         loadItemUnits({{ old('item_id') }});
+    @else
+        // Load default units on page load
+        resetUnitDropdown();
+    @endif
+
+    // Restore old unit value if exists (for validation errors)
+    @if(old('unit'))
+        const oldUnit = "{{ old('unit') }}";
+        const unitSelect = document.getElementById('unit');
+        const customUnitInput = document.getElementById('custom_unit');
+        
+        // Check if the old unit exists in the dropdown
+        let foundInDropdown = false;
+        for (let i = 0; i < unitSelect.options.length; i++) {
+            if (unitSelect.options[i].value === oldUnit) {
+                unitSelect.value = oldUnit;
+                customUnitInput.value = oldUnit;
+                foundInDropdown = true;
+                break;
+            }
+        }
+        
+        // If not found, it's a custom unit
+        if (!foundInDropdown && oldUnit !== '__custom__') {
+            unitSelect.value = '__custom__';
+            customUnitInput.value = oldUnit;
+            customUnitInput.style.display = 'block';
+            customUnitInput.required = true;
+            unitSelect.required = false;
+        }
+    @else
+        // Initialize: Sync dropdown default value to hidden input on page load
+        const unitSelect = document.getElementById('unit');
+        const customUnitInput = document.getElementById('custom_unit');
+        
+        if (unitSelect.value && unitSelect.value !== '' && unitSelect.value !== '__custom__') {
+            customUnitInput.value = unitSelect.value;
+            console.log('Page load: Synced default unit to hidden input:', customUnitInput.value);
+        }
     @endif
 </script>
 @endpush

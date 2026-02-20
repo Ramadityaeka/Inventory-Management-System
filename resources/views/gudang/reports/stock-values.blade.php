@@ -121,7 +121,7 @@
     <!-- Stock Values Table -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-light">
-            <h6 class="mb-0">Data Inventori ({{ $stocks->total() }} item)</h6>
+            <h6 class="mb-0">Data Inventori ({{ number_format($totalItems ?? $stocks->total()) }} item)</h6>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">

@@ -275,6 +275,7 @@ class SubmissionController extends Controller
             $submissions = Submission::whereIn('id', $request->submission_ids)
                 ->whereIn('warehouse_id', $warehouseIds)
                 ->where('status', 'pending')
+                ->with(['item', 'staff'])
                 ->get();
 
             if ($submissions->isEmpty()) {
@@ -284,15 +285,18 @@ class SubmissionController extends Controller
             DB::beginTransaction();
 
             $approvedCount = 0;
+            /** @var Submission $submission */
             foreach ($submissions as $submission) {
                 // Create approval record
-                SubmissionApproval::create([
+                Approval::create([
                     'submission_id' => $submission->id,
                     'admin_id' => Auth::id(),
                     'action' => 'approved',
                     'notes' => 'Bulk approved by admin',
-                    'created_at' => now()
                 ]);
+
+                // Update submission status
+                $submission->update(['status' => 'approved']);
 
                 // Create notification
                 $this->createStaffNotification($submission, 'approved', 'Submission Anda telah diapprove secara bulk oleh admin gudang.');
