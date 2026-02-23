@@ -216,15 +216,14 @@ class ItemController extends Controller
         // Check if item has stock
         $totalStock = $item->stocks()->sum('quantity');
         if ($totalStock > 0) {
-            return redirect()->route('admin.items.index')
-                ->with('error', 'Cannot delete item that has stock in warehouses.');
+            return redirect()->route('admin.items.index');
         }
 
-        // Soft delete by setting is_active to false
-        $item->update(['is_active' => false]);
+        // Hard delete when no stock exists
+        $item->delete();
 
         return redirect()->route('admin.items.index')
-            ->with('success', 'Item deactivated successfully.');
+            ->with('success', 'Item berhasil dihapus.');
     }
 
     public function toggleStatus(Request $request, Item $item)
@@ -304,6 +303,7 @@ class ItemController extends Controller
             ->get();
 
         foreach ($stocks as $stock) {
+            /** @var Stock $stock */
             // Create stock movement for adjustment
             StockMovement::create([
                 'item_id' => $item->id,

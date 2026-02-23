@@ -66,6 +66,7 @@ Route::middleware('auth')->group(function () {
         // Category API endpoints for AJAX
         Route::get('categories/api/search', [CategoryController::class, 'search'])->name('categories.search');
         Route::get('categories/api/generate-code', [CategoryController::class, 'generateCode'])->name('categories.generate-code');
+        Route::get('categories/api/check-code', [CategoryController::class, 'checkCode'])->name('categories.check-code');
         
         Route::resource('suppliers', SupplierController::class);
         // Item API endpoints (harus sebelum resource route)

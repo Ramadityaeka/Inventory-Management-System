@@ -46,12 +46,12 @@
                     <div class="input-group">
                         <input type="text" class="form-control @error('code') is-invalid @enderror"
                                id="code" name="code" value="{{ old('code') }}" 
-                               placeholder="Contoh: 1.01.03" required>
+                               placeholder="Contoh: 1.01.03" required oninput="checkCode()">
                         <button class="btn btn-outline-secondary" type="button" onclick="generateCode()">
                             <i class="bi bi-arrow-clockwise"></i> Auto
                         </button>
                     </div>
-                    <div class="form-text">Kode otomatis dibuat jika memilih kategori induk</div>
+                    <div id="code_feedback" class="form-text">Kode bisa diubah secara manual. Klik Auto untuk saran kode berikutnya</div>
                     @error('code')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
@@ -94,6 +94,53 @@
 </div>
 
 <script>
+let _createCodeTimer = null;
+let _createCodeAvailable = true;
+
+function checkCode() {
+    const code     = document.getElementById('code').value.trim();
+    const codeEl   = document.getElementById('code');
+    const feedback = document.getElementById('code_feedback');
+
+    clearTimeout(_createCodeTimer);
+
+    if (!code) {
+        codeEl.classList.remove('is-valid', 'is-invalid');
+        feedback.className = 'form-text';
+        feedback.textContent = 'Kode bisa diubah secara manual. Klik Auto untuk saran kode berikutnya';
+        _createCodeAvailable = true;
+        return;
+    }
+
+    feedback.className = 'form-text text-muted';
+    feedback.textContent = 'Memeriksa ketersediaan kode...';
+
+    _createCodeTimer = setTimeout(() => {
+        fetch(`{{ route('admin.categories.check-code') }}?code=${encodeURIComponent(code)}`)
+            .then(r => r.json())
+            .then(data => {
+                _createCodeAvailable = data.available;
+                if (data.available) {
+                    codeEl.classList.remove('is-invalid');
+                    codeEl.classList.add('is-valid');
+                    feedback.className = 'form-text text-success';
+                    feedback.textContent = '✓ Kode tersedia dan bisa digunakan.';
+                } else {
+                    codeEl.classList.remove('is-valid');
+                    codeEl.classList.add('is-invalid');
+                    feedback.className = 'form-text text-danger';
+                    feedback.textContent = '✗ Kode "' + code + '" sudah digunakan. Pilih kode lain.';
+                }
+            })
+            .catch(() => {
+                _createCodeAvailable = true;
+                codeEl.classList.remove('is-valid', 'is-invalid');
+                feedback.className = 'form-text text-warning';
+                feedback.textContent = 'Tidak bisa memeriksa kode. Lanjutkan dengan hati-hati.';
+            });
+    }, 400);
+}
+
 function generateCode() {
     const parentSelect = document.getElementById('parent_id');
     const codeInput = document.getElementById('code');
@@ -101,20 +148,25 @@ function generateCode() {
     
     if (!parentId) {
         codeInput.value = '';
-        codeInput.readOnly = false;
+        codeInput.classList.remove('is-valid', 'is-invalid');
         return;
     }
-    
-    // Get parent code from selected option
-    const selectedOption = parentSelect.options[parentSelect.selectedIndex];
-    const parentCode = selectedOption.getAttribute('data-code');
     
     // Call API to generate next code
     fetch(`{{ route('admin.categories.generate-code') }}?parent_id=${parentId}`)
         .then(response => response.json())
         .then(data => {
             codeInput.value = data.code;
-            codeInput.readOnly = true;
+            checkCode(); // auto-check generated code
+            const existing = document.getElementById('overflowWarning');
+            if (existing) existing.remove();
+            if (data.overflow) {
+                const warn = document.createElement('div');
+                warn.id = 'overflowWarning';
+                warn.className = 'alert alert-warning mt-2';
+                warn.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i><strong>Perhatian:</strong> Kode yang di-generate (<code>${data.code}</code>) melebihi batas nomor urut 999. Silakan isi kode secara manual dengan nomor yang masih tersedia.`;
+                codeInput.closest('.col-md-6').appendChild(warn);
+            }
         })
         .catch(error => {
             console.error('Error:', error);
@@ -122,12 +174,51 @@ function generateCode() {
         });
 }
 
+// Client-side validation before submit
+document.getElementById('categoryForm').addEventListener('submit', function(e) {
+    const codeInput = document.getElementById('code');
+    const parentId = document.getElementById('parent_id').value;
+
+    // Block if code already taken
+    if (!_createCodeAvailable) {
+        e.preventDefault();
+        const existing = document.getElementById('overflowWarning');
+        if (existing) existing.remove();
+        const warn = document.createElement('div');
+        warn.id = 'overflowWarning';
+        warn.className = 'alert alert-danger mt-2';
+        warn.innerHTML = `<i class="bi bi-x-circle me-2"></i><strong>Tidak dapat disimpan.</strong> Kode "<strong>${codeInput.value}</strong>" sudah digunakan. Gunakan kode lain.`;
+        codeInput.closest('.col-md-6').appendChild(warn);
+        codeInput.focus();
+        return;
+    }
+
+    if (parentId && codeInput.value) {
+        const parts = codeInput.value.split('.');
+        const lastSegment = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(lastSegment) && lastSegment > 999) {
+            e.preventDefault();
+            const existing = document.getElementById('overflowWarning');
+            if (existing) existing.remove();
+            const warn = document.createElement('div');
+            warn.id = 'overflowWarning';
+            warn.className = 'alert alert-danger mt-2';
+            warn.innerHTML = `<i class="bi bi-x-circle me-2"></i><strong>Tidak dapat disimpan.</strong> Nomor urut kode tidak boleh melebihi 999. Silakan ubah ke kode yang tersedia.`;
+            codeInput.closest('.col-md-6').appendChild(warn);
+            codeInput.focus();
+        }
+    }
+});
+
 // Auto-generate on load if parent is selected
 document.addEventListener('DOMContentLoaded', function() {
     const parentId = document.getElementById('parent_id').value;
     if (parentId) {
         generateCode();
     }
+    // Check old value if any (after validation error redirect)
+    const codeVal = document.getElementById('code').value;
+    if (codeVal) checkCode();
 });
 </script>
 @endsection

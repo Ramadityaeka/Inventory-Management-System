@@ -3,325 +3,304 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - {{ config('app.name', 'Inventory ESDM') }}</title>
+    <title>Login - {{ config('app.name', 'Inventory Inspektorat Jendral KESDM') }}</title>
     
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom CSS -->
     <style>
+        :root {
+            --esdm-blue: #1e3c72;
+            --esdm-blue-light: #2a5298;
+            --esdm-gold: #f5b041;
+            --overlay-dark: rgba(15, 32, 39, 0.85);
+            --overlay-blue: rgba(30, 60, 114, 0.85);
+        }
+
         body {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            /* Menggunakan gambar gedung sebagai background utama dengan efek overlay gelap-biru */
+            background: linear-gradient(135deg, var(--overlay-blue) 0%, var(--overlay-dark) 100%), 
+                        url('/images/login-bg.png') no-repeat center center fixed;
+            background-size: cover;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             position: relative;
-        }
-        
-        body::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
-            opacity: 0.3;
         }
         
         .login-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 24px;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
-            border: 1px solid rgba(255,255,255,0.2);
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.5);
             overflow: hidden;
             width: 100%;
-            max-width: 460px;
+            max-width: 440px;
             margin: 20px;
             position: relative;
             z-index: 1;
+            border: 1px solid rgba(255,255,255,0.15);
         }
         
         .login-header {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            /* Menampilkan kembali gambar gedung di area header dengan perpaduan gradasi */
+            background: linear-gradient(to bottom, rgba(30, 60, 114, 0.75), rgba(42, 82, 152, 0.95)), 
+                        url('/images/login-bg.png') center center / cover no-repeat;
             color: white;
-            padding: 2.5rem 2rem;
+            padding: 3rem 2rem 2rem;
             text-align: center;
             position: relative;
-            overflow: hidden;
+            border-bottom: 4px solid var(--esdm-gold);
         }
         
-        .login-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 50%);
-            animation: shimmer 3s ease-in-out infinite;
+        .logo-icon {
+            font-size: 2.5rem;
+            color: var(--esdm-gold);
+            background: rgba(255, 255, 255, 0.15);
+            width: 80px;
+            height: 80px;
+            line-height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 1.2rem auto;
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            animation: float 3s ease-in-out infinite;
         }
         
-        @keyframes shimmer {
-            0%, 100% { transform: translateX(-100%) translateY(-100%); }
-            50% { transform: translateX(0) translateY(0); }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
         }
         
         .login-header h2 {
             margin: 0;
             font-weight: 700;
-            font-size: 1.8rem;
-            position: relative;
-            z-index: 1;
+            font-size: 1.4rem;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.4);
         }
         
         .login-header p {
-            margin: 0.8rem 0 0 0;
-            opacity: 0.9;
-            font-weight: 300;
-            position: relative;
-            z-index: 1;
+            margin: 0.5rem 0 0 0;
+            color: #e2e8f0;
+            font-weight: 400;
+            font-size: 0.95rem;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .login-header small {
+            display: inline-block;
+            margin-top: 0.6rem;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            backdrop-filter: blur(4px);
         }
         
         .login-body {
-            padding: 2.5rem;
-            background: white;
+            padding: 2.5rem 2rem 2rem;
+            background: #ffffff;
         }
         
         .form-floating {
-            margin-bottom: 1.5rem;
-            position: relative;
+            margin-bottom: 1.2rem;
         }
         
         .form-control {
-            border-radius: 16px;
-            border: 2px solid #e8f0fe;
-            padding: 1.2rem 1rem;
+            border-radius: 12px;
+            border: 1.5px solid #e2e8f0;
+            padding: 1rem 0.75rem;
             font-size: 1rem;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            background: #fafbff;
+            color: #334155;
+            background: #f8fafc;
+            transition: all 0.3s ease;
         }
         
         .form-control:focus {
-            border-color: #1e3c72;
-            box-shadow: 0 0 0 4px rgba(30, 60, 114, 0.1);
-            background: white;
-            transform: translateY(-2px);
+            border-color: var(--esdm-blue-light);
+            box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.1);
+            background: #ffffff;
         }
         
         .form-floating > label {
-            padding: 1rem;
-            color: #6c7b7f;
+            color: #64748b;
             font-weight: 500;
+            padding: 1rem 0.75rem;
         }
         
         .btn-login {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, var(--esdm-blue) 0%, var(--esdm-blue-light) 100%);
             border: none;
-            border-radius: 16px;
-            padding: 1.2rem;
-            font-size: 1.1rem;
+            border-radius: 12px;
+            padding: 1rem;
+            font-size: 1rem;
             font-weight: 600;
+            letter-spacing: 0.5px;
             width: 100%;
             color: white;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .btn-login::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s ease;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(30, 60, 114, 0.25);
+            margin-top: 0.5rem;
         }
         
         .btn-login:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 35px rgba(30, 60, 114, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(30, 60, 114, 0.4);
             color: white;
+            background: linear-gradient(135deg, #152c5b 0%, var(--esdm-blue) 100%);
         }
         
-        .btn-login:hover::before {
-            left: 100%;
-        }
-        
-        .form-check-input:checked {
-            background-color: #1e3c72;
-            border-color: #1e3c72;
-        }
-        
-        .alert {
-            border-radius: 16px;
-            border: none;
-            margin-bottom: 1.5rem;
-            padding: 1rem 1.2rem;
-            background: linear-gradient(135deg, #f8d7da 0%, #f5c2c7 100%);
-        }
-        
-        .alert-success {
-            background: linear-gradient(135deg, #d1f2eb 0%, #a3d9cc 100%);
-            color: #0f5132;
-        }
-        
-        .logo-icon {
-            font-size: 3.5rem;
-            margin-bottom: 1rem;
-            position: relative;
-            z-index: 1;
-            display: inline-block;
-            animation: pulse 2s ease-in-out infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-        
-        .login-footer {
-            text-align: center;
-            padding: 1.5rem 2rem 2.5rem;
-            color: #6c757d;
-            font-size: 0.9rem;
-            background: #f8f9ff;
-        }
-        
-        .divider {
-            margin: 2rem 0;
-            text-align: center;
-            position: relative;
-        }
-        
-        .divider::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, #e9ecef, transparent);
-        }
-        
-        .divider span {
-            background: white;
-            padding: 0 1.5rem;
-            color: #6c757d;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-        
-        .input-group {
+        .password-field {
             position: relative;
         }
         
         .password-field .form-control {
-            padding-right: 3.5rem;
+            padding-right: 3rem;
         }
         
         .password-toggle {
             position: absolute;
-            right: 1.2rem;
+            right: 0.5rem;
             top: 50%;
             transform: translateY(-50%);
-            background: none;
+            background: transparent;
             border: none;
-            color: #6c757d;
+            color: #94a3b8;
             cursor: pointer;
-            z-index: 10;
+            z-index: 5;
             padding: 0.5rem;
             border-radius: 8px;
-            transition: all 0.3s ease;
+            transition: color 0.2s ease;
+            height: 100%;
+            display: flex;
+            align-items: center;
         }
         
         .password-toggle:hover {
-            color: #1e3c72;
-            background: #f0f4ff;
+            color: var(--esdm-blue);
         }
         
         .form-check {
-            margin-bottom: 2rem !important;
+            margin-bottom: 1.5rem !important;
+            display: flex;
+            align-items: center;
         }
         
         .form-check-label {
-            color: #5a6c7d;
+            color: #64748b;
             font-weight: 500;
+            font-size: 0.9rem;
+            margin-top: 2px;
+            cursor: pointer;
         }
         
         .form-check-input {
-            border-radius: 6px;
+            border-radius: 4px;
+            border: 1.5px solid #cbd5e1;
             margin-right: 0.5rem;
+            cursor: pointer;
+            width: 1.1em;
+            height: 1.1em;
+            margin-top: 0;
+        }
+
+        .form-check-input:checked {
+            background-color: var(--esdm-blue);
+            border-color: var(--esdm-blue);
+        }
+        
+        /* Alerts Styling */
+        .alert {
+            border-radius: 12px;
+            border: none;
+            padding: 1rem;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .alert-danger {
+            background-color: #fef2f2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .alert-success {
+            background-color: #f0fdf4;
+            color: #166534;
+            border-left: 4px solid #22c55e;
+        }
+        
+        .login-footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: #64748b;
+            background: #f8fafc;
+            border-top: 1px solid #f1f5f9;
+        }
+        
+        .login-footer p strong {
+            color: #475569;
         }
         
         @media (max-width: 480px) {
             .login-container {
-                margin: 10px;
-                border-radius: 20px;
+                margin: 15px;
+                border-radius: 16px;
             }
-            
-            .login-header {
-                padding: 2rem 1.5rem;
-            }
-            
-            .login-body {
-                padding: 2rem 1.5rem;
-            }
-            
-            .login-footer {
-                padding: 1.5rem;
-            }
+            .login-header { padding: 2rem 1.5rem 1.5rem; }
+            .logo-icon { width: 65px; height: 65px; line-height: 65px; font-size: 2rem; }
+            .login-body { padding: 2rem 1.5rem; }
         }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <!-- Header -->
         <div class="login-header">
             <div class="logo-icon">
                 <i class="bi bi-boxes"></i>
             </div>
-            <h2>Inventory ESDM</h2>
-            <p>Sistem Manajemen Inventori Terpadu</p>
-            <small style="opacity: 0.8; font-size: 0.85rem;">Kementerian Energi dan Sumber Daya Mineral</small>
+            <h2>Inventory Inspektorat Jendral KESDM</h2>
+            <p>Sistem Manajemen Inventori </p>
+            <small style="opacity: 0.9; font-size: 0.85rem;">Inspektorat Jendral KESDM</small>
         </div>
         
-        <!-- Body -->
         <div class="login-body">
-            <!-- Error Messages -->
             @if ($errors->any())
                 <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    <strong>Login Gagal!</strong>
-                    <ul class="mb-0 mt-2" style="font-size: 0.9rem;">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
+                    <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+                    <div>
+                        <strong>Login Gagal!</strong>
+                        <ul class="mb-0 mt-1 ps-3" style="font-size: 0.85rem;">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
                 </div>
             @endif
             
             @if (session('status'))
                 <div class="alert alert-success">
-                    <i class="bi bi-check-circle-fill me-2"></i>
-                    <strong>Berhasil!</strong> {{ session('status') }}
+                    <i class="bi bi-check-circle-fill me-2 mt-1"></i>
+                    <div>
+                        <strong>Berhasil!</strong> {{ session('status') }}
+                    </div>
                 </div>
             @endif
             
             @if (session('error'))
                 <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    <strong>Error!</strong> {{ session('error') }}
+                    <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+                    <div>
+                        <strong>Error!</strong> {{ session('error') }}
+                    </div>
                 </div>
             @endif
             
-            <!-- Login Form -->
             <form method="POST" action="{{ route('login') }}" id="loginForm">
                 @csrf
                 
@@ -354,7 +333,7 @@
                     <label for="password">
                         <i class="bi bi-key-fill me-2"></i>Kata Sandi
                     </label>
-                    <button type="button" class="password-toggle" onclick="togglePassword()">
+                    <button type="button" class="password-toggle" onclick="togglePassword()" tabindex="-1">
                         <i class="bi bi-eye" id="passwordToggleIcon"></i>
                     </button>
                     @error('password')
@@ -364,10 +343,10 @@
                     @enderror
                 </div>
                 
-                <div class="form-check mb-3">
+                <div class="form-check">
                     <input class="form-check-input" type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
                     <label class="form-check-label" for="remember">
-                        <i class=""></i>Ingat Saya
+                        Ingat Saya
                     </label>
                 </div>
                 
@@ -381,22 +360,17 @@
             </form>
         </div>
         
-        <!-- Footer -->
         <div class="login-footer">
-            <p class="mb-2">
-                <i class="bi bi-shield-check me-1"></i>
+            <p class="mb-1">
+                <i class="bi bi-shield-check me-1 text-success"></i>
                 <strong>Akses Aman & Terpercaya</strong>
             </p>
-            <p class="mb-0" style="font-size: 0.8rem; opacity: 0.7;">
-                © {{ date('Y') }} Kementerian ESDM - Sistem Inventory Management
-            </p>
-            <p class="mb-0 mt-2" style="font-size: 0.75rem; opacity: 0.6;">
-                Gunakan kredensial resmi untuk mengakses sistem
+            <p class="mb-0" style="font-size: 0.8rem;">
+                © {{ date('Y') }} Inspektorat Jendral KESDM<br>Sistem Inventory Management
             </p>
         </div>
     </div>
     
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
@@ -433,8 +407,8 @@
                 e.preventDefault();
                 
                 let errorHtml = '<div class="alert alert-danger">';
-                errorHtml += '<i class="bi bi-exclamation-circle me-2"></i>';
-                errorHtml += '<strong>Error!</strong> Silakan isi semua field yang diperlukan.';
+                errorHtml += '<i class="bi bi-exclamation-circle me-2 mt-1"></i>';
+                errorHtml += '<div><strong>Error!</strong> Silakan isi semua field yang diperlukan.</div>';
                 errorHtml += '</div>';
                 
                 const existingAlert = document.querySelector('.alert');
@@ -471,8 +445,8 @@
                 
                 // Show custom error
                 let errorHtml = '<div class="alert alert-danger">';
-                errorHtml += '<i class="bi bi-exclamation-circle me-2"></i>';
-                errorHtml += '<strong>Error!</strong> Please fill in all required fields.';
+                errorHtml += '<i class="bi bi-exclamation-circle me-2 mt-1"></i>';
+                errorHtml += '<div><strong>Error!</strong> Please fill in all required fields.</div>';
                 errorHtml += '</div>';
                 
                 // Find existing alerts and replace or add new one
@@ -489,7 +463,7 @@
                 const loginSpinner = document.getElementById('loginSpinner');
                 
                 loginBtn.disabled = false;
-                loginBtnText.textContent = 'Sign In';
+                loginBtnText.textContent = 'Masuk ke Sistem';
                 loginSpinner.classList.add('d-none');
                 
                 return false;
@@ -503,7 +477,7 @@
             loginContainer.style.transform = 'translateY(20px)';
             
             setTimeout(() => {
-                loginContainer.style.transition = 'all 0.6s ease';
+                loginContainer.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
                 loginContainer.style.opacity = '1';
                 loginContainer.style.transform = 'translateY(0)';
             }, 100);

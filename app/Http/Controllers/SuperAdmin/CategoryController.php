@@ -4,6 +4,7 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Stock;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -27,10 +28,19 @@ class CategoryController extends Controller
         $categories = $query->withCount(['items' => function($q) {
             $q->where('is_active', 1);
         }])
+        ->withCount('children')
+        ->addSelect([
+            'total_stock' => Stock::selectRaw('COALESCE(SUM(stocks.quantity), 0)')
+                ->join('items', 'items.id', '=', 'stocks.item_id')
+                ->whereColumn('items.category_id', 'categories.id'),
+        ])
         ->orderBy('code', 'asc')
         ->paginate(50);
 
-        return view('admin.categories.index', compact('categories'));
+        // All categories for the quick-add modal dropdown
+        $allCategories = Category::active()->orderBy('code', 'asc')->get();
+
+        return view('admin.categories.index', compact('categories', 'allCategories'));
     }
 
     public function create(Request $request)
@@ -50,17 +60,17 @@ class CategoryController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'parent_id' => 'nullable|exists:categories,id',
-            'code' => 'nullable|string|max:50|unique:categories',
+            'code' => 'required|string|max:50|unique:categories',
             'description' => 'nullable|string',
         ]);
 
-        // Auto-generate code if parent is selected and code not provided
-        if (!empty($validated['parent_id']) && empty($validated['code'])) {
-            $parent = Category::findOrFail($validated['parent_id']);
-            $validated['code'] = $parent->generateNextSubCategoryCode();
-        } elseif (empty($validated['code'])) {
-            // Root category, must provide code manually
-            return back()->withErrors(['code' => 'Kode harus diisi untuk kategori utama'])->withInput();
+        // Validate last segment does not exceed 999
+        $codeParts = explode('.', $validated['code']);
+        $lastSegment = (int) end($codeParts);
+        if (!empty($validated['parent_id']) && $lastSegment > 999) {
+            return redirect()->route('admin.categories.index')
+                ->with('error', 'Nomor urut kode "' . $validated['code'] . '" tidak boleh melebihi 999. Silakan gunakan kode lain yang tersedia.')
+                ->withInput();
         }
 
         // Set default is_active to true
@@ -121,23 +131,28 @@ class CategoryController extends Controller
 
     public function destroy(Category $category)
     {
-        // Check if category has items
-        if ($category->items()->exists()) {
-            return redirect()->route('admin.categories.index')
-                ->with('error', 'Tidak dapat menghapus kategori yang masih memiliki barang.');
-        }
-
-        // Check if category has children
+        // Check if category has sub-categories
         if ($category->children()->exists()) {
             return redirect()->route('admin.categories.index')
                 ->with('error', 'Tidak dapat menghapus kategori yang masih memiliki sub-kategori.');
         }
 
-        // Soft delete by setting is_active to false
-        $category->update(['is_active' => false]);
+        // Check if any item in this category still has stock
+        $totalStock = Stock::whereHas('item', function ($q) use ($category) {
+            $q->where('category_id', $category->id);
+        })->sum('quantity');
+
+        if ($totalStock > 0) {
+            return redirect()->route('admin.categories.index')
+                ->with('error', 'Tidak dapat menghapus kategori karena masih ada barang yang memiliki stock.');
+        }
+
+        // Orphan items (set category_id to null) then hard delete category
+        $category->items()->update(['category_id' => null]);
+        $category->delete();
 
         return redirect()->route('admin.categories.index')
-            ->with('success', 'Kategori berhasil dinonaktifkan.');
+            ->with('success', 'Kategori berhasil dihapus.');
     }
 
     /**
@@ -182,10 +197,41 @@ class CategoryController extends Controller
         $parent = Category::findOrFail($parentId);
         $nextCode = $parent->generateNextSubCategoryCode();
 
+        // Check if last segment exceeds 999
+        $parts = explode('.', $nextCode);
+        $lastSegment = (int) end($parts);
+        $overflow = $lastSegment > 999;
+
         return response()->json([
             'code' => $nextCode,
             'parent_code' => $parent->code,
             'parent_name' => $parent->name,
+            'overflow' => $overflow,
+        ]);
+    }
+
+    /**
+     * Check if a category code is already taken (AJAX)
+     */
+    public function checkCode(Request $request)
+    {
+        $code      = $request->get('code');
+        $excludeId = $request->get('exclude_id'); // used when editing
+
+        if (!$code) {
+            return response()->json(['available' => true]);
+        }
+
+        $query = Category::where('code', $code);
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        $exists = $query->exists();
+
+        return response()->json([
+            'available' => !$exists,
+            'code'      => $code,
         ]);
     }
 }

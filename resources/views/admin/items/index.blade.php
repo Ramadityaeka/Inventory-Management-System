@@ -160,12 +160,21 @@
                                        title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <button type="button"
-                                            class="btn btn-outline-danger"
-                                            onclick="deleteItem({{ $item->id }}, '{{ $item->name }}')"
-                                            title="Delete">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    @if($item->total_stock > 0)
+                                        <button type="button"
+                                                class="btn btn-outline-danger"
+                                                disabled
+                                                title="Tidak dapat dihapus — masih ada stock">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    @else
+                                        <button type="button"
+                                                class="btn btn-outline-danger"
+                                                onclick="deleteItem({{ $item->id }}, '{{ $item->name }}')"
+                                                title="Hapus">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -199,10 +208,14 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Apakah Anda yakin ingin menonaktifkan item <strong id="itemName"></strong>?</p>
-                <div class="alert alert-warning">
+                <p>Apakah Anda yakin ingin menghapus item <strong id="itemName"></strong>?</p>
+                <div class="alert alert-danger">
                     <i class="bi bi-exclamation-triangle me-2"></i>
-                    Item yang memiliki stock tidak dapat dihapus.
+                    Tindakan ini tidak dapat dibatalkan. Item akan dihapus secara permanen.
+                </div>
+                <div class="alert alert-warning">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Item yang masih memiliki stock di gudang tidak dapat dihapus.
                 </div>
             </div>
             <div class="modal-footer">
@@ -211,7 +224,7 @@
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash me-1"></i>Nonaktifkan
+                        <i class="bi bi-trash me-1"></i>Hapus
                     </button>
                 </form>
             </div>
