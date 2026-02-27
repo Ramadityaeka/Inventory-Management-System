@@ -54,14 +54,17 @@ class StockController extends Controller
         // Get paginated results
         $stocks = $query->paginate(50)->appends($request->query());
         
-        // Load recent stock movements for each stock (last 3 movements)
-        $stocks->getCollection()->transform(function ($stock) {
-            $stock->recent_movements = StockMovement::with(['creator'])
-                ->where('item_id', $stock->item_id)
-                ->where('warehouse_id', $stock->warehouse_id)
-                ->orderBy('created_at', 'desc')
-                ->limit(3)
-                ->get();
+        // Pre-fetch all recent movements in 1 query (instead of N+1)
+        $itemIds = $stocks->getCollection()->pluck('item_id')->unique();
+        $allMovements = StockMovement::with('creator:id,name')
+            ->whereIn('item_id', $itemIds)
+            ->where('warehouse_id', $warehouseId)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->groupBy('item_id');
+
+        $stocks->getCollection()->transform(function ($stock) use ($allMovements) {
+            $stock->recent_movements = ($allMovements[$stock->item_id] ?? collect())->take(3);
             return $stock;
         });
         

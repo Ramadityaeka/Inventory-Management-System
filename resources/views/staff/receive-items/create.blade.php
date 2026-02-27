@@ -58,6 +58,13 @@
                            autocomplete="off" required>
                     <input type="hidden" id="item_id" name="item_id" value="{{ old('item_id') }}">
                     <div id="item-suggestions" class="list-group position-absolute" style="z-index: 1000; max-height: 300px; overflow-y: auto; display: none;"></div>
+                    <div id="item-duplicate-warning" class="alert alert-warning mt-2" style="display: none;">
+                        <div class="fw-bold mb-1">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Barang dengan nama mirip sudah ada:
+                        </div>
+                        <ul class="mb-0 small" id="item-duplicate-list"></ul>
+                    </div>
                     <div class="form-text">Ketik untuk mencari dari database atau masukkan nama barang baru</div>
                     @error('item_name')
                         <div class="invalid-feedback">{{ $message }}</div>
@@ -470,7 +477,10 @@
     const categoryField = document.getElementById('category-field');
     const itemCodeInput = document.getElementById('item_code');
     const categoryIdInput = document.getElementById('category_id');
+    const duplicateWarning = document.getElementById('item-duplicate-warning');
+    const duplicateList = document.getElementById('item-duplicate-list');
     let debounceTimer;
+    let lastItemResults = [];
 
     itemNameInput.addEventListener('input', function() {
         clearTimeout(debounceTimer);
@@ -488,6 +498,7 @@
                 .then(response => response.json())
                 .then(data => {
                     suggestionsList.innerHTML = '';
+                    lastItemResults = data || [];
                     
                     if (data.length > 0) {
                         data.forEach(item => {
@@ -511,12 +522,33 @@
                             });
                             suggestionsList.appendChild(button);
                         });
+
+                        // Tambah opsi eksplisit untuk membuat barang baru dengan nama yang diketik
+                        const newItemButton = document.createElement('button');
+                        newItemButton.type = 'button';
+                        newItemButton.className = 'list-group-item list-group-item-action';
+                        const safeQuery = query.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        newItemButton.innerHTML = `
+                            <div>
+                                <i class="bi bi-plus-circle text-success"></i>
+                                <strong> Tambah barang baru:</strong>
+                                <span class="text-primary">"${safeQuery}"</span>
+                            </div>
+                            <small class="text-muted">Buat barang baru dengan nama persis seperti yang Anda ketik.</small>
+                        `;
+                        newItemButton.addEventListener('click', function() {
+                            itemIdInput.value = '';
+                            suggestionsList.style.display = 'none';
+                            showNewItemFields(lastItemResults);
+                        });
+                        suggestionsList.appendChild(newItemButton);
+
                         suggestionsList.style.display = 'block';
                     } else {
                         suggestionsList.innerHTML = '<div class="list-group-item text-muted">Barang tidak ditemukan. Silakan pilih kategori untuk barang baru.</div>';
                         suggestionsList.style.display = 'block';
                         itemIdInput.value = '';
-                        showNewItemFields();
+                        showNewItemFields([]);
                         resetUnitDropdown();
                     }
                 })
@@ -527,12 +559,26 @@
         }, 300);
     });
 
-    function showNewItemFields() {
+    function showNewItemFields(similarItems = []) {
         itemCodeField.style.display = 'block';
         categoryField.style.display = 'block';
         itemCodeInput.required = true;
         categoryIdInput.required = true;
         resetUnitDropdown();
+
+        // Tampilkan peringatan jika ada barang dengan nama mirip
+        if (similarItems && similarItems.length > 0) {
+            duplicateList.innerHTML = '';
+            similarItems.slice(0, 5).forEach(function (item) {
+                const li = document.createElement('li');
+                li.textContent = `${item.name}${item.code ? ' (Kode: ' + item.code + ')' : ''}`;
+                duplicateList.appendChild(li);
+            });
+            duplicateWarning.style.display = 'block';
+        } else {
+            duplicateWarning.style.display = 'none';
+            duplicateList.innerHTML = '';
+        }
     }
 
     function hideNewItemFields() {
@@ -548,6 +594,10 @@
         document.getElementById('custom_unit').style.display = 'none';
         document.getElementById('custom_unit').required = false;
         document.getElementById('unit').required = true;
+
+        // Sembunyikan peringatan duplikasi
+        duplicateWarning.style.display = 'none';
+        duplicateList.innerHTML = '';
     }
 
     // Category search
@@ -654,8 +704,20 @@
         }
     });
 
-    // Clear item_id when manually typing
-    itemNameInput.addEventListener('keydown', function() {
+    // Clear item_id when manually typing dan support Enter untuk tambah barang baru
+    itemNameInput.addEventListener('keydown', function(e) {
+        // Jika tekan Enter dan belum pilih item dari daftar, anggap sebagai barang baru
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const nameValue = itemNameInput.value.trim();
+            if (!itemIdInput.value && nameValue.length >= 2) {
+                suggestionsList.style.display = 'none';
+                showNewItemFields(lastItemResults);
+            }
+            return;
+        }
+
+        // Jika sebelumnya sudah pilih item, lalu user mengetik lagi, reset ke mode barang baru
         if (itemIdInput.value) {
             itemIdInput.value = '';
             resetUnitDropdown();
