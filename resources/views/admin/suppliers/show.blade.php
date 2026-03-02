@@ -80,11 +80,11 @@
                 <div class="alert alert-info">
                     <div class="row text-center">
                         <div class="col-md-6">
-                            <h5 class="mb-0">{{ $supplier->items->count() }}</h5>
+                            <h5 class="mb-0">{{ $supplier->items_count }}</h5>
                             <small class="text-muted">Total Item</small>
                         </div>
                         <div class="col-md-6">
-                            <h5 class="mb-0">{{ $supplier->submissions->count() }}</h5>
+                            <h5 class="mb-0">{{ $supplier->submissions_count }}</h5>
                             <small class="text-muted">Total Pengajuan</small>
                         </div>
                     </div>
@@ -95,7 +95,7 @@
 </div>
 
 <!-- Items dari Supplier -->
-@if($supplier->items->count() > 0)
+@if($items->count() > 0)
 <div class="card mb-4">
     <div class="card-header">
         <h6 class="mb-0">Daftar Item dari Supplier Ini</h6>
@@ -113,7 +113,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($supplier->items as $item)
+                    @foreach($items as $item)
                         <tr>
                             <td><code>{{ $item->code }}</code></td>
                             <td>{{ $item->name }}</td>
@@ -131,12 +131,17 @@
                 </tbody>
             </table>
         </div>
+        @if($items->hasPages())
+            <div class="d-flex justify-content-center mt-3">
+                {{ $items->links('vendor.pagination.bootstrap-5') }}
+            </div>
+        @endif
     </div>
 </div>
 @endif
 
 <!-- Pengajuan dari Supplier -->
-@if($supplier->submissions->count() > 0)
+@if($submissions->count() > 0)
 <div class="card mb-4">
     <div class="card-header">
         <h6 class="mb-0">Riwayat Pengajuan</h6>
@@ -154,7 +159,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($supplier->submissions->take(10) as $submission)
+                    @foreach($submissions as $submission)
                         <tr>
                             <td><code>{{ $submission->code ?? '-' }}</code></td>
                             <td>{{ $submission->created_at ? $submission->created_at->format('d/m/Y') : '-' }}</td>
@@ -176,10 +181,10 @@
                 </tbody>
             </table>
         </div>
-        @if($supplier->submissions->count() > 10)
-            <p class="text-muted text-center mb-0 mt-2">
-                <small>Menampilkan 10 pengajuan terakhir dari {{ $supplier->submissions->count() }} total pengajuan</small>
-            </p>
+        @if($submissions->hasPages())
+            <div class="d-flex justify-content-center mt-3">
+                {{ $submissions->links('vendor.pagination.bootstrap-5') }}
+            </div>
         @endif
     </div>
 </div>

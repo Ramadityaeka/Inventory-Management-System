@@ -181,9 +181,13 @@
                     <h6 class="mb-0">
                         <i class="bi bi-list-ul text-primary me-2"></i>Daftar Barang di Unit
                     </h6>
-                    <div class="d-flex gap-2">
-                        <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Cari barang..." style="width: 250px;">
-                    </div>
+                    <form method="GET" action="{{ route('admin.warehouses.show', $warehouse) }}" class="d-flex gap-2">
+                        <input type="text" name="stock_search" class="form-control form-control-sm" placeholder="Cari barang..." style="width: 250px;" value="{{ request('stock_search') }}">
+                        <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
+                        @if(request('stock_search'))
+                            <a href="{{ route('admin.warehouses.show', $warehouse) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-circle"></i></a>
+                        @endif
+                    </form>
                 </div>
             </div>
             <div class="card-body p-0">
@@ -204,7 +208,7 @@
                             <tbody>
                                 @foreach($stocks as $index => $stock)
                                     <tr>
-                                        <td class="text-center">{{ $index + 1 }}</td>
+                                        <td class="text-center">{{ $stocks->firstItem() + $index }}</td>
                                         <td><code>{{ $stock['item_code'] }}</code></td>
                                         <td>
                                             <strong>{{ $stock['item_name'] }}</strong>
@@ -232,7 +236,7 @@
                                         </td>
                                         <td>
                                             <small class="text-muted">
-                                                {{ $stock['last_updated']->diffForHumans() }}
+                                                {{ formatDateIndoLong($stock['last_updated']) }}
                                             </small>
                                         </td>
                                     </tr>
@@ -240,6 +244,11 @@
                             </tbody>
                         </table>
                     </div>
+                    @if($stocks->hasPages())
+                        <div class="d-flex justify-content-center py-3">
+                            {{ $stocks->links('vendor.pagination.bootstrap-5') }}
+                        </div>
+                    @endif
                 @else
                     <div class="text-center py-5">
                         <i class="bi bi-box text-muted" style="font-size: 4rem;"></i>
@@ -279,7 +288,7 @@
                             <tbody>
                                 @foreach($recentMovements as $index => $movement)
                                     <tr>
-                                        <td class="text-center">{{ $index + 1 }}</td>
+                                        <td class="text-center">{{ $recentMovements->firstItem() + $index }}</td>
                                         <td>
                                             <small>{{ \Carbon\Carbon::parse($movement->created_at)->format('d/m/Y H:i') }}</small>
                                         </td>
@@ -306,6 +315,11 @@
                             </tbody>
                         </table>
                     </div>
+                    @if($recentMovements->hasPages())
+                        <div class="d-flex justify-content-center py-3">
+                            {{ $recentMovements->links('vendor.pagination.bootstrap-5') }}
+                        </div>
+                    @endif
                 @else
                     <div class="text-center py-5">
                         <i class="bi bi-clock-history text-muted" style="font-size: 4rem;"></i>
@@ -359,17 +373,4 @@
 </style>
 @endpush
 
-@push('scripts')
-<script>
-    // Search functionality
-    document.getElementById('searchInput').addEventListener('keyup', function() {
-        const searchValue = this.value.toLowerCase();
-        const tableRows = document.querySelectorAll('#stockTable tbody tr');
-        
-        tableRows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(searchValue) ? '' : 'none';
-        });
-    });
-</script>
-@endpush
+

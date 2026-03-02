@@ -54,19 +54,31 @@ class StockController extends Controller
         // Get paginated results
         $stocks = $query->paginate(50)->appends($request->query());
         
-        // Pre-fetch all recent movements in 1 query (instead of N+1)
-        $itemIds = $stocks->getCollection()->pluck('item_id')->unique();
-        $allMovements = StockMovement::with('creator:id,name')
-            ->whereIn('item_id', $itemIds)
-            ->where('warehouse_id', $warehouseId)
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->groupBy('item_id');
+        // Batch load recent movements (eliminates N+1: 1 query instead of 50)
+        $stockItems = $stocks->getCollection();
+        $itemWarehousePairs = $stockItems->map(fn($s) => ['item_id' => $s->item_id, 'warehouse_id' => $s->warehouse_id]);
+        
+        if ($itemWarehousePairs->isNotEmpty()) {
+            // Build a single query with all item+warehouse combinations
+            $allMovements = StockMovement::with(['creator'])
+                ->where(function($query) use ($itemWarehousePairs) {
+                    foreach ($itemWarehousePairs as $pair) {
+                        $query->orWhere(function($q) use ($pair) {
+                            $q->where('item_id', $pair['item_id'])
+                              ->where('warehouse_id', $pair['warehouse_id']);
+                        });
+                    }
+                })
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->groupBy(fn($m) => $m->item_id . '-' . $m->warehouse_id);
 
-        $stocks->getCollection()->transform(function ($stock) use ($allMovements) {
-            $stock->recent_movements = ($allMovements[$stock->item_id] ?? collect())->take(3);
-            return $stock;
-        });
+            $stockItems->transform(function ($stock) use ($allMovements) {
+                $key = $stock->item_id . '-' . $stock->warehouse_id;
+                $stock->recent_movements = ($allMovements[$key] ?? collect())->take(3);
+                return $stock;
+            });
+        }
         
         // Calculate statistics for the warehouse
         $statsQuery = Stock::where('warehouse_id', $warehouseId);

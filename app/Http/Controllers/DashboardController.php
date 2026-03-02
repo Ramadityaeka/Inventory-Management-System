@@ -51,18 +51,17 @@ class DashboardController extends Controller
     private function superAdminDashboard()
     {
         try {
-            // Consolidated counts in fewer queries
+            // Single query for warehouse counts
             $warehouseCount = Warehouse::count();
             $activeWarehouseCount = Warehouse::whereHas('stocks', function($q) {
                 $q->where('quantity', '>', 0);
             })->count();
 
-            // Consolidated today's stock movement stats (1 query instead of 2)
+            // Single query for today's stock movements (in + out)
             $todayMovements = StockMovement::whereDate('created_at', today())
-                ->selectRaw("
-                    SUM(CASE WHEN quantity > 0 THEN quantity ELSE 0 END) as stock_in,
-                    SUM(CASE WHEN quantity < 0 THEN ABS(quantity) ELSE 0 END) as stock_out
-                ")->first();
+                ->selectRaw('SUM(CASE WHEN quantity > 0 THEN quantity ELSE 0 END) as stock_in')
+                ->selectRaw('SUM(CASE WHEN quantity < 0 THEN ABS(quantity) ELSE 0 END) as stock_out')
+                ->first();
 
             $stats = [
                 'total_units' => $warehouseCount,
@@ -76,7 +75,10 @@ class DashboardController extends Controller
                 'today_total_stock_in' => $todayMovements->stock_in ?? 0,
                 'today_total_stock_out' => $todayMovements->stock_out ?? 0,
                 'today_transfers_approved' => 0,
-                'today_new_alerts' => Stock::where('quantity', '=', 0)->distinct('item_id')->count('item_id') ?? 0,
+                'today_new_alerts' => Item::join('stocks', 'items.id', '=', 'stocks.item_id')
+                    ->where('stocks.quantity', '=', 0)
+                    ->distinct('items.id')
+                    ->count() ?? 0,
                 'monthly_transfers_current' => 0,
                 'monthly_transfers_target' => 50,
                 'monthly_movements_current' => StockMovement::whereYear('created_at', date('Y'))->whereMonth('created_at', date('m'))->sum(DB::raw('ABS(quantity)')) ?? 0,
@@ -123,13 +125,13 @@ class DashboardController extends Controller
             // Pending transfers with relationships - Feature disabled
             $pendingTransfers = collect(); // Empty collection - no transfers table
 
-            // Warehouse list with stats
-            $warehouses = $warehouseModel::withCount(['stocks'])
-                ->get()
-                ->map(function($warehouse) {
-                    $warehouse->total_quantity = $warehouse->stocks()->sum('quantity') ?? 0;
-                    return $warehouse;
-                });
+            // Single query with aggregation instead of N+1
+            $warehouses = Warehouse::select('warehouses.*')
+                ->withCount(['stocks'])
+                ->addSelect(['total_quantity' => Stock::selectRaw('COALESCE(SUM(quantity), 0)')
+                    ->whereColumn('warehouse_id', 'warehouses.id')
+                ])
+                ->get();
 
             // Recent activities across all warehouses
             $recentActivities = StockMovement::with(['item:id,name,unit', 'warehouse:id,name', 'creator:id,name'])
@@ -148,7 +150,6 @@ class DashboardController extends Controller
             ));
         } catch (\Exception $e) {
             Log::error('Super Admin Dashboard Error: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
             
             // Return view with empty data instead of throwing error
             return view('dashboard.super-admin', [
@@ -205,50 +206,45 @@ class DashboardController extends Controller
 
         $warehouseName = $user->warehouses()->first()->name ?? 'No Warehouse';
 
-        // === CONSOLIDATED STOCK STATS (1 query instead of 3) ===
+        // === CONSOLIDATED STOCK QUERIES (2 queries instead of 3) ===
         $stockStats = Stock::whereIn('warehouse_id', $warehouseIds)
-            ->selectRaw("
-                COUNT(DISTINCT item_id) as total_items,
-                COALESCE(SUM(quantity), 0) as total_stock,
-                SUM(CASE WHEN quantity = 0 THEN 1 ELSE 0 END) as low_stock_items
-            ")->first();
-
-        // === CONSOLIDATED SUBMISSION STATS (1 query instead of 8) ===
-        $submissionStats = Submission::whereIn('warehouse_id', $warehouseIds)
-            ->selectRaw("
-                COUNT(*) as total,
-                SUM(CASE WHEN status = 'pending' AND is_draft = 0 THEN 1 ELSE 0 END) as pending,
-                SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
-                SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected,
-                SUM(CASE WHEN DATE(created_at) = CURDATE() THEN 1 ELSE 0 END) as today_count,
-                SUM(CASE WHEN status = 'approved' AND DATE(updated_at) = CURDATE() THEN 1 ELSE 0 END) as today_approved,
-                SUM(CASE WHEN status = 'pending' AND DATE(submitted_at) = CURDATE() THEN 1 ELSE 0 END) as today_pending,
-                SUM(CASE WHEN YEAR(created_at) = YEAR(CURDATE()) AND MONTH(created_at) = MONTH(CURDATE()) THEN 1 ELSE 0 END) as monthly_count
-            ")->first();
-
-        // === CONSOLIDATED MOVEMENT STATS (1 query instead of 7) ===
-        $weekStart = now()->startOfWeek()->format('Y-m-d H:i:s');
-        $weekEnd = now()->endOfWeek()->format('Y-m-d H:i:s');
-        $lastWeekStart = now()->subWeek()->startOfWeek()->format('Y-m-d H:i:s');
-        $lastWeekEnd = now()->subWeek()->endOfWeek()->format('Y-m-d H:i:s');
-
-        $movementStats = StockMovement::whereIn('warehouse_id', $warehouseIds)
-            ->selectRaw("
-                SUM(CASE WHEN quantity > 0 THEN 1 ELSE 0 END) as stock_in_count,
-                SUM(CASE WHEN quantity < 0 THEN 1 ELSE 0 END) as stock_out_count,
-                SUM(CASE WHEN DATE(created_at) = CURDATE() AND quantity > 0 THEN quantity ELSE 0 END) as today_stock_in,
-                SUM(CASE WHEN DATE(created_at) = CURDATE() AND quantity < 0 THEN ABS(quantity) ELSE 0 END) as today_stock_out,
-                SUM(CASE WHEN created_at BETWEEN ? AND ? AND quantity > 0 THEN quantity ELSE 0 END) as week_stock_in,
-                SUM(CASE WHEN created_at BETWEEN ? AND ? AND quantity < 0 THEN ABS(quantity) ELSE 0 END) as week_stock_out,
-                SUM(CASE WHEN created_at BETWEEN ? AND ? AND quantity > 0 THEN quantity ELSE 0 END) as last_week_stock_in,
-                SUM(CASE WHEN YEAR(created_at) = YEAR(CURDATE()) AND MONTH(created_at) = MONTH(CURDATE()) THEN ABS(quantity) ELSE 0 END) as monthly_movements
-            ", [$weekStart, $weekEnd, $weekStart, $weekEnd, $lastWeekStart, $lastWeekEnd])
+            ->selectRaw('COUNT(DISTINCT item_id) as total_items')
+            ->selectRaw('COALESCE(SUM(quantity), 0) as total_stock')
+            ->selectRaw('SUM(CASE WHEN quantity = 0 THEN 1 ELSE 0 END) as low_stock_items')
             ->first();
 
-        // Build stats array from consolidated results
-        $totalApproved = $submissionStats->approved ?? 0;
-        $totalRejected = $submissionStats->rejected ?? 0;
-        $totalDecided = $totalApproved + $totalRejected;
+        // === CONSOLIDATED SUBMISSION QUERIES (1 query instead of 8) ===
+        $submissionStats = Submission::whereIn('warehouse_id', $warehouseIds)
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw("SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending")
+            ->selectRaw("SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved")
+            ->selectRaw("SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected")
+            ->selectRaw("SUM(CASE WHEN status = 'approved' AND DATE(updated_at) = ? THEN 1 ELSE 0 END) as today_approved", [today()])
+            ->selectRaw("SUM(CASE WHEN status = 'pending' AND DATE(submitted_at) = ? THEN 1 ELSE 0 END) as today_pending", [today()])
+            ->selectRaw("SUM(CASE WHEN DATE(created_at) = ? THEN 1 ELSE 0 END) as today_submissions", [today()])
+            ->selectRaw("SUM(CASE WHEN YEAR(created_at) = ? AND MONTH(created_at) = ? THEN 1 ELSE 0 END) as monthly_submissions", [date('Y'), date('m')])
+            ->first();
+
+        // === CONSOLIDATED STOCK MOVEMENT QUERIES (1 query instead of 10) ===
+        $weekStart = now()->startOfWeek();
+        $weekEnd = now()->endOfWeek();
+        $lastWeekStart = now()->subWeek()->startOfWeek();
+        $lastWeekEnd = now()->subWeek()->endOfWeek();
+
+        $movementStats = StockMovement::whereIn('warehouse_id', $warehouseIds)
+            ->selectRaw('SUM(CASE WHEN quantity > 0 THEN 1 ELSE 0 END) as stock_in_count')
+            ->selectRaw('SUM(CASE WHEN quantity < 0 THEN 1 ELSE 0 END) as stock_out_count')
+            ->selectRaw("SUM(CASE WHEN quantity > 0 AND DATE(created_at) = ? THEN quantity ELSE 0 END) as today_stock_in", [today()])
+            ->selectRaw("SUM(CASE WHEN quantity < 0 AND DATE(created_at) = ? THEN ABS(quantity) ELSE 0 END) as today_stock_out", [today()])
+            ->selectRaw("SUM(CASE WHEN quantity > 0 AND created_at BETWEEN ? AND ? THEN quantity ELSE 0 END) as week_stock_in", [$weekStart, $weekEnd])
+            ->selectRaw("SUM(CASE WHEN quantity < 0 AND created_at BETWEEN ? AND ? THEN ABS(quantity) ELSE 0 END) as week_stock_out", [$weekStart, $weekEnd])
+            ->selectRaw("SUM(CASE WHEN quantity > 0 AND created_at BETWEEN ? AND ? THEN quantity ELSE 0 END) as last_week_stock_in", [$lastWeekStart, $lastWeekEnd])
+            ->selectRaw("SUM(CASE WHEN YEAR(created_at) = ? AND MONTH(created_at) = ? THEN ABS(quantity) ELSE 0 END) as monthly_movements", [date('Y'), date('m')])
+            ->first();
+
+        // Build stats from consolidated queries
+        $totalDecided = ($submissionStats->approved ?? 0) + ($submissionStats->rejected ?? 0);
+        $approvalRate = $totalDecided > 0 ? round(($submissionStats->approved / $totalDecided) * 100, 1) : 0;
 
         $stats = [
             'total_items' => $stockStats->total_items ?? 0,
@@ -264,20 +260,18 @@ class DashboardController extends Controller
             'today_stock_out' => $movementStats->today_stock_out ?? 0,
             'today_approved' => $submissionStats->today_approved ?? 0,
             'today_pending' => $submissionStats->today_pending ?? 0,
-            'today_submissions' => $submissionStats->today_count ?? 0,
+            'today_submissions' => $submissionStats->today_submissions ?? 0,
             'week_stock_in' => $movementStats->week_stock_in ?? 0,
             'week_stock_out' => $movementStats->week_stock_out ?? 0,
             'last_week_stock_in' => $movementStats->last_week_stock_in ?? 0,
-            'total_approved' => $totalApproved,
-            'total_rejected' => $totalRejected,
-            'approval_rate' => $totalDecided > 0 ? round(($totalApproved / $totalDecided) * 100, 1) : 0,
-            'monthly_submissions_current' => $submissionStats->monthly_count ?? 0,
+            'total_approved' => $submissionStats->approved ?? 0,
+            'total_rejected' => $submissionStats->rejected ?? 0,
+            'approval_rate' => $approvalRate,
+            'monthly_submissions_current' => $submissionStats->monthly_submissions ?? 0,
             'monthly_submissions_target' => 100,
             'monthly_movements_current' => $movementStats->monthly_movements ?? 0,
             'monthly_movements_target' => 500,
         ];
-        
-        // Approval rate already calculated above
 
         // Optimized daily movements - only last 30 days
         $dailyMovements = StockMovement::select(
@@ -390,25 +384,26 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
-        // Consolidated submission stats (1 query instead of 5)
-        $submissionStats = Submission::where('staff_id', $user->id)
-            ->selectRaw("
-                COUNT(*) as total,
-                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-                SUM(CASE WHEN status = 'approved' AND YEAR(updated_at) = ? AND MONTH(updated_at) = ? THEN 1 ELSE 0 END) as approved_month,
-                SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected,
-                SUM(CASE WHEN is_draft = 1 THEN 1 ELSE 0 END) as drafts
-            ", [date('Y'), date('m')])
-            ->first();
-
+        // Optimized stats queries
         $stats = [
-            'total_submissions' => $submissionStats->total ?? 0,
-            'pending_approval' => $submissionStats->pending ?? 0,
-            'approved_this_month' => $submissionStats->approved_month ?? 0,
-            'rejected' => $submissionStats->rejected ?? 0,
+            'total_submissions' => Submission::where('staff_id', $user->id)->count(),
+            'pending_approval' => Submission::where('staff_id', $user->id)
+                ->where('status', 'pending')
+                ->count(),
+            'approved_this_month' => Submission::where('staff_id', $user->id)
+                ->where('status', 'approved')
+                ->whereMonth('updated_at', date('m'))
+                ->whereYear('updated_at', date('Y'))
+                ->count(),
+            'rejected' => Submission::where('staff_id', $user->id)
+                ->where('status', 'rejected')
+                ->count(),
         ];
 
-        $draftCount = $submissionStats->drafts ?? 0;
+        // Draft count
+        $draftCount = Submission::where('staff_id', $user->id)
+            ->where('is_draft', true)
+            ->count();
 
         // Recent submissions with eager loading
         $recentSubmissions = Submission::where('staff_id', $user->id)
@@ -417,12 +412,13 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        // Consolidated notification query (1 query instead of 2)
-        $notifications = Notification::where('user_id', $user->id)
+        // Recent notifications
+        $recentNotifications = Notification::where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();
-        $recentNotifications = $notifications;
+
+        // Unread notifications count
         $unreadNotifications = Notification::where('user_id', $user->id)
             ->where('is_read', false)
             ->count();

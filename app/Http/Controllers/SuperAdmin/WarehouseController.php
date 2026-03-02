@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -60,7 +61,7 @@ class WarehouseController extends Controller
             ->with('success', 'Warehouse created successfully.');
     }
 
-    public function show(Warehouse $warehouse)
+    public function show(Request $request, Warehouse $warehouse)
     {
         try {
             // Ensure warehouse exists and load relations
@@ -107,18 +108,39 @@ class WarehouseController extends Controller
             }
             
             // Sort by item name
-            $stocks = $processedStocks->sortBy('item_name')->values();
+            $allStocks = $processedStocks->sortBy('item_name')->values();
 
-            // Calculate statistics with safe defaults
+            // Apply server-side search filter
+            if ($request->filled('stock_search')) {
+                $search = strtolower($request->stock_search);
+                $allStocks = $allStocks->filter(function ($stock) use ($search) {
+                    return str_contains(strtolower($stock['item_name']), $search)
+                        || str_contains(strtolower($stock['item_code']), $search)
+                        || str_contains(strtolower($stock['category_name']), $search);
+                })->values();
+            }
+
+            // Calculate statistics from FULL collection (before pagination, after search)
             $stats = [
-                'total_items' => $stocks->count(),
-                'total_stock' => $stocks->sum('quantity'),
-                'out_of_stock' => $stocks->where('status', 'out_of_stock')->count(),
-                'low_stock' => $stocks->where('status', 'low_stock')->count(),
-                'normal_stock' => $stocks->where('status', 'normal')->count(),
+                'total_items' => $processedStocks->count(),
+                'total_stock' => $processedStocks->sum('quantity'),
+                'out_of_stock' => $processedStocks->where('status', 'out_of_stock')->count(),
+                'low_stock' => $processedStocks->where('status', 'low_stock')->count(),
+                'normal_stock' => $processedStocks->where('status', 'normal')->count(),
             ];
 
-            // Get recent stock movements for this warehouse (check both warehouse_id and unit_id)
+            // Server-side pagination for stocks
+            $perPage = 25;
+            $currentPage = $request->input('stocks_page', 1);
+            $stocks = new LengthAwarePaginator(
+                $allStocks->forPage($currentPage, $perPage),
+                $allStocks->count(),
+                $perPage,
+                $currentPage,
+                ['path' => $request->url(), 'pageName' => 'stocks_page', 'query' => $request->query()]
+            );
+
+            // Get stock movements with server-side pagination
             try {
                 $recentMovements = DB::table('stock_movements')
                     ->join('items', 'stock_movements.item_id', '=', 'items.id')
@@ -129,18 +151,16 @@ class WarehouseController extends Controller
                     })
                     ->select(
                         'stock_movements.*',
-                        // alias movement_type as type so views expecting ->type work
                         DB::raw('stock_movements.movement_type as type'),
                         'items.name as item_name',
                         'items.code as item_code',
                         DB::raw('COALESCE(users.name, "System") as user_name')
                     )
                     ->orderBy('stock_movements.created_at', 'desc')
-                    ->limit(10)
-                    ->get();
+                    ->paginate(15, ['*'], 'movements_page');
             } catch (\Exception $e) {
                 \Log::warning('Error fetching stock movements: ' . $e->getMessage());
-                $recentMovements = collect();
+                $recentMovements = new LengthAwarePaginator(collect(), 0, 15);
             }
 
             return view('admin.warehouses.show', compact('warehouse', 'stocks', 'stats', 'recentMovements'));

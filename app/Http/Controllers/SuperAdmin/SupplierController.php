@@ -64,8 +64,19 @@ class SupplierController extends Controller
 
     public function show(Supplier $supplier)
     {
-        $supplier->load(['items', 'submissions']);
-        return view('admin.suppliers.show', compact('supplier'));
+        $supplier->loadCount(['items', 'submissions']);
+        
+        $items = $supplier->items()
+            ->with('category')
+            ->orderBy('name', 'asc')
+            ->paginate(20, ['*'], 'items_page');
+
+        $submissions = $supplier->submissions()
+            ->with(['item', 'warehouse', 'staff'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(15, ['*'], 'submissions_page');
+
+        return view('admin.suppliers.show', compact('supplier', 'items', 'submissions'));
     }
 
     public function edit(Supplier $supplier)

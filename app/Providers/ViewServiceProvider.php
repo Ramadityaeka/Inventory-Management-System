@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Models\Notification;
-use App\Models\StockAlert;
 use App\Models\StockRequest;
 use App\Models\Submission;
 use Illuminate\Support\Facades\Auth;
@@ -12,75 +11,37 @@ use Illuminate\Support\ServiceProvider;
 
 class ViewServiceProvider extends ServiceProvider
 {
-    /**
-     * Register services.
-     */
     public function register(): void
     {
         //
     }
 
-    /**
-     * Bootstrap services.
-     */
     public function boot(): void
     {
-        // Share data with layouts.app
+        // Share notification + navigation badge data with layouts.app
         View::composer('layouts.app', function ($view) {
             if (Auth::check()) {
                 $user = Auth::user();
+                $userId = $user->id;
 
-                $view->with('unreadNotifications', $user->notifications()->unread()->count());
-                $view->with('notifications', $user->notifications()->latest()->take(5)->get());
-            }
-        });
+                // Direct queries (lightweight COUNT/LIMIT queries)
+                $view->with('unreadNotifications', Notification::where('user_id', $userId)->where('is_read', false)->count());
+                $view->with('notifications', Notification::where('user_id', $userId)->latest()->take(5)->get());
 
-        // Share data with admin_gudang layouts
-        View::composer('layouts.admin_gudang', function ($view) {
-            if (Auth::check()) {
-                $user = Auth::user();
-
+                // Navigation badge counts for Admin Gudang
                 if ($user->isAdminGudang()) {
-                    // Count pending submissions in user's warehouses
-                    $pendingSubmissions = Submission::where('status', Submission::STATUS_PENDING)
-                        ->whereHas('warehouse.users', function ($query) use ($user) {
-                            $query->where('user_id', $user->id);
-                        })
-                        ->count();
+                    $warehouseIds = $user->warehouses()->pluck('warehouses.id');
 
-                    // Count unread low stock alerts in user's warehouses
-                    $lowStockAlerts = StockAlert::where('alert_type', StockAlert::ALERT_TYPE_LOW_STOCK)
-                        ->where('is_read', false)
-                        ->whereHas('warehouse.users', function ($query) use ($user) {
-                            $query->where('user_id', $user->id);
-                        })
-                        ->count();
+                    $view->with('pendingSubmissions', Submission::whereIn('warehouse_id', $warehouseIds)
+                        ->where('status', 'pending')->where('is_draft', false)->count());
 
-                    // Count pending stock requests in user's warehouses
-                    $pendingStockRequests = StockRequest::where('status', StockRequest::STATUS_PENDING)
-                        ->whereHas('warehouse.users', function ($query) use ($user) {
-                            $query->where('user_id', $user->id);
-                        })
-                        ->count();
-
-                    $view->with('pendingSubmissions', $pendingSubmissions);
-                    $view->with('lowStockAlerts', $lowStockAlerts);
-                    $view->with('pendingStockRequests', $pendingStockRequests);
+                    $view->with('pendingStockRequests', StockRequest::whereIn('warehouse_id', $warehouseIds)
+                        ->where('status', 'pending')->count());
                 }
-            }
-        });
 
-        // Share data with staff_gudang layouts
-        View::composer('layouts.staff_gudang', function ($view) {
-            if (Auth::check()) {
-                $user = Auth::user();
-
+                // Draft count for Staff Gudang
                 if ($user->isStaffGudang()) {
-                    $draftCount = Submission::where('staff_id', $user->id)
-                        ->where('is_draft', true)
-                        ->count();
-
-                    $view->with('draftCount', $draftCount);
+                    $view->with('draftCount', Submission::where('staff_id', $userId)->where('is_draft', true)->count());
                 }
             }
         });

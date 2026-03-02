@@ -109,16 +109,25 @@ class ItemController extends Controller
             'stocks.warehouse',
             'deactivatedBy',
             'replacementItem',
-            'stockMovements' => function ($query) {
-                $query->with(['creator:id,name', 'warehouse:id,name'])
-                      ->orderBy('created_at', 'desc')
-                      ->limit(20);
-            }
         ]);
 
         $totalStock = $item->stocks->sum('quantity');
 
-        return view('admin.items.show', compact('item', 'totalStock'));
+        // Paginate stock movements (moved from eager loading constraint)
+        $stockMovements = $item->stockMovements()
+            ->with(['creator:id,name', 'warehouse:id,name'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(15, ['*'], 'movements_page');
+
+        // Move recent purchases query from Blade into controller
+        $recentPurchases = $item->submissions()
+            ->where('status', 'approved')
+            ->whereNotNull('unit_price')
+            ->with(['warehouse', 'supplier', 'staff'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(10, ['*'], 'purchases_page');
+
+        return view('admin.items.show', compact('item', 'totalStock', 'stockMovements', 'recentPurchases'));
     }
 
     public function edit(Item $item)

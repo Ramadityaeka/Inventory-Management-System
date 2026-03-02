@@ -234,18 +234,9 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h6 class="mb-0"><i class="bi bi-receipt me-2"></i>Riwayat Pembelian (10 Terakhir)</h6>
+                <h6 class="mb-0"><i class="bi bi-receipt me-2"></i>Riwayat Pembelian</h6>
             </div>
             <div class="card-body">
-                @php
-                    $recentPurchases = $item->submissions()
-                        ->where('status', 'approved')
-                        ->whereNotNull('unit_price')
-                        ->with(['warehouse', 'supplier', 'staff'])
-                        ->orderBy('created_at', 'desc')
-                        ->take(10)
-                        ->get();
-                @endphp
                 
                 @if($recentPurchases->count() > 0)
                     <div class="table-responsive">
@@ -284,6 +275,11 @@
                             </tbody>
                         </table>
                     </div>
+                    @if($recentPurchases->hasPages())
+                        <div class="d-flex justify-content-center mt-3">
+                            {{ $recentPurchases->links('vendor.pagination.bootstrap-5') }}
+                        </div>
+                    @endif
                 @else
                     <div class="text-center py-4">
                         <i class="bi bi-receipt text-muted fs-1 mb-3"></i>
@@ -303,9 +299,9 @@
                 <h6 class="mb-0">Riwayat perpindahan barang</h6>
             </div>
             <div class="card-body">
-                @if($item->stockMovements->count() > 0)
+                @if($stockMovements->count() > 0)
                     <div class="timeline">
-                        @foreach($item->stockMovements as $movement)
+                        @foreach($stockMovements as $movement)
                             <div class="timeline-item">
                                 <div class="timeline-marker">
                                     @switch($movement->movement_type)
@@ -358,6 +354,11 @@
                             </div>
                         @endforeach
                     </div>
+                    @if($stockMovements->hasPages())
+                        <div class="d-flex justify-content-center mt-3">
+                            {{ $stockMovements->links('vendor.pagination.bootstrap-5') }}
+                        </div>
+                    @endif
                 @else
                     <div class="text-center py-4">
                         <i class="bi bi-clock-history text-muted fs-1 mb-3"></i>

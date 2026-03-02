@@ -17,6 +17,7 @@
         </a>
     </div>
 
+    
     <div class="card-body">
         <!-- Search Form -->
         <form method="GET" action="{{ route('admin.warehouses.index') }}" class="row g-3 mb-4">
