@@ -130,6 +130,16 @@ class User extends Authenticatable
         return $this->hasMany(StockRequest::class, 'approved_by');
     }
 
+    public function savedSignature(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(UserSignature::class);
+    }
+
+    public function picRequests(): HasMany
+    {
+        return $this->hasMany(PublicRequest::class, 'pic_user_id');
+    }
+
     // Scopes
     public function scopeSuperAdmin($query)
     {

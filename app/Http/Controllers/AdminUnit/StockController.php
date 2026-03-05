@@ -18,7 +18,7 @@ class StockController extends Controller
         $userWarehouses = auth()->user()->warehouses()->pluck('warehouses.id');
         
         if ($userWarehouses->isEmpty()) {
-            return redirect()->back()->with('error', 'You do not have access to any warehouse.');
+            return redirect()->back()->with('error', 'Anda tidak memiliki akses ke unit manapun.');
         }
         
         $warehouseId = $userWarehouses->first();
@@ -106,7 +106,7 @@ class StockController extends Controller
         $userWarehouses = auth()->user()->warehouses;
         
         if ($userWarehouses->isEmpty()) {
-            return redirect()->route('gudang.stocks.index')->with('error', 'You do not have access to any warehouse.');
+            return redirect()->route('gudang.stocks.index')->with('error', 'Anda tidak memiliki akses ke unit manapun.');
         }
         
         // Get active items that can have stock added
@@ -129,19 +129,19 @@ class StockController extends Controller
 
             // Check if user has access to the warehouse
             if (!auth()->user()->warehouses->contains($validated['warehouse_id'])) {
-                return redirect()->back()->with('error', 'You do not have access to this warehouse.');
+                return redirect()->back()->with('error', 'Anda tidak memiliki akses ke unit ini.');
             }
 
             // Check if item is active
             $item = Item::with('itemUnits')->findOrFail($validated['item_id']);
             if (!$item->is_active) {
-                return redirect()->back()->with('error', 'Cannot add stock for inactive item.');
+                return redirect()->back()->with('error', 'Tidak dapat menambahkan stok untuk item yang tidak aktif.');
             }
 
             // Get base unit for stock movement
             $baseUnit = $item->itemUnits->first();
             if (!$baseUnit) {
-                return redirect()->back()->with('error', 'Item does not have any units configured.');
+                return redirect()->back()->with('error', 'Item tidak memiliki unit yang terkonfigurasi.');
             }
 
             // Get or create stock record
@@ -158,7 +158,7 @@ class StockController extends Controller
             // Record stock movement
             StockMovement::create([
                 'item_id' => $validated['item_id'],
-                'unit_id' => $baseUnit->id,
+                'unit_id' => $validated['warehouse_id'],
                 'warehouse_id' => $validated['warehouse_id'],
                 'movement_type' => StockMovement::MOVEMENT_TYPE_ADJUSTMENT,
                 'quantity' => $validated['quantity'],
@@ -175,7 +175,7 @@ class StockController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Failed to add stock: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal menambahkan stok: ' . $e->getMessage());
         }
     }
 
@@ -185,7 +185,7 @@ class StockController extends Controller
         $userWarehouses = auth()->user()->warehouses()->pluck('warehouses.id');
         
         if ($userWarehouses->isEmpty()) {
-            return redirect()->route('gudang.stocks.index')->with('error', 'You do not have access to any warehouse.');
+            return redirect()->route('gudang.stocks.index')->with('error', 'Anda tidak memiliki akses ke unit manapun.');
         }
         
         // Get stock movements for user warehouses
@@ -245,7 +245,7 @@ class StockController extends Controller
         $userWarehouses = auth()->user()->warehouses()->pluck('warehouses.id');
         
         if ($userWarehouses->isEmpty()) {
-            return redirect()->back()->with('error', 'You do not have access to any warehouse.');
+            return redirect()->back()->with('error', 'Anda tidak memiliki akses ke unit manapun.');
         }
         
         // Check if user has access to at least one warehouse with this item
@@ -254,7 +254,7 @@ class StockController extends Controller
             ->exists();
             
         if (!$hasAccess) {
-            return redirect()->back()->with('error', 'You do not have access to this item.');
+            return redirect()->back()->with('error', 'Anda tidak memiliki akses ke item ini.');
         }
         
         // Get stock movements for this item
@@ -311,7 +311,7 @@ class StockController extends Controller
 
             // Check if user has access to this warehouse
             if (!auth()->user()->warehouses->contains($stock->warehouse_id)) {
-                return redirect()->back()->with('error', 'You do not have access to this warehouse.');
+                return redirect()->back()->with('error', 'Anda tidak memiliki akses ke unit ini.');
             }
 
             // Check if item is inactive
@@ -325,7 +325,7 @@ class StockController extends Controller
             // Get base unit for stock movement
             $baseUnit = $stock->item->itemUnits->first();
             if (!$baseUnit) {
-                return redirect()->back()->with('error', 'Item does not have any units configured.');
+                return redirect()->back()->with('error', 'Item tidak memiliki unit yang terkonfigurasi.');
             }
 
             // Calculate new quantity
@@ -335,7 +335,7 @@ class StockController extends Controller
                 
                 // Check if stock is sufficient for reduction
                 if ($stock->quantity + $quantity < 0) {
-                    return redirect()->back()->with('error', 'Insufficient stock. Current stock: ' . $stock->quantity);
+                    return redirect()->back()->with('error', 'Stok tidak mencukupi. Stok saat ini: ' . $stock->quantity);
                 }
             }
 
@@ -348,7 +348,7 @@ class StockController extends Controller
             // Record stock movement
             StockMovement::create([
                 'item_id' => $stock->item_id,
-                'unit_id' => $baseUnit->id,
+                'unit_id' => $stock->warehouse_id,
                 'warehouse_id' => $stock->warehouse_id,
                 'movement_type' => StockMovement::MOVEMENT_TYPE_ADJUSTMENT,
                 'quantity' => $quantity,
@@ -405,7 +405,7 @@ class StockController extends Controller
             $stock->last_updated = now();
             $stock->save();
 
-            StockMovement::create(['item_id' => $item->id, 'unit_id' => $baseUnit->id, 'warehouse_id' => $validated['warehouse_id'], 'movement_type' => StockMovement::MOVEMENT_TYPE_ADJUSTMENT, 'quantity' => $quantity, 'reference_type' => 'manual_adjustment', 'reference_id' => auth()->id(), 'notes' => $validated['notes'] . ' (Penyesuaian oleh ' . auth()->user()->name . ')', 'created_by' => auth()->id()]);
+            StockMovement::create(['item_id' => $item->id, 'unit_id' => $validated['warehouse_id'], 'warehouse_id' => $validated['warehouse_id'], 'movement_type' => StockMovement::MOVEMENT_TYPE_ADJUSTMENT, 'quantity' => $quantity, 'reference_type' => 'manual_adjustment', 'reference_id' => auth()->id(), 'notes' => $validated['notes'] . ' (Penyesuaian oleh ' . auth()->user()->name . ')', 'created_by' => auth()->id()]);
 
             DB::commit();
 

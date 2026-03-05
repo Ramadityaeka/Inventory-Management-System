@@ -1,12 +1,16 @@
 <?php
 
 use App\Http\Controllers\AdminUnit\AlertController;
+use App\Http\Controllers\AdminUnit\GudangReportController;
+use App\Http\Controllers\AdminUnit\MonthlyReportController;
+use App\Http\Controllers\AdminUnit\PublicRequestManagementController;
 use App\Http\Controllers\AdminUnit\StockController;
 use App\Http\Controllers\AdminUnit\StockRequestManagementController;
 use App\Http\Controllers\AdminUnit\SubmissionController;
-use App\Http\Controllers\AdminUnit\GudangReportController;
+use App\Http\Controllers\AdminUnit\UserSignatureController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Public\PublicRequestController;
 use App\Http\Controllers\Staff\DraftController;
 use App\Http\Controllers\Staff\ReceiveItemController;
 use App\Http\Controllers\Staff\StockRequestController;
@@ -18,12 +22,33 @@ use App\Http\Controllers\SuperAdmin\UserController;
 use App\Http\Controllers\SuperAdmin\WarehouseController;
 use Illuminate\Support\Facades\Route;
 
+// =========================================
+// ROUTE PUBLIK - TIDAK PERLU LOGIN
+// =========================================
+
 Route::get('/', function () {
     if (auth()->check()) {
         return redirect()->route('dashboard');
     }
     return redirect()->route('login');
+})->name('home');
+
+// Form dan proses pengajuan publik
+Route::prefix('request')->name('public.request.')->group(function () {
+    Route::get('/create', [PublicRequestController::class, 'create'])->name('create');
+    Route::post('/store', [PublicRequestController::class, 'store'])
+         ->name('store')
+         ->middleware('throttle:10,1');
+    Route::get('/success', [PublicRequestController::class, 'success'])->name('success');
+    Route::get('/status', [PublicRequestController::class, 'checkStatus'])->name('status');
+    Route::post('/status', [PublicRequestController::class, 'findStatus'])->name('find-status');
+    Route::get('/{token}/document', [PublicRequestController::class, 'document'])->name('document');
+    Route::get('/{token}/pdf', [PublicRequestController::class, 'exportPdf'])->name('pdf');
 });
+
+// AJAX endpoint publik
+Route::get('/api/unit/{id}/stocks', [PublicRequestController::class, 'getStocks'])->name('api.unit.stocks');
+Route::get('/api/unit/{id}/pics', [PublicRequestController::class, 'getPics'])->name('api.unit.pics');
 
 require __DIR__.'/auth.php';
 
@@ -137,13 +162,32 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/transactions', [GudangReportController::class, 'transactions'])->name('reports.transactions');
         Route::get('/reports/stock-values', [GudangReportController::class, 'stockValues'])->name('reports.stock-values');
         Route::get('/reports/stock-summary', [GudangReportController::class, 'stockSummary'])->name('reports.stock-summary');
-        Route::get('/reports/monthly', [GudangReportController::class, 'monthly'])->name('reports.monthly');
+        Route::get('/reports/monthly', [MonthlyReportController::class, 'index'])->name('reports.monthly');
+        Route::post('/reports/monthly/generate', [MonthlyReportController::class, 'generate'])->name('reports.monthly.generate');
+        Route::get('/reports/monthly/pdf', [MonthlyReportController::class, 'exportPdf'])->name('reports.monthly.pdf');
         Route::get('/reports/transactions/export', [GudangReportController::class, 'exportTransactions'])->name('reports.transactions.export');
         Route::get('/reports/stock-values/export', [GudangReportController::class, 'exportStockValues'])->name('reports.stock-values.export');
         Route::get('/reports/stock-summary/excel', [GudangReportController::class, 'exportStockSummaryExcel'])->name('reports.stock-summary.excel');
         Route::get('/reports/stock-summary/pdf', [GudangReportController::class, 'exportStockSummaryPdf'])->name('reports.stock-summary.pdf');
         Route::post('/reports/transactions/export-pdf', [GudangReportController::class, 'exportTransactionsPdf'])->name('reports.transactions.exportPdf');
         Route::post('/reports/stock-values/export-pdf', [GudangReportController::class, 'exportStockValuesPdf'])->name('reports.stock-values.exportPdf');
+
+        // Manajemen Permintaan Publik
+        Route::prefix('public-requests')->name('public-requests.')->group(function () {
+            Route::get('/', [PublicRequestManagementController::class, 'index'])->name('index');
+            Route::get('/{id}', [PublicRequestManagementController::class, 'show'])->name('show');
+            Route::post('/{id}/approve', [PublicRequestManagementController::class, 'approve'])->name('approve');
+            Route::post('/{id}/reject', [PublicRequestManagementController::class, 'reject'])->name('reject');
+            Route::get('/{id}/sign', [PublicRequestManagementController::class, 'showSign'])->name('sign');
+            Route::post('/{id}/sign', [PublicRequestManagementController::class, 'saveSign'])->name('save-sign');
+        });
+
+        // Manajemen Tanda Tangan PIC
+        Route::prefix('signature')->name('signature.')->group(function () {
+            Route::get('/', [UserSignatureController::class, 'show'])->name('show');
+            Route::post('/save', [UserSignatureController::class, 'save'])->name('save');
+            Route::delete('/', [UserSignatureController::class, 'destroy'])->name('destroy');
+        });
     });
 
     // Staff Gudang Routes

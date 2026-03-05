@@ -73,7 +73,9 @@ class StockValueReportExport implements FromCollection, WithHeadings, WithMappin
             'Jumlah',
             'Satuan',
             'Harga/Satuan (Rp)',
-            'Harga Total (Rp)'
+            'Harga Total (Rp)',
+            'Pemohon Publik Terakhir',
+            'PIC Terakhir'
         ];
     }
 
@@ -93,6 +95,20 @@ class StockValueReportExport implements FromCollection, WithHeadings, WithMappin
         $unitPrice = $latestSubmission ? (float) $latestSubmission->unit_price : 0;
         $totalValue = $stock->quantity * $unitPrice;
 
+        // Info permintaan publik terakhir
+        $lastPublicMovement = \App\Models\StockMovement::with('creator')
+            ->where('item_id', $stock->item_id)
+            ->where('warehouse_id', $stock->warehouse_id)
+            ->where('movement_type', 'out')
+            ->where('reference_type', 'public_request')
+            ->orderBy('created_at', 'desc')
+            ->first();
+        $pubNoteParts = explode(' - ', $lastPublicMovement->notes ?? '', 2);
+        $lastPublicRequester = (isset($pubNoteParts[1]) && $pubNoteParts[1] !== '')
+            ? $pubNoteParts[1]
+            : (\App\Models\PublicRequest::find($lastPublicMovement?->reference_id)?->requester_name ?? '-');
+        $lastPublicProcessor = $lastPublicMovement?->creator->name ?? '-';
+
         return [
             $index,
             $stock->warehouse->name ?? '-',
@@ -102,7 +118,9 @@ class StockValueReportExport implements FromCollection, WithHeadings, WithMappin
             (int) $stock->quantity,
             $stock->item->unit ?? '-',
             $unitPrice,
-            $totalValue
+            $totalValue,
+            $lastPublicRequester,
+            $lastPublicProcessor
         ];
     }
 
@@ -114,7 +132,7 @@ class StockValueReportExport implements FromCollection, WithHeadings, WithMappin
     public function styles(Worksheet $sheet)
     {
         // Style header row
-        $sheet->getStyle('A1:I1')->applyFromArray([
+        $sheet->getStyle('A1:K1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF'],
@@ -137,7 +155,7 @@ class StockValueReportExport implements FromCollection, WithHeadings, WithMappin
         // Style data rows
         $lastRow = $sheet->getHighestRow();
         if ($lastRow > 1) {
-            $sheet->getStyle('A2:I' . $lastRow)->applyFromArray([
+            $sheet->getStyle('A2:K' . $lastRow)->applyFromArray([
                 'borders' => [
                     'allBorders' => [
                         'borderStyle' => Border::BORDER_THIN,
@@ -188,9 +206,11 @@ class StockValueReportExport implements FromCollection, WithHeadings, WithMappin
                 $sheet->setCellValue('G' . $totalRow, 'item');
                 $sheet->setCellValue('H' . $totalRow, '');
                 $sheet->setCellValue('I' . $totalRow, $totalValue);
+                $sheet->setCellValue('J' . $totalRow, '');
+                $sheet->setCellValue('K' . $totalRow, '');
                 
                 // Style total row
-                $sheet->getStyle('A' . $totalRow . ':I' . $totalRow)->applyFromArray([
+                $sheet->getStyle('A' . $totalRow . ':K' . $totalRow)->applyFromArray([
                     'font' => [
                         'bold' => true,
                         'size' => 11,

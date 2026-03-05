@@ -7,6 +7,7 @@ use App\Models\Submission;
 use App\Models\Category;
 use App\Models\Item;
 use App\Models\Stock;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\TransactionReportExport;
@@ -91,6 +92,15 @@ class GudangReportController extends Controller
         ])->whereIn('warehouse_id', $warehouseIds)
           ->where('movement_type', 'adjustment');
 
+        // Get Public Request Movements (Permintaan Publik - Barang Keluar)
+        $publicRequestMovementsQuery = StockMovement::with([
+            'item.category',
+            'warehouse',
+            'creator'
+        ])->whereIn('warehouse_id', $warehouseIds)
+          ->where('movement_type', 'out')
+          ->where('reference_type', 'public_request');
+
         // Filter by Category
         if ($request->filled('category_id')) {
             $submissionsQuery->whereHas('item', function($q) use ($request) {
@@ -100,6 +110,9 @@ class GudangReportController extends Controller
                 $q->where('category_id', $request->category_id);
             });
             $adjustmentsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('category_id', $request->category_id);
+            });
+            $publicRequestMovementsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
         }
@@ -115,6 +128,9 @@ class GudangReportController extends Controller
             $adjustmentsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('name', 'LIKE', '%' . $request->item_name . '%');
             });
+            $publicRequestMovementsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('name', 'LIKE', '%' . $request->item_name . '%');
+            });
         }
 
         // Filter by Item Code
@@ -128,6 +144,9 @@ class GudangReportController extends Controller
             $adjustmentsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('code', 'LIKE', '%' . $request->item_code . '%');
             });
+            $publicRequestMovementsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('code', 'LIKE', '%' . $request->item_code . '%');
+            });
         }
 
         // Filter by Year
@@ -135,6 +154,7 @@ class GudangReportController extends Controller
             $submissionsQuery->whereYear('submitted_at', $request->year);
             $stockRequestsQuery->whereYear('created_at', $request->year);
             $adjustmentsQuery->whereYear('created_at', $request->year);
+            $publicRequestMovementsQuery->whereYear('created_at', $request->year);
         }
 
         // Filter by Month
@@ -142,6 +162,7 @@ class GudangReportController extends Controller
             $submissionsQuery->whereMonth('submitted_at', $request->month);
             $stockRequestsQuery->whereMonth('created_at', $request->month);
             $adjustmentsQuery->whereMonth('created_at', $request->month);
+            $publicRequestMovementsQuery->whereMonth('created_at', $request->month);
         }
 
         // Apply status filter only to submissions
@@ -151,8 +172,9 @@ class GudangReportController extends Controller
 
         // Get results
         $submissions = $submissionsQuery->get()->map(function($item) {
-            $item->transaction_type = 'in';
-            $item->transaction_date = $item->submitted_at;
+            $item->transaction_type   = 'in';
+            $item->transaction_date   = $item->submitted_at;
+            $item->requester_label    = $item->staff->name ?? '-';
             return $item;
         });
 
@@ -160,9 +182,30 @@ class GudangReportController extends Controller
         $stockRequests = collect([]);
         if (!$request->filled('status') || $request->status == 'approved') {
             $stockRequests = $stockRequestsQuery->get()->map(function($item) {
-                $item->transaction_type = 'out';
-                $item->transaction_date = $item->approved_at ?? $item->created_at;
+                $item->transaction_type   = 'out';
+                $item->transaction_date   = $item->approved_at ?? $item->created_at;
+                $item->requester_label    = $item->staff->name ?? '-';
+                $item->processor_label    = $item->approver->name ?? '-';
                 return $item;
+            });
+        }
+
+        // Get public request movements (permintaan publik - barang keluar)
+        $publicRequests = collect([]);
+        if (!$request->filled('status') || $request->status == 'approved') {
+            $publicRequests = $publicRequestMovementsQuery->get()->map(function($movement) {
+                $movement->transaction_type  = 'out';
+                $movement->transaction_date  = $movement->created_at;
+                $movement->base_quantity     = abs($movement->quantity);
+                $movement->status            = 'approved';
+                // Extract requester name from notes: "Permintaan publik #REQ-... - Nama Pemohon"
+                $noteParts = explode(' - ', $movement->notes ?? '', 2);
+                $movement->requester_label   = (isset($noteParts[1]) && $noteParts[1] !== '')
+                    ? $noteParts[1]
+                    : (\App\Models\PublicRequest::find($movement->reference_id)?->requester_name ?? '-');
+                $movement->processor_label   = $movement->creator->name ?? '-';
+                $movement->reference_label   = 'Permintaan Publik';
+                return $movement;
             });
         }
 
@@ -179,7 +222,7 @@ class GudangReportController extends Controller
         }
 
         // Merge and sort
-        $allTransactions = $submissions->concat($stockRequests)->concat($adjustments)->sortByDesc('transaction_date');
+        $allTransactions = $submissions->concat($stockRequests)->concat($publicRequests)->concat($adjustments)->sortByDesc('transaction_date');
         
         // Calculate historical stock (stock after each transaction)
         // Get current stocks for all items/warehouses in the transaction list
@@ -241,8 +284,8 @@ class GudangReportController extends Controller
         $stats = [
             'total_transactions' => $allTransactions->count(),
             'total_stock_in' => $submissions->where('status', 'approved')->sum('quantity') + $adjustmentsIn->sum('quantity'),
-            'total_stock_out' => $stockRequests->sum('base_quantity') + abs($adjustmentsOut->sum('quantity')),
-            'approved_count' => $submissions->where('status', 'approved')->count() + $stockRequests->count() + $adjustments->count(),
+            'total_stock_out' => $stockRequests->sum('base_quantity') + $publicRequests->sum('base_quantity') + abs($adjustmentsOut->sum('quantity')),
+            'approved_count' => $submissions->where('status', 'approved')->count() + $stockRequests->count() + $publicRequests->count() + $adjustments->count(),
             'pending_count' => $submissions->where('status', 'pending')->count(),
             'rejected_count' => $submissions->where('status', 'rejected')->count(),
         ];
@@ -340,6 +383,18 @@ class GudangReportController extends Controller
             $unitPrice = $latestSubmission ? $latestSubmission->unit_price : 0;
             $stock->latest_unit_price = $unitPrice;
             $stock->total_value = $stock->quantity * $unitPrice;
+
+            // Info permintaan publik terakhir untuk item ini
+            $lastPublicMovement = StockMovement::with('creator')
+                ->where('item_id', $stock->item_id)
+                ->where('warehouse_id', $stock->warehouse_id)
+                ->where('movement_type', 'out')
+                ->where('reference_type', 'public_request')
+                ->orderBy('created_at', 'desc')
+                ->first();
+            $pubNoteParts = explode(' - ', $lastPublicMovement->notes ?? '', 2);
+            $stock->last_public_requester = (isset($pubNoteParts[1]) && $pubNoteParts[1] !== '') ? $pubNoteParts[1] : (\App\Models\PublicRequest::find($lastPublicMovement?->reference_id)?->requester_name ?? '-');
+            $stock->last_public_processor = $lastPublicMovement?->creator->name ?? '-';
         }
 
         // Get filter options
@@ -445,12 +500,24 @@ class GudangReportController extends Controller
         ])->whereIn('warehouse_id', $warehouseIds)
           ->where('status', 'approved');
 
+        // Get Public Request Movements (Permintaan Publik - Barang Keluar)
+        $publicRequestMovementsQuery = StockMovement::with([
+            'item.category',
+            'warehouse',
+            'creator'
+        ])->whereIn('warehouse_id', $warehouseIds)
+          ->where('movement_type', 'out')
+          ->where('reference_type', 'public_request');
+
         // Apply same filters
         if ($request->filled('category_id')) {
             $submissionsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('category_id', $request->category_id);
+            });
+            $publicRequestMovementsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
         }
@@ -462,6 +529,9 @@ class GudangReportController extends Controller
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('name', 'LIKE', '%' . $request->item_name . '%');
             });
+            $publicRequestMovementsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('name', 'LIKE', '%' . $request->item_name . '%');
+            });
         }
 
         if ($request->filled('item_code')) {
@@ -471,16 +541,21 @@ class GudangReportController extends Controller
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('code', 'LIKE', '%' . $request->item_code . '%');
             });
+            $publicRequestMovementsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('code', 'LIKE', '%' . $request->item_code . '%');
+            });
         }
 
         if ($request->filled('year')) {
             $submissionsQuery->whereYear('submitted_at', $request->year);
             $stockRequestsQuery->whereYear('created_at', $request->year);
+            $publicRequestMovementsQuery->whereYear('created_at', $request->year);
         }
 
         if ($request->filled('month')) {
             $submissionsQuery->whereMonth('submitted_at', $request->month);
             $stockRequestsQuery->whereMonth('created_at', $request->month);
+            $publicRequestMovementsQuery->whereMonth('created_at', $request->month);
         }
 
         // Apply status filter only to submissions
@@ -490,8 +565,9 @@ class GudangReportController extends Controller
 
         // Get results
         $submissions = $submissionsQuery->get()->map(function($item) {
-            $item->transaction_type = 'in';
-            $item->transaction_date = $item->submitted_at;
+            $item->transaction_type  = 'in';
+            $item->transaction_date  = $item->submitted_at;
+            $item->requester_label   = $item->staff->name ?? '-';
             return $item;
         });
 
@@ -499,20 +575,40 @@ class GudangReportController extends Controller
         $stockRequests = collect([]);
         if (!$request->filled('status') || $request->status == 'approved') {
             $stockRequests = $stockRequestsQuery->get()->map(function($item) {
-                $item->transaction_type = 'out';
-                $item->transaction_date = $item->approved_at ?? $item->created_at;
+                $item->transaction_type  = 'out';
+                $item->transaction_date  = $item->approved_at ?? $item->created_at;
+                $item->requester_label   = $item->staff->name ?? '-';
+                $item->processor_label   = $item->approver->name ?? '-';
                 return $item;
             });
         }
 
-        $transactions = $submissions->concat($stockRequests)->sortByDesc('transaction_date');
+        // Get public request movements
+        $publicRequests = collect([]);
+        if (!$request->filled('status') || $request->status == 'approved') {
+            $publicRequests = $publicRequestMovementsQuery->get()->map(function($movement) {
+                $movement->transaction_type  = 'out';
+                $movement->transaction_date  = $movement->created_at;
+                $movement->base_quantity     = abs($movement->quantity);
+                $movement->status            = 'approved';
+                $noteParts = explode(' - ', $movement->notes ?? '', 2);
+                $movement->requester_label   = (isset($noteParts[1]) && $noteParts[1] !== '')
+                    ? $noteParts[1]
+                    : (\App\Models\PublicRequest::find($movement->reference_id)?->requester_name ?? '-');
+                $movement->processor_label   = $movement->creator->name ?? '-';
+                $movement->reference_label   = 'Permintaan Publik';
+                return $movement;
+            });
+        }
+
+        $transactions = $submissions->concat($stockRequests)->concat($publicRequests)->sortByDesc('transaction_date');
 
         // Calculate statistics
         $stats = [
             'total_transactions' => $transactions->count(),
             'total_stock_in' => $submissions->where('status', 'approved')->sum('quantity'),
-            'total_stock_out' => $stockRequests->sum('base_quantity'),
-            'approved_count' => $transactions->where('status', 'approved')->count(),
+            'total_stock_out' => $stockRequests->sum('base_quantity') + $publicRequests->sum('base_quantity'),
+            'approved_count' => $submissions->where('status', 'approved')->count() + $stockRequests->count() + $publicRequests->count(),
             'pending_count' => $submissions->where('status', 'pending')->count(),
             'rejected_count' => $submissions->where('status', 'rejected')->count(),
         ];
@@ -576,6 +672,18 @@ class GudangReportController extends Controller
             $unitPrice = $latestSubmission ? $latestSubmission->unit_price : 0;
             $totalValue = $stock->quantity * $unitPrice;
 
+            // Info permintaan publik terakhir untuk PDF
+            $lastPublicMovement = StockMovement::with('creator')
+                ->where('item_id', $stock->item_id)
+                ->where('warehouse_id', $stock->warehouse_id)
+                ->where('movement_type', 'out')
+                ->where('reference_type', 'public_request')
+                ->orderBy('created_at', 'desc')
+                ->first();
+            $pubNoteParts = explode(' - ', $lastPublicMovement->notes ?? '', 2);
+            $lastPublicRequester = (isset($pubNoteParts[1]) && $pubNoteParts[1] !== '') ? $pubNoteParts[1] : (\App\Models\PublicRequest::find($lastPublicMovement?->reference_id)?->requester_name ?? '-');
+            $lastPublicProcessor = $lastPublicMovement?->creator->name ?? '-';
+
             return [
                 'stock' => $stock,
                 'item' => $stock->item,
@@ -583,6 +691,8 @@ class GudangReportController extends Controller
                 'quantity' => $stock->quantity,
                 'unit_price' => $unitPrice,
                 'total_value' => $totalValue,
+                'last_public_requester' => $lastPublicRequester,
+                'last_public_processor' => $lastPublicProcessor,
             ];
         });
 
@@ -769,7 +879,28 @@ class GudangReportController extends Controller
                     ->when($year, fn($q) => $q->whereYear('approved_at', $year))
                     ->when($month, fn($q) => $q->whereMonth('approved_at', $month))
                     ->sum('base_quantity') ?? 0;
-                
+
+                // Tambahkan public_request ke stock_out
+                $whStockOut += abs(StockMovement::where('item_id', $item->id)
+                    ->where('warehouse_id', $stock->warehouse_id)
+                    ->where('movement_type', 'out')
+                    ->where('reference_type', 'public_request')
+                    ->when($year, fn($q) => $q->whereYear('created_at', $year))
+                    ->when($month, fn($q) => $q->whereMonth('created_at', $month))
+                    ->sum('quantity') ?? 0);
+
+                // Info permintaan publik terakhir untuk item ini
+                $lastPublicMovement = StockMovement::with('creator')
+                    ->where('item_id', $item->id)
+                    ->where('warehouse_id', $stock->warehouse_id)
+                    ->where('movement_type', 'out')
+                    ->where('reference_type', 'public_request')
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+                $pubNoteParts = explode(' - ', $lastPublicMovement->notes ?? '', 2);
+                $lastPublicRequester = (isset($pubNoteParts[1]) && $pubNoteParts[1] !== '') ? $pubNoteParts[1] : (\App\Models\PublicRequest::find($lastPublicMovement?->reference_id)?->requester_name ?? '-');
+                $lastPublicProcessor = $lastPublicMovement?->creator->name ?? '-';
+
                 $summaryData[] = [
                     'item_id' => $item->id,
                     'warehouse_id' => $stock->warehouse_id,
@@ -781,6 +912,8 @@ class GudangReportController extends Controller
                     'stock_in' => $whStockIn,
                     'stock_out' => $whStockOut,
                     'current_stock' => $stock->quantity,
+                    'last_public_requester' => $lastPublicRequester,
+                    'last_public_processor' => $lastPublicProcessor,
                 ];
             }
         }
@@ -935,7 +1068,28 @@ class GudangReportController extends Controller
                     ->when($year, fn($q) => $q->whereYear('approved_at', $year))
                     ->when($month, fn($q) => $q->whereMonth('approved_at', $month))
                     ->sum('base_quantity') ?? 0;
-                
+
+                // Tambahkan public_request ke stock_out
+                $whStockOut += abs(StockMovement::where('item_id', $item->id)
+                    ->where('warehouse_id', $stock->warehouse_id)
+                    ->where('movement_type', 'out')
+                    ->where('reference_type', 'public_request')
+                    ->when($year, fn($q) => $q->whereYear('created_at', $year))
+                    ->when($month, fn($q) => $q->whereMonth('created_at', $month))
+                    ->sum('quantity') ?? 0);
+
+                // Info permintaan publik terakhir
+                $lastPublicMovement = StockMovement::with('creator')
+                    ->where('item_id', $item->id)
+                    ->where('warehouse_id', $stock->warehouse_id)
+                    ->where('movement_type', 'out')
+                    ->where('reference_type', 'public_request')
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+                $pubNoteParts = explode(' - ', $lastPublicMovement->notes ?? '', 2);
+                $lastPublicRequester = (isset($pubNoteParts[1]) && $pubNoteParts[1] !== '') ? $pubNoteParts[1] : (\App\Models\PublicRequest::find($lastPublicMovement?->reference_id)?->requester_name ?? '-');
+                $lastPublicProcessor = $lastPublicMovement?->creator->name ?? '-';
+
                 $summaryData[] = [
                     'warehouse_name' => $stock->warehouse->name ?? '-',
                     'code' => $item->code,
@@ -945,6 +1099,8 @@ class GudangReportController extends Controller
                     'stock_in' => $whStockIn,
                     'stock_out' => $whStockOut,
                     'current_stock' => $stock->quantity,
+                    'last_public_requester' => $lastPublicRequester,
+                    'last_public_processor' => $lastPublicProcessor,
                 ];
             }
         }

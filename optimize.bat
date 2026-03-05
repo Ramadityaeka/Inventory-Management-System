@@ -1,34 +1,38 @@
 @echo off
-echo ==========================================
-echo   Laravel Performance Optimization
-echo ==========================================
+echo ====================================
+echo  Laravel Performance Optimization
+echo ====================================
 echo.
 
-echo [1/5] Caching configuration...
+echo [1/6] Clearing all caches...
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+echo.
+
+echo [2/6] Caching configuration...
 php artisan config:cache
 echo.
 
-echo [2/5] Caching routes...
+echo [3/6] Caching routes...
 php artisan route:cache
 echo.
 
-echo [3/5] Caching views...
+echo [4/6] Caching views...
 php artisan view:cache
 echo.
 
-echo [4/5] Caching events...
+echo [5/6] Caching events...
 php artisan event:cache
 echo.
 
-echo [5/5] Running pending migrations...
-php artisan migrate --force
+echo [6/6] Running optimize...
+php artisan optimize
 echo.
 
-echo ==========================================
-echo   Optimization complete!
-echo ==========================================
-echo.
-echo NOTE: If you change .env, routes, or views,
-echo       run this script again.
+echo ====================================
+echo  Optimization complete!
+echo ====================================
 echo.
 pause

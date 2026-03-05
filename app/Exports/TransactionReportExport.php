@@ -51,6 +51,14 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
             'creator'
         ])->where('movement_type', 'adjustment');
 
+        // Get Public Request Movements (Permintaan Publik - Barang Keluar)
+        $publicRequestQuery = \App\Models\StockMovement::with([
+            'item.category',
+            'warehouse',
+            'creator'
+        ])->where('movement_type', 'out')
+          ->where('reference_type', 'public_request');
+
         // Apply filters to both
         if (isset($this->filters['category_id']) && !empty($this->filters['category_id'])) {
             $submissionsQuery->whereHas('item', function($q) {
@@ -74,6 +82,9 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
             $adjustmentsQuery->whereHas('item', function($q) {
                 $q->where('name', 'LIKE', '%' . $this->filters['item_name'] . '%');
             });
+            $publicRequestQuery->whereHas('item', function($q) {
+                $q->where('name', 'LIKE', '%' . $this->filters['item_name'] . '%');
+            });
         }
 
         if (isset($this->filters['item_code']) && !empty($this->filters['item_code'])) {
@@ -86,24 +97,30 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
             $adjustmentsQuery->whereHas('item', function($q) {
                 $q->where('code', 'LIKE', '%' . $this->filters['item_code'] . '%');
             });
+            $publicRequestQuery->whereHas('item', function($q) {
+                $q->where('code', 'LIKE', '%' . $this->filters['item_code'] . '%');
+            });
         }
 
         if (isset($this->filters['year']) && !empty($this->filters['year'])) {
             $submissionsQuery->whereYear('submitted_at', $this->filters['year']);
             $stockRequestsQuery->whereYear('created_at', $this->filters['year']);
             $adjustmentsQuery->whereYear('created_at', $this->filters['year']);
+            $publicRequestQuery->whereYear('created_at', $this->filters['year']);
         }
 
         if (isset($this->filters['month']) && !empty($this->filters['month'])) {
             $submissionsQuery->whereMonth('submitted_at', $this->filters['month']);
             $stockRequestsQuery->whereMonth('created_at', $this->filters['month']);
             $adjustmentsQuery->whereMonth('created_at', $this->filters['month']);
+            $publicRequestQuery->whereMonth('created_at', $this->filters['month']);
         }
 
         if (isset($this->filters['warehouse_id']) && !empty($this->filters['warehouse_id'])) {
             $submissionsQuery->where('warehouse_id', $this->filters['warehouse_id']);
             $stockRequestsQuery->where('warehouse_id', $this->filters['warehouse_id']);
             $adjustmentsQuery->where('warehouse_id', $this->filters['warehouse_id']);
+            $publicRequestQuery->where('warehouse_id', $this->filters['warehouse_id']);
         }
 
         // Support for multiple warehouse IDs (for admin gudang)
@@ -111,6 +128,14 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
             $submissionsQuery->whereIn('warehouse_id', $this->filters['warehouse_ids']);
             $stockRequestsQuery->whereIn('warehouse_id', $this->filters['warehouse_ids']);
             $adjustmentsQuery->whereIn('warehouse_id', $this->filters['warehouse_ids']);
+            $publicRequestQuery->whereIn('warehouse_id', $this->filters['warehouse_ids']);
+        }
+
+        // Apply category filter to public request query if needed
+        if (isset($this->filters['category_id']) && !empty($this->filters['category_id'])) {
+            $publicRequestQuery->whereHas('item', function($q) {
+                $q->where('category_id', $this->filters['category_id']);
+            });
         }
 
         // Apply status filter only to submissions
@@ -146,8 +171,25 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
             });
         }
 
+        // Get public request movements (only when status is empty or approved)
+        $publicRequests = collect([]);
+        if (!isset($this->filters['status']) || empty($this->filters['status']) || $this->filters['status'] == 'approved') {
+            $publicRequests = $publicRequestQuery->get()->map(function($movement) {
+                $movement->transaction_type = 'out';
+                $movement->transaction_date = $movement->created_at;
+                $movement->base_quantity = abs($movement->quantity);
+                $movement->status = 'approved';
+                $noteParts = explode(' - ', $movement->notes ?? '', 2);
+                $movement->requester_label = (isset($noteParts[1]) && $noteParts[1] !== '')
+                    ? $noteParts[1]
+                    : (\App\Models\PublicRequest::find($movement->reference_id)?->requester_name ?? '-');
+                $movement->processor_label = $movement->creator->name ?? '-';
+                return $movement;
+            });
+        }
+
         // Merge all transactions and sort
-        $allTransactions = $submissions->concat($stockRequests)->concat($adjustments)->sortByDesc('transaction_date');
+        $allTransactions = $submissions->concat($stockRequests)->concat($adjustments)->concat($publicRequests)->sortByDesc('transaction_date');
         
         // Calculate historical stock (stock after each transaction)
         $currentStocks = [];
@@ -236,14 +278,19 @@ class TransactionReportExport implements FromCollection, WithHeadings, WithMappi
             $transactionDate = $transaction->created_at ? 
                 $transaction->created_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : '-';
         } else {
-            // Barang Keluar (StockRequest)
+            // Barang Keluar - check if public_request or regular StockRequest
             $barangMasuk = 0;
             $barangKeluar = (int) ($transaction->base_quantity ?? $transaction->quantity);
             $statusText = 'Disetujui';
-            $diajukanOleh = $transaction->staff ? $transaction->staff->name : '-';
-            $diproses = $transaction->approver ? $transaction->approver->name : '-';
-            $transactionDate = $transaction->approved_at ? 
-                $transaction->approved_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : 
+            if (isset($transaction->reference_type) && $transaction->reference_type == 'public_request') {
+                $diajukanOleh = $transaction->requester_label ?? '-';
+                $diproses = $transaction->processor_label ?? '-';
+            } else {
+                $diajukanOleh = $transaction->staff ? $transaction->staff->name : '-';
+                $diproses = $transaction->approver ? $transaction->approver->name : '-';
+            }
+            $transactionDate = $transaction->approved_at ?
+                $transaction->approved_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') :
                 ($transaction->created_at ? $transaction->created_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : '-');
         }
 

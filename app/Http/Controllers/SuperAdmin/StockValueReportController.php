@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Stock;
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\StockMovement;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -86,6 +87,18 @@ class StockValueReportController extends Controller
             $unitPrice = $latestSubmission ? $latestSubmission->unit_price : 0;
             $totalValue = $stock->quantity * $unitPrice;
 
+            // Info permintaan publik terakhir
+            $lastPublicMovement = StockMovement::with('creator')
+                ->where('item_id', $stock->item_id)
+                ->where('warehouse_id', $stock->warehouse_id)
+                ->where('movement_type', 'out')
+                ->where('reference_type', 'public_request')
+                ->orderBy('created_at', 'desc')
+                ->first();
+            $pubNoteParts = explode(' - ', $lastPublicMovement->notes ?? '', 2);
+            $lastPublicRequester = (isset($pubNoteParts[1]) && $pubNoteParts[1] !== '') ? $pubNoteParts[1] : (\App\Models\PublicRequest::find($lastPublicMovement?->reference_id)?->requester_name ?? '-');
+            $lastPublicProcessor = $lastPublicMovement?->creator->name ?? '-';
+
             return [
                 'stock' => $stock,
                 'item' => $stock->item,
@@ -94,6 +107,8 @@ class StockValueReportController extends Controller
                 'display_quantity' => $stock->quantity,
                 'unit_price' => $unitPrice,
                 'total_value' => $totalValue,
+                'last_public_requester' => $lastPublicRequester,
+                'last_public_processor' => $lastPublicProcessor,
             ];
         });
 
@@ -156,6 +171,18 @@ class StockValueReportController extends Controller
             $unitPrice = $latestSubmission ? $latestSubmission->unit_price : 0;
             $totalValue = $stock->quantity * $unitPrice;
 
+            // Info permintaan publik terakhir (PDF)
+            $lastPublicMovement = StockMovement::with('creator')
+                ->where('item_id', $stock->item_id)
+                ->where('warehouse_id', $stock->warehouse_id)
+                ->where('movement_type', 'out')
+                ->where('reference_type', 'public_request')
+                ->orderBy('created_at', 'desc')
+                ->first();
+            $pubNoteParts = explode(' - ', $lastPublicMovement->notes ?? '', 2);
+            $lastPublicRequester = (isset($pubNoteParts[1]) && $pubNoteParts[1] !== '') ? $pubNoteParts[1] : (\App\Models\PublicRequest::find($lastPublicMovement?->reference_id)?->requester_name ?? '-');
+            $lastPublicProcessor = $lastPublicMovement?->creator->name ?? '-';
+
             return [
                 'stock' => $stock,
                 'item' => $stock->item,
@@ -163,6 +190,8 @@ class StockValueReportController extends Controller
                 'quantity' => $stock->quantity,
                 'unit_price' => $unitPrice,
                 'total_value' => $totalValue,
+                'last_public_requester' => $lastPublicRequester,
+                'last_public_processor' => $lastPublicProcessor,
             ];
         });
 

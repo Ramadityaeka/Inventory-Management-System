@@ -174,7 +174,8 @@
                             <th>Keluar</th>
                             <th>Satuan</th>
                             <th>Sisa Stok</th>
-                        </tr>
+                            <th>Diajukan Oleh <small class="text-warning">(Publik Terakhir)</small></th>
+                            <th>Diproses Oleh</th>
                     </thead>
                     <tbody>
                         @forelse($summary as $index => $item)
@@ -200,10 +201,18 @@
                                 <td>
                                     <strong>{{ number_format($item['current_stock']) }}</strong>
                                 </td>
-                            </tr>
+                                <td>
+                                    @if(isset($item['last_public_requester']) && $item['last_public_requester'] != '-')
+                                        <small>{{ $item['last_public_requester'] }}</small>
+                                        <br><span class="badge bg-warning text-dark" style="font-size:0.7em">Publik</span>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td><small>{{ $item['last_public_processor'] ?? '-' }}</small></td>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center py-4">
+                                <td colspan="12" class="text-center py-4">
                                     <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                                     <p class="text-muted">Tidak ada data untuk ditampilkan. Silakan sesuaikan filter.</p>
                                 </td>

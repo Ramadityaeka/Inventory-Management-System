@@ -35,6 +35,14 @@ class TransactionReportController extends Controller
             'approver'
         ])->where('status', 'approved');
 
+        // Get Public Requests (Barang Keluar via Permintaan Publik)
+        $publicRequestMovementsQuery = \App\Models\StockMovement::with([
+            'item.category',
+            'warehouse',
+            'creator'
+        ])->where('movement_type', 'out')
+          ->where('reference_type', 'public_request');
+
         // Get Stock Adjustments (Penyesuaian Stok)
         $adjustmentsQuery = \App\Models\StockMovement::with([
             'item.category',
@@ -50,6 +58,9 @@ class TransactionReportController extends Controller
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
+            $publicRequestMovementsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('category_id', $request->category_id);
+            });
             $adjustmentsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
@@ -62,6 +73,9 @@ class TransactionReportController extends Controller
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('name', 'LIKE', '%' . $request->item_name . '%');
             });
+            $publicRequestMovementsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('name', 'LIKE', '%' . $request->item_name . '%');
+            });
         }
 
         if ($request->filled('item_code')) {
@@ -71,21 +85,27 @@ class TransactionReportController extends Controller
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('code', 'LIKE', '%' . $request->item_code . '%');
             });
+            $publicRequestMovementsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('code', 'LIKE', '%' . $request->item_code . '%');
+            });
         }
 
         if ($request->filled('year')) {
             $submissionsQuery->whereYear('submitted_at', $request->year);
             $stockRequestsQuery->whereYear('created_at', $request->year);
+            $publicRequestMovementsQuery->whereYear('created_at', $request->year);
         }
 
         if ($request->filled('month')) {
             $submissionsQuery->whereMonth('submitted_at', $request->month);
             $stockRequestsQuery->whereMonth('created_at', $request->month);
+            $publicRequestMovementsQuery->whereMonth('created_at', $request->month);
         }
 
         if ($request->filled('warehouse_id')) {
             $submissionsQuery->where('warehouse_id', $request->warehouse_id);
             $stockRequestsQuery->where('warehouse_id', $request->warehouse_id);
+            $publicRequestMovementsQuery->where('warehouse_id', $request->warehouse_id);
         }
 
         // Apply status filter only to submissions
@@ -110,6 +130,26 @@ class TransactionReportController extends Controller
             });
         }
 
+        // Get permintaan publik (barang keluar via public request)
+        $publicRequests = collect([]);
+        if (!$request->filled('status') || $request->status == 'approved') {
+            $publicRequests = $publicRequestMovementsQuery->get()->map(function($movement) {
+                // Buat objek virtual yang kompatibel dengan tampilan transaksi
+                $movement->transaction_type    = 'out';
+                $movement->transaction_date    = $movement->created_at;
+                $movement->base_quantity       = abs($movement->quantity);
+                $movement->status              = 'approved';
+                $movement->reference_label     = 'Permintaan Publik';
+                // Extract requester name from notes: "Permintaan publik #REQ-... - Nama Pemohon"
+                $noteParts = explode(' - ', $movement->notes ?? '', 2);
+                $movement->requester_label     = (isset($noteParts[1]) && $noteParts[1] !== '')
+                    ? $noteParts[1]
+                    : (\App\Models\PublicRequest::find($movement->reference_id)?->requester_name ?? '-');
+                $movement->processor_label     = $movement->creator->name ?? '-';
+                return $movement;
+            });
+        }
+
         // Get adjustments (only when status is empty or approved)
         $adjustments = collect([]);
         if (!$request->filled('status') || $request->status == 'approved') {
@@ -122,8 +162,8 @@ class TransactionReportController extends Controller
             });
         }
 
-        // Merge and sort
-        $allTransactions = $submissions->concat($stockRequests)->concat($adjustments)->sortByDesc('transaction_date');
+        // Merge and sort (termasuk permintaan publik)
+        $allTransactions = $submissions->concat($stockRequests)->concat($publicRequests)->concat($adjustments)->sortByDesc('transaction_date');
         
         // Calculate historical stock (stock after each transaction)
         // Get current stocks for all items/warehouses in the transaction list
@@ -186,8 +226,8 @@ class TransactionReportController extends Controller
         $stats = [
             'total_transactions' => $allTransactions->count(),
             'total_stock_in' => $submissions->where('status', 'approved')->sum('quantity') + $adjustmentsIn->sum('quantity'),
-            'total_stock_out' => $stockRequests->sum('base_quantity') + abs($adjustmentsOut->sum('quantity')),
-            'approved_count' => $submissions->where('status', 'approved')->count() + $stockRequests->count() + $adjustments->count(),
+            'total_stock_out' => $stockRequests->sum('base_quantity') + $publicRequests->sum('base_quantity') + abs($adjustmentsOut->sum('quantity')),
+            'approved_count' => $submissions->where('status', 'approved')->count() + $stockRequests->count() + $publicRequests->count() + $adjustments->count(),
             'pending_count' => $submissions->where('status', 'pending')->count(),
             'rejected_count' => $submissions->where('status', 'rejected')->count(),
         ];
@@ -229,6 +269,14 @@ class TransactionReportController extends Controller
             'approver'
         ])->where('status', 'approved');
 
+        // Get Public Requests (Barang Keluar via Permintaan Publik)
+        $publicRequestMovementsQuery = \App\Models\StockMovement::with([
+            'item.category',
+            'warehouse',
+            'creator'
+        ])->where('movement_type', 'out')
+          ->where('reference_type', 'public_request');
+
         // Get Stock Adjustments (Penyesuaian Stok)
         $adjustmentsQuery = \App\Models\StockMovement::with([
             'item.category',
@@ -244,6 +292,9 @@ class TransactionReportController extends Controller
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
+            $publicRequestMovementsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('category_id', $request->category_id);
+            });
             $adjustmentsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('category_id', $request->category_id);
             });
@@ -254,6 +305,9 @@ class TransactionReportController extends Controller
                 $q->where('name', 'LIKE', '%' . $request->item_name . '%');
             });
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('name', 'LIKE', '%' . $request->item_name . '%');
+            });
+            $publicRequestMovementsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('name', 'LIKE', '%' . $request->item_name . '%');
             });
             $adjustmentsQuery->whereHas('item', function($q) use ($request) {
@@ -268,6 +322,9 @@ class TransactionReportController extends Controller
             $stockRequestsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('code', 'LIKE', '%' . $request->item_code . '%');
             });
+            $publicRequestMovementsQuery->whereHas('item', function($q) use ($request) {
+                $q->where('code', 'LIKE', '%' . $request->item_code . '%');
+            });
             $adjustmentsQuery->whereHas('item', function($q) use ($request) {
                 $q->where('code', 'LIKE', '%' . $request->item_code . '%');
             });
@@ -276,18 +333,21 @@ class TransactionReportController extends Controller
         if ($request->filled('year')) {
             $submissionsQuery->whereYear('submitted_at', $request->year);
             $stockRequestsQuery->whereYear('created_at', $request->year);
+            $publicRequestMovementsQuery->whereYear('created_at', $request->year);
             $adjustmentsQuery->whereYear('created_at', $request->year);
         }
 
         if ($request->filled('month')) {
             $submissionsQuery->whereMonth('submitted_at', $request->month);
             $stockRequestsQuery->whereMonth('created_at', $request->month);
+            $publicRequestMovementsQuery->whereMonth('created_at', $request->month);
             $adjustmentsQuery->whereMonth('created_at', $request->month);
         }
 
         if ($request->filled('warehouse_id')) {
             $submissionsQuery->where('warehouse_id', $request->warehouse_id);
             $stockRequestsQuery->where('warehouse_id', $request->warehouse_id);
+            $publicRequestMovementsQuery->where('warehouse_id', $request->warehouse_id);
             $adjustmentsQuery->where('warehouse_id', $request->warehouse_id);
         }
 
@@ -313,6 +373,24 @@ class TransactionReportController extends Controller
             });
         }
 
+        // Get public requests (permintaan publik)
+        $publicRequests = collect([]);
+        if (!$request->filled('status') || $request->status == 'approved') {
+            $publicRequests = $publicRequestMovementsQuery->get()->map(function($movement) {
+                $movement->transaction_type = 'out';
+                $movement->transaction_date = $movement->created_at;
+                $movement->base_quantity    = abs($movement->quantity);
+                $movement->status           = 'approved';
+                $movement->reference_label  = 'Permintaan Publik';
+                $noteParts = explode(' - ', $movement->notes ?? '', 2);
+                $movement->requester_label  = (isset($noteParts[1]) && $noteParts[1] !== '')
+                    ? $noteParts[1]
+                    : (\App\Models\PublicRequest::find($movement->reference_id)?->requester_name ?? '-');
+                $movement->processor_label  = $movement->creator->name ?? '-';
+                return $movement;
+            });
+        }
+
         // Get adjustments (only when status is empty or approved)
         $adjustments = collect([]);
         if (!$request->filled('status') || $request->status == 'approved') {
@@ -324,8 +402,8 @@ class TransactionReportController extends Controller
             });
         }
 
-        // Merge and sort
-        $allTransactions = $submissions->concat($stockRequests)->concat($adjustments)->sortByDesc('transaction_date');
+        // Merge and sort (termasuk permintaan publik)
+        $allTransactions = $submissions->concat($stockRequests)->concat($publicRequests)->concat($adjustments)->sortByDesc('transaction_date');
         
         // Calculate historical stock (stock after each transaction)
         $currentStocks = [];
@@ -343,15 +421,11 @@ class TransactionReportController extends Controller
         $runningStocks = $currentStocks;
         foreach ($allTransactions as $transaction) {
             $key = $transaction->item_id . '_' . $transaction->warehouse_id;
-            
-            // The stock after this transaction is the current running stock
             $transaction->stock_after = $runningStocks[$key];
-            
-            // Update running stock by reversing this transaction
             if ($transaction->transaction_type == 'in') {
                 $runningStocks[$key] -= $transaction->quantity;
             } elseif ($transaction->transaction_type == 'out') {
-                $runningStocks[$key] += ($transaction->base_quantity ?? $transaction->quantity);
+                $runningStocks[$key] += ($transaction->base_quantity ?? abs($transaction->quantity));
             } elseif ($transaction->transaction_type == 'adjustment') {
                 $runningStocks[$key] -= $transaction->quantity;
             }
@@ -360,20 +434,16 @@ class TransactionReportController extends Controller
         $transactions = $allTransactions;
 
         // Calculate statistics
-        $adjustmentsIn = $adjustments->filter(function($item) {
-            return $item->quantity > 0;
-        });
-        $adjustmentsOut = $adjustments->filter(function($item) {
-            return $item->quantity < 0;
-        });
+        $adjustmentsIn = $adjustments->filter(fn($item) => $item->quantity > 0);
+        $adjustmentsOut = $adjustments->filter(fn($item) => $item->quantity < 0);
         
         $stats = [
             'total_transactions' => $allTransactions->count(),
-            'total_stock_in' => $submissions->where('status', 'approved')->sum('quantity') + $adjustmentsIn->sum('quantity'),
-            'total_stock_out' => $stockRequests->sum('base_quantity') + abs($adjustmentsOut->sum('quantity')),
-            'approved_count' => $submissions->where('status', 'approved')->count() + $stockRequests->count() + $adjustments->count(),
-            'pending_count' => $submissions->where('status', 'pending')->count(),
-            'rejected_count' => $submissions->where('status', 'rejected')->count(),
+            'total_stock_in'  => $submissions->where('status', 'approved')->sum('quantity') + $adjustmentsIn->sum('quantity'),
+            'total_stock_out' => $stockRequests->sum('base_quantity') + $publicRequests->sum('base_quantity') + abs($adjustmentsOut->sum('quantity')),
+            'approved_count'  => $submissions->where('status', 'approved')->count() + $stockRequests->count() + $publicRequests->count() + $adjustments->count(),
+            'pending_count'   => $submissions->where('status', 'pending')->count(),
+            'rejected_count'  => $submissions->where('status', 'rejected')->count(),
         ];
 
         $filters = $request->all();

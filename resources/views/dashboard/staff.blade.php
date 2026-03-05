@@ -7,7 +7,7 @@
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h4 class="mb-1">Dashboard Staff Gudang</h4>
+                <h4 class="mb-1">Dashboard Staff Unit</h4>
                 <p class="text-muted mb-0">Selamat datang! Kelola penerimaan barang dengan mudah</p>
             </div>
             <div class="d-flex gap-2">
@@ -465,8 +465,6 @@
 @push('scripts')
 <script>
     function markAsRead(notificationId) {
-        // This would typically make an AJAX call to mark the notification as read
-        // For now, we'll just reload the page or hide the button
         fetch(`/notifications/${notificationId}/read`, {
             method: 'POST',
             headers: {

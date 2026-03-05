@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\Submission;
 use App\Models\StockRequest;
+use App\Models\StockMovement;
 use App\Models\Stock;
 use App\Models\Item;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -115,7 +116,30 @@ class StockSummaryReportExport implements FromCollection, WithHeadings, WithMapp
                         ->when($year, fn($q) => $q->whereYear('approved_at', $year))
                         ->when($month, fn($q) => $q->whereMonth('approved_at', $month))
                         ->sum('base_quantity') ?? 0;
+
+                    // Tambahkan barang keluar dari permintaan publik
+                    $whStockOut += abs(StockMovement::where('item_id', $item->id)
+                        ->where('warehouse_id', $stock->warehouse_id)
+                        ->where('movement_type', 'out')
+                        ->where('reference_type', 'public_request')
+                        ->when($year, fn($q) => $q->whereYear('created_at', $year))
+                        ->when($month, fn($q) => $q->whereMonth('created_at', $month))
+                        ->sum('quantity') ?? 0);
                     
+                    // Info permintaan publik terakhir untuk item ini
+                    $lastPublicMovement = StockMovement::with('creator')
+                        ->where('item_id', $item->id)
+                        ->where('warehouse_id', $stock->warehouse_id)
+                        ->where('movement_type', 'out')
+                        ->where('reference_type', 'public_request')
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+                    $pubNoteParts = explode(' - ', $lastPublicMovement->notes ?? '', 2);
+                    $lastPublicRequester = (isset($pubNoteParts[1]) && $pubNoteParts[1] !== '')
+                        ? $pubNoteParts[1]
+                        : (\App\Models\PublicRequest::find($lastPublicMovement?->reference_id)?->requester_name ?? '-');
+                    $lastPublicProcessor = $lastPublicMovement?->creator->name ?? '-';
+
                     $summaryData->push((object)[
                         'warehouse_name' => $stock->warehouse->name ?? '-',
                         'code' => $item->code,
@@ -127,6 +151,8 @@ class StockSummaryReportExport implements FromCollection, WithHeadings, WithMapp
                         'stock_out' => $whStockOut,
                         'unit_stock' => $unitName,
                         'current_stock' => $stock->quantity,
+                        'last_public_requester' => $lastPublicRequester,
+                        'last_public_processor' => $lastPublicProcessor,
                     ]);
                 }
             }
@@ -158,6 +184,8 @@ class StockSummaryReportExport implements FromCollection, WithHeadings, WithMapp
             'JUMLAH KELUAR',
             'SATUAN STOK',
             'SISA STOK',
+            'PEMOHON PUBLIK TERAKHIR',
+            'PIC TERAKHIR',
         ];
     }
 
@@ -177,6 +205,8 @@ class StockSummaryReportExport implements FromCollection, WithHeadings, WithMapp
             $row->stock_out,
             $row->unit_stock,
             $row->current_stock,
+            $row->last_public_requester ?? '-',
+            $row->last_public_processor ?? '-',
         ];
     }
 
@@ -188,7 +218,7 @@ class StockSummaryReportExport implements FromCollection, WithHeadings, WithMapp
     public function styles(Worksheet $sheet)
     {
         // Header style
-        $sheet->getStyle('A1:K1')->applyFromArray([
+        $sheet->getStyle('A1:M1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'size' => 12,
@@ -214,7 +244,7 @@ class StockSummaryReportExport implements FromCollection, WithHeadings, WithMapp
         $lastRow = $this->rowNumber + 1;
 
         // All data borders
-        $sheet->getStyle('A1:K' . $lastRow)->applyFromArray([
+        $sheet->getStyle('A1:M' . $lastRow)->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,
@@ -231,11 +261,13 @@ class StockSummaryReportExport implements FromCollection, WithHeadings, WithMapp
         $sheet->getStyle('I2:I' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
         $sheet->getStyle('J2:J' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('K2:K' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('L2:L' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('M2:M' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
         // Zebra striping
         for ($i = 2; $i <= $lastRow; $i++) {
             if ($i % 2 == 0) {
-                $sheet->getStyle('A' . $i . ':K' . $i)->applyFromArray([
+                $sheet->getStyle('A' . $i . ':M' . $i)->applyFromArray([
                     'fill' => [
                         'fillType' => Fill::FILL_SOLID,
                         'startColor' => ['rgb' => 'F2F2F2'],

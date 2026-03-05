@@ -47,7 +47,7 @@
                         <div class="col-12 col-md-6">
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-exclamation-circle text-danger me-2"></i>
-                                <span>{{ $lowStockItems->count() }} item stok rendah di seluruh gudang</span>
+                                <span>{{ $lowStockItems->count() }} item stok rendah di seluruh unit</span>
                                 <a href="{{ route('admin.reports.stock-values') }}" class="btn btn-sm btn-danger ms-auto">Periksa</a>
                             </div>
                         </div>
@@ -128,7 +128,7 @@
                             <div>
                                 <h5 class="mb-1">{{ number_format($stats['total_stock']) }}</h5>
                                 <p class="text-muted small mb-0">Total Stok</p>
-                                <small class="text-info">Semua gudang</small>
+                                <small class="text-info">Semua unit</small>
                             </div>
                             <div class="text-info">
                                 <i class="bi bi-arrow-right fs-5"></i>
@@ -214,7 +214,7 @@
                             <div>
                                 <h5 class="mb-1">{{ number_format($stats['today_total_stock_in']) }}</h5>
                                 <p class="text-muted small mb-0">Stock In Hari Ini</p>
-                                <small class="text-success">Masuk gudang</small>
+                                <small class="text-success">Masuk unit</small>
                             </div>
                         </div>
                     </div>
@@ -237,7 +237,7 @@
                             <div>
                                 <h5 class="mb-1">{{ number_format($stats['today_total_stock_out']) }}</h5>
                                 <p class="text-muted small mb-0">Stock Out Hari Ini</p>
-                                <small class="text-danger">Keluar gudang</small>
+                                <small class="text-danger">Keluar unit</small>
                             </div>
                         </div>
                     </div>
@@ -259,7 +259,7 @@
                     <div class="col-6 col-md-3">
                         <a href="{{ route('admin.warehouses.index') }}" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center p-3">
                             <i class="bi bi-building me-2"></i>
-                            <span>Kelola Gudang</span>
+                            <span>Kelola Unit</span>
                         </a>
                     </div>
                     <div class="col-6 col-md-3">
@@ -396,7 +396,7 @@
                         <div class="col-12">
                             <div class="text-center py-4">
                                 <i class="bi bi-building text-muted fs-1 mb-3"></i>
-                                <p class="text-muted mb-0">Belum ada gudang</p>
+                                <p class="text-muted mb-0">Belum ada unit</p>
                             </div>
                         </div>
                     @endforelse

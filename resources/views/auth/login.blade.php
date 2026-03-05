@@ -17,7 +17,6 @@
         }
 
         body {
-            /* Menggunakan gambar gedung sebagai background utama dengan efek overlay gelap-biru */
             background: linear-gradient(135deg, var(--overlay-blue) 0%, var(--overlay-dark) 100%), 
                         url('/images/login-bg.png') no-repeat center center fixed;
             background-size: cover;
@@ -43,7 +42,6 @@
         }
         
         .login-header {
-            /* Menampilkan kembali gambar gedung di area header dengan perpaduan gradasi */
             background: linear-gradient(to bottom, rgba(30, 60, 114, 0.75), rgba(42, 82, 152, 0.95)), 
                         url('/images/login-bg.png') center center / cover no-repeat;
             color: white;
@@ -361,6 +359,17 @@
         </div>
         
         <div class="login-footer">
+            <div class="mb-3">
+                <div class="d-grid gap-2">
+                    <a href="{{ route('public.request.create') }}" class="btn btn-outline-primary btn-sm" style="border-radius: 10px; border-color: var(--esdm-blue-light); color: var(--esdm-blue); font-weight: 600; padding: 0.6rem;">
+                        <i class="bi bi-clipboard-plus me-2"></i>Ajukan Permintaan Barang
+                    </a>
+                    <a href="{{ route('public.request.status') }}" class="btn btn-outline-secondary btn-sm" style="border-radius: 10px; font-weight: 500; padding: 0.5rem;">
+                        <i class="bi bi-search me-2"></i>Cek Status Permohonan
+                    </a>
+                </div>
+            </div>
+            <hr style="border-color: #e2e8f0; margin: 1rem 0;">
             <p class="mb-1">
                 <i class="bi bi-shield-check me-1 text-success"></i>
                 <strong>Akses Aman & Terpercaya</strong>

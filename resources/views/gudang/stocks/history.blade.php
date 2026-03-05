@@ -505,27 +505,26 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if($movement->submission && $movement->submission->staff)
+                                    @php
+                                        $isAdjustment = $movement->movement_type === 'adjustment';
+                                        $displayPerson = $isAdjustment
+                                            ? $movement->creator
+                                            : ($movement->submission ? $movement->submission->staff : null);
+                                    @endphp
+                                    @if($displayPerson)
                                         <div class="d-flex align-items-center">
                                             <div class="avatar-initial rounded-circle me-2 d-flex align-items-center justify-content-center" 
                                                  style="width: 28px; height: 28px; background-color: #28a745; color: white; font-size: 0.7rem; font-weight: bold;">
-                                                {{ strtoupper(substr($movement->submission->staff->name, 0, 1)) }}
+                                                {{ strtoupper(substr($displayPerson->name, 0, 1)) }}
                                             </div>
                                             <div>
-                                                <small><strong>{{ $movement->submission->staff->name }}</strong></small>
+                                                <small><strong>{{ $displayPerson->name }}</strong></small>
                                                 <br><small class="text-muted">
-                                                    @switch($movement->submission->staff->role)
-                                                        @case('super_admin')
-                                                            Super Admin
-                                                            @break
-                                                        @case('admin_gudang')
-                                                            Admin Unit
-                                                            @break
-                                                        @case('staff_gudang')
-                                                            Staff Unit
-                                                            @break
-                                                        @default
-                                                            {{ $movement->submission->staff->role }}
+                                                    @switch($displayPerson->role)
+                                                        @case('super_admin') Super Admin @break
+                                                        @case('admin_gudang') Admin Unit @break
+                                                        @case('staff_gudang') Staff Unit @break
+                                                        @default {{ $displayPerson->role }}
                                                     @endswitch
                                                 </small>
                                             </div>
@@ -559,8 +558,9 @@
                                                 data-supplier-phone="{{ $movement->submission && $movement->submission->supplier ? $movement->submission->supplier->phone : '-' }}"
                                                 data-supplier-email="{{ $movement->submission && $movement->submission->supplier ? $movement->submission->supplier->email : '-' }}"
                                                 data-supplier-address="{{ $movement->submission && $movement->submission->supplier ? $movement->submission->supplier->address : '-' }}"
-                                                data-staff-name="{{ $movement->submission && $movement->submission->staff ? $movement->submission->staff->name : '-' }}"
-                                                data-staff-email="{{ $movement->submission && $movement->submission->staff ? $movement->submission->staff->email : '-' }}"
+                                                data-staff-name="{{ $movement->movement_type === 'adjustment' ? ($movement->creator ? $movement->creator->name : '-') : ($movement->submission && $movement->submission->staff ? $movement->submission->staff->name : '-') }}"
+                                                data-staff-email="{{ $movement->movement_type === 'adjustment' ? ($movement->creator ? $movement->creator->email : '-') : ($movement->submission && $movement->submission->staff ? $movement->submission->staff->email : '-') }}"
+                                                data-staff-role="{{ $movement->movement_type === 'adjustment' ? ($movement->creator ? $movement->creator->role : '-') : ($movement->submission && $movement->submission->staff ? $movement->submission->staff->role : '-') }}"
                                                 data-creator-name="{{ $movement->creator ? $movement->creator->name : '-' }}"
                                                 data-creator-role="{{ $movement->creator ? $movement->creator->role : '-' }}"
                                                 data-notes="{{ $movement->notes ?? 'Tidak ada catatan' }}"

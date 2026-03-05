@@ -226,6 +226,8 @@
                 <th width="8%" class="text-right">KELUAR</th>
                 <th width="8%">SATUAN</th>
                 <th width="8%" class="text-right">SISA STOK</th>
+                <th width="12%">PEMOHON PUBLIK</th>
+                <th width="10%">PIC TERAKHIR</th>
             </tr>
         </thead>
         <tbody>
@@ -248,6 +250,8 @@
                     </td>
                     <td>{{ $data['unit'] }}</td>
                     <td class="text-right"><strong>{{ number_format($data['current_stock'], 0, ',', '.') }}</strong></td>
+                    <td>{{ $data['last_public_requester'] ?? '-' }}</td>
+                    <td>{{ $data['last_public_processor'] ?? '-' }}</td>
                 </tr>
             @empty
                 <tr>
@@ -263,6 +267,8 @@
                 <td class="text-right"><strong>{{ number_format($totals['total_stock_out'], 0, ',', '.') }}</strong></td>
                 <td>-</td>
                 <td class="text-right"><strong>{{ number_format($totals['total_current_stock'], 0, ',', '.') }}</strong></td>
+                <td>-</td>
+                <td>-</td>
             </tr>
         </tfoot>
     </table>

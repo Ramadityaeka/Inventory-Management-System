@@ -165,7 +165,9 @@
                     <th width="7%">Stok</th>
                     <th width="6%">Satuan</th>
                     <th width="15%">Harga/Satuan</th>
-                    <th width="15%">Harga Total</th>
+                    <th width="12%">Harga Total</th>
+                    <th width="12%">Pemohon Publik</th>
+                    <th width="10%">PIC Terakhir</th>
                 </tr>
             </thead>
             <tbody>
@@ -199,6 +201,8 @@
                                 -
                             @endif
                         </td>
+                        <td>{{ $data['last_public_requester'] ?? '-' }}</td>
+                        <td>{{ $data['last_public_processor'] ?? '-' }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -209,6 +213,8 @@
                     <td class="text-center">item</td>
                     <td></td>
                     <td class="text-right">Rp {{ number_format($stats['total_stock_value'], 0, ',', '.') }}</td>
+                    <td></td>
+                    <td></td>
                 </tr>
             </tfoot>
         </table>

@@ -1,6 +1,5 @@
 <ul class="nav flex-column">
     @if(auth()->user()->isSuperAdmin())
-        <!-- Super Admin Menu -->
         <li class="nav-item">
             <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                 <i class="bi bi-speedometer2 me-2"></i>Dashboard
@@ -97,6 +96,24 @@
                 @if(isset($pendingStockRequests) && $pendingStockRequests > 0)
                     <span class="badge bg-warning rounded-pill float-end">{{ $pendingStockRequests }}</span>
                 @endif
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {{ request()->routeIs('gudang.public-requests.*') ? 'active' : '' }}" href="{{ route('gudang.public-requests.index') }}">
+                <i class="bi bi-inbox me-2"></i>Permintaan Masuk
+                @php
+                    $pendingPublicRequests = auth()->user()->picRequests()->where('status', 'pending')->count();
+                @endphp
+                @if($pendingPublicRequests > 0)
+                    <span class="badge bg-danger rounded-pill float-end">{{ $pendingPublicRequests }}</span>
+                @endif
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {{ request()->routeIs('gudang.signature.*') ? 'active' : '' }}" href="{{ route('gudang.signature.show') }}">
+                <i class="bi bi-pen me-2"></i>Tanda Tangan Saya
             </a>
         </li>
 

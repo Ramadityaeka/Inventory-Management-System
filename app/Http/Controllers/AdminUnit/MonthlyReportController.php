@@ -7,6 +7,7 @@ use App\Models\StockMovement;
 use App\Models\Stock;
 use App\Models\Submission;
 use App\Models\Transfer;
+use App\Models\PublicRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -134,6 +135,14 @@ class MonthlyReportController extends Controller
         }
         
         $transactions = $transactionsQuery->orderBy('created_at', 'desc')->get();
+
+        // Get public requests (permintaan publik keluar) untuk periode ini
+        $publicRequestsOut = PublicRequest::with(['items.item', 'pic', 'requesterSignature'])
+            ->where('warehouse_id', $warehouseId)
+            ->whereIn('status', ['approved', 'partial', 'completed'])
+            ->whereBetween('approved_at', [$startDate, $endDate])
+            ->orderBy('approved_at', 'desc')
+            ->get();
         
         // Group movements by item
         $itemMovements = $movements->groupBy('item_id')->map(function ($movements, $itemId) use ($warehouseId, $startDate, $endDate) {
@@ -241,10 +250,12 @@ class MonthlyReportController extends Controller
             'total_movements' => $movements->count(),
             'item_movements' => $itemMovements,
             'transactions' => $transactions,
+            'public_requests_out' => $publicRequestsOut,
             'submissions_count' => $submissions->count(),
             'submissions_approved' => $submissions->where('status', 'approved')->count(),
             'submissions_pending' => $submissions->where('status', 'pending')->count(),
             'submissions_rejected' => $submissions->where('status', 'rejected')->count(),
+            'public_requests_count' => $publicRequestsOut->count(),
             'transfers_out' => $transfersOut,
             'transfers_in' => $transfersIn,
             'current_stocks' => $currentStocks,

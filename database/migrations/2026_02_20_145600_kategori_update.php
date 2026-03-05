@@ -26,7 +26,7 @@ return new class extends Migration
         $bahan        = $this->upsertCategory('1.01.01', 'BAHAN', $l2_01, $now);
         $sukuCadang   = $this->upsertCategory('1.01.02', 'SUKU CADANG', $l2_01, $now);
         $alatKantor   = $this->upsertCategory('1.01.03', 'ALAT/BAHAN UNTUK KEGIATAN KANTOR', $l2_01, $now);
-        $obat         = $this->upsertCategory('1.01.04', 'OBAT-OBATAN', $l2_01, $now);
+        $obat         = $this->upsertCategory('1.01.03.14', 'OBAT-OBATAN', $alatKantor, $now);
         $dijual       = $this->upsertCategory('1.01.05', 'PERSEDIAAN UNTUK DIJUAL/DISERAHKAN', $l2_01, $now);
         $strategis    = $this->upsertCategory('1.01.06', 'PERSEDIAAN UNTUK TUJUAN STRATEGIS/BERJAGA-JAGA', $l2_01, $now);
         $natura       = $this->upsertCategory('1.01.07', 'NATURA DAN PAKAN', $l2_01, $now);
@@ -403,18 +403,17 @@ return new class extends Migration
         ], $now);
 
         // ═══════════════════════════════════════════════════════════
-        // 1.01.04 OBAT-OBATAN
+        // 1.01.03.14 OBAT-OBATAN
         // ═══════════════════════════════════════════════════════════
-        $obatObat = $this->upsertCategory('1.01.04.01', 'OBAT', $obat, $now);
-        $this->insertChildren($obatObat, [
-            ['1.01.04.01.001', 'Obat Cair'],
-            ['1.01.04.01.002', 'Obat Padat'],
-            ['1.01.04.01.003', 'Obat Gas'],
-            ['1.01.04.01.004', 'Obat Serbuk/Tepung'],
-            ['1.01.04.01.005', 'Obat Gel/Salep'],
-            ['1.01.04.01.006', 'Alat/Obat Kontrasepsi Keluarga Berencana'],
-            ['1.01.04.01.007', 'Non Alat/Obat Kontrasepsi Keluarga Berencana'],
-            ['1.01.04.01.999', 'Obat Lainnya'],
+        $this->insertChildren($obat, [
+            ['1.01.03.14.001', 'Obat Cair'],
+            ['1.01.03.14.002', 'Obat Padat'],
+            ['1.01.03.14.003', 'Obat Gas'],
+            ['1.01.03.14.004', 'Obat Serbuk/Tepung'],
+            ['1.01.03.14.005', 'Obat Gel/Salep'],
+            ['1.01.03.14.006', 'Alat/Obat Kontrasepsi Keluarga Berencana'],
+            ['1.01.03.14.007', 'Non Alat/Obat Kontrasepsi Keluarga Berencana'],
+            ['1.01.03.14.999', 'Obat Lainnya'],
         ], $now);
 
         // ═══════════════════════════════════════════════════════════

@@ -137,7 +137,8 @@
                             <th>Satuan</th>
                             <th class="text-end">Harga/Satuan</th>
                             <th class="text-end">Total Nilai</th>
-                        </tr>
+                            <th>Diajukan Oleh <small class="text-warning">(Publik Terakhir)</small></th>
+                            <th>Diproses Oleh</th>
                     </thead>
                     <tbody>
                         @forelse($stocks as $index => $stock)
@@ -171,10 +172,18 @@
                                         <span class="text-muted">-</span>
                                     @endif
                                 </td>
-                            </tr>
+                                <td>
+                                    @if(isset($stock->last_public_requester) && $stock->last_public_requester != '-')
+                                        <small>{{ $stock->last_public_requester }}</small>
+                                        <br><span class="badge bg-warning text-dark" style="font-size:0.7em">Publik</span>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td><small>{{ $stock->last_public_processor ?? '-' }}</small></td>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center py-4 text-muted">
+                                <td colspan="11" class="text-center py-4 text-muted">
                                     <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                     Tidak ada data stok
                                 </td>
@@ -184,7 +193,7 @@
                     @if($stocks->count() > 0)
                         <tfoot class="table-light">
                             <tr class="fw-bold">
-                                <td colspan="5" class="text-end">TOTAL:</td>
+                                <td colspan="7" class="text-end">TOTAL:</td>
                                 <td class="text-end">{{ number_format($totalQuantity, 0, ',', '.') }}</td>
                                 <td>-</td>
                                 <td>-</td>

@@ -9,6 +9,7 @@ use App\Models\Item;
 use App\Models\Warehouse;
 use App\Models\Stock;
 use App\Models\StockRequest;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -72,19 +73,40 @@ class StockSummaryReportController extends Controller
                         ->when($month, fn($q) => $q->whereMonth('submitted_at', $month))
                         ->sum('quantity') ?? 0;
 
-                    // Query untuk barang keluar (approved stock requests)
+                    // Query untuk barang keluar (approved stock requests + permintaan publik)
                     $stockOut = StockRequest::where('item_id', $item->id)
                         ->where('status', 'approved')
                         ->where('warehouse_id', $warehouseId)
                         ->when($year, fn($q) => $q->whereYear('approved_at', $year))
                         ->when($month, fn($q) => $q->whereMonth('approved_at', $month))
                         ->sum('base_quantity') ?? 0;
+
+                    // Tambahkan barang keluar dari permintaan publik
+                    $stockOut += abs(StockMovement::where('item_id', $item->id)
+                        ->where('warehouse_id', $warehouseId)
+                        ->where('movement_type', 'out')
+                        ->where('reference_type', 'public_request')
+                        ->when($year, fn($q) => $q->whereYear('created_at', $year))
+                        ->when($month, fn($q) => $q->whereMonth('created_at', $month))
+                        ->sum('quantity') ?? 0);
                     
                     $currentStock = Stock::where('item_id', $item->id)
                         ->where('warehouse_id', $warehouseId)
                         ->sum('quantity') ?? 0;
                     
                     $warehouse = Warehouse::find($warehouseId);
+
+                    // Info permintaan publik terakhir
+                    $lastPublicMovement = StockMovement::with('creator')
+                        ->where('item_id', $item->id)
+                        ->where('warehouse_id', $warehouseId)
+                        ->where('movement_type', 'out')
+                        ->where('reference_type', 'public_request')
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+                    $pubNoteParts = explode(' - ', $lastPublicMovement->notes ?? '', 2);
+                    $lastPublicRequester = (isset($pubNoteParts[1]) && $pubNoteParts[1] !== '') ? $pubNoteParts[1] : (\App\Models\PublicRequest::find($lastPublicMovement?->reference_id)?->requester_name ?? '-');
+                    $lastPublicProcessor = $lastPublicMovement?->creator->name ?? '-';
                     
                     if ($currentStock > 0) {
                         $summaryData[] = [
@@ -98,6 +120,8 @@ class StockSummaryReportController extends Controller
                             'stock_in' => $stockIn,
                             'stock_out' => $stockOut,
                             'current_stock' => $currentStock,
+                            'last_public_requester' => $lastPublicRequester,
+                            'last_public_processor' => $lastPublicProcessor,
                         ];
                     }
                 } else {
@@ -123,6 +147,27 @@ class StockSummaryReportController extends Controller
                             ->when($year, fn($q) => $q->whereYear('approved_at', $year))
                             ->when($month, fn($q) => $q->whereMonth('approved_at', $month))
                             ->sum('base_quantity') ?? 0;
+
+                        // Tambahkan barang keluar dari permintaan publik
+                        $whStockOut += abs(StockMovement::where('item_id', $item->id)
+                            ->where('warehouse_id', $stock->warehouse_id)
+                            ->where('movement_type', 'out')
+                            ->where('reference_type', 'public_request')
+                            ->when($year, fn($q) => $q->whereYear('created_at', $year))
+                            ->when($month, fn($q) => $q->whereMonth('created_at', $month))
+                            ->sum('quantity') ?? 0);
+
+                        // Info permintaan publik terakhir
+                        $whLastPublic = StockMovement::with('creator')
+                            ->where('item_id', $item->id)
+                            ->where('warehouse_id', $stock->warehouse_id)
+                            ->where('movement_type', 'out')
+                            ->where('reference_type', 'public_request')
+                            ->orderBy('created_at', 'desc')
+                            ->first();
+                        $whPubParts = explode(' - ', $whLastPublic->notes ?? '', 2);
+                        $whLastRequester = (isset($whPubParts[1]) && $whPubParts[1] !== '') ? $whPubParts[1] : (\App\Models\PublicRequest::find($whLastPublic?->reference_id)?->requester_name ?? '-');
+                        $whLastProcessor = $whLastPublic?->creator->name ?? '-';
                         
                         $summaryData[] = [
                             'item_id' => $item->id,
@@ -135,6 +180,8 @@ class StockSummaryReportController extends Controller
                             'stock_in' => $whStockIn,
                             'stock_out' => $whStockOut,
                             'current_stock' => $stock->quantity,
+                            'last_public_requester' => $whLastRequester,
+                            'last_public_processor' => $whLastProcessor,
                         ];
                     }
                 }
@@ -266,19 +313,40 @@ class StockSummaryReportController extends Controller
                         ->when($month, fn($q) => $q->whereMonth('submitted_at', $month))
                         ->sum('quantity') ?? 0;
 
-                    // Query untuk barang keluar (approved stock requests)
+                    // Query untuk barang keluar (approved stock requests + permintaan publik)
                     $stockOut = StockRequest::where('item_id', $item->id)
                         ->where('status', 'approved')
                         ->where('warehouse_id', $warehouseId)
                         ->when($year, fn($q) => $q->whereYear('approved_at', $year))
                         ->when($month, fn($q) => $q->whereMonth('approved_at', $month))
                         ->sum('base_quantity') ?? 0;
+
+                    // Tambahkan barang keluar dari permintaan publik
+                    $stockOut += abs(StockMovement::where('item_id', $item->id)
+                        ->where('warehouse_id', $warehouseId)
+                        ->where('movement_type', 'out')
+                        ->where('reference_type', 'public_request')
+                        ->when($year, fn($q) => $q->whereYear('created_at', $year))
+                        ->when($month, fn($q) => $q->whereMonth('created_at', $month))
+                        ->sum('quantity') ?? 0);
                     
                     $currentStock = Stock::where('item_id', $item->id)
                         ->where('warehouse_id', $warehouseId)
                         ->sum('quantity') ?? 0;
                     
                     $warehouse = Warehouse::find($warehouseId);
+
+                    // Info permintaan publik terakhir (PDF)
+                    $pdfLastPublic = StockMovement::with('creator')
+                        ->where('item_id', $item->id)
+                        ->where('warehouse_id', $warehouseId)
+                        ->where('movement_type', 'out')
+                        ->where('reference_type', 'public_request')
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+                    $pdfPubParts = explode(' - ', $pdfLastPublic->notes ?? '', 2);
+                    $pdfLastRequester = (isset($pdfPubParts[1]) && $pdfPubParts[1] !== '') ? $pdfPubParts[1] : (\App\Models\PublicRequest::find($pdfLastPublic?->reference_id)?->requester_name ?? '-');
+                    $pdfLastProcessor = $pdfLastPublic?->creator->name ?? '-';
                     
                     if ($currentStock > 0) {
                         $summaryData[] = [
@@ -290,6 +358,8 @@ class StockSummaryReportController extends Controller
                             'stock_in' => $stockIn,
                             'stock_out' => $stockOut,
                             'current_stock' => $currentStock,
+                            'last_public_requester' => $pdfLastRequester,
+                            'last_public_processor' => $pdfLastProcessor,
                         ];
                     }
                 } else {
@@ -315,6 +385,27 @@ class StockSummaryReportController extends Controller
                             ->when($year, fn($q) => $q->whereYear('approved_at', $year))
                             ->when($month, fn($q) => $q->whereMonth('approved_at', $month))
                             ->sum('base_quantity') ?? 0;
+
+                        // Tambahkan barang keluar dari permintaan publik
+                        $whStockOut += abs(StockMovement::where('item_id', $item->id)
+                            ->where('warehouse_id', $stock->warehouse_id)
+                            ->where('movement_type', 'out')
+                            ->where('reference_type', 'public_request')
+                            ->when($year, fn($q) => $q->whereYear('created_at', $year))
+                            ->when($month, fn($q) => $q->whereMonth('created_at', $month))
+                            ->sum('quantity') ?? 0);
+
+                        // Info permintaan publik terakhir (PDF all warehouses)
+                        $pdfWhLastPublic = StockMovement::with('creator')
+                            ->where('item_id', $item->id)
+                            ->where('warehouse_id', $stock->warehouse_id)
+                            ->where('movement_type', 'out')
+                            ->where('reference_type', 'public_request')
+                            ->orderBy('created_at', 'desc')
+                            ->first();
+                        $pdfWhParts = explode(' - ', $pdfWhLastPublic->notes ?? '', 2);
+                        $pdfWhLastRequester = (isset($pdfWhParts[1]) && $pdfWhParts[1] !== '') ? $pdfWhParts[1] : (\App\Models\PublicRequest::find($pdfWhLastPublic?->reference_id)?->requester_name ?? '-');
+                        $pdfWhLastProcessor = $pdfWhLastPublic?->creator->name ?? '-';
                         
                         $summaryData[] = [
                             'warehouse_name' => $stock->warehouse->name ?? '-',
@@ -325,6 +416,8 @@ class StockSummaryReportController extends Controller
                             'stock_in' => $whStockIn,
                             'stock_out' => $whStockOut,
                             'current_stock' => $stock->quantity,
+                            'last_public_requester' => $pdfWhLastRequester,
+                            'last_public_processor' => $pdfWhLastProcessor,
                         ];
                     }
                 }

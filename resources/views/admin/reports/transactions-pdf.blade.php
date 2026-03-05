@@ -172,9 +172,10 @@
                     <th width="7%">Barang Keluar</th>
                     <th width="6%">Satuan</th>
                     <th width="8%">Stok Setelah</th>
-                    <th width="10%">Kategori</th>
-                    <th width="8%">Status</th>
-                    <th width="14%">Diproses Oleh</th>
+                    <th width="9%">Kategori</th>
+                    <th width="11%">Diajukan Oleh</th>
+                    <th width="7%">Status</th>
+                    <th width="12%">Diproses Oleh</th>
                 </tr>
             </thead>
             <tbody>
@@ -218,6 +219,18 @@
                         <td class="text-center">{{ $transaction->item->unit ?? '-' }}</td>
                         <td class="text-center"><strong>{{ number_format($transaction->stock_after ?? 0) }}</strong></td>
                         <td>{{ $transaction->item->category->name ?? '-' }}</td>
+                        <td>
+                            @if(isset($transaction->reference_type) && $transaction->reference_type == 'public_request')
+                                {{ $transaction->requester_label ?? '-' }}
+                                <br><small class="badge badge-info">Publik</small>
+                            @elseif($transaction->transaction_type == 'in')
+                                {{ $transaction->staff->name ?? '-' }}
+                            @elseif($transaction->transaction_type == 'adjustment')
+                                {{ $transaction->creator->name ?? '-' }}
+                            @else
+                                {{ $transaction->staff->name ?? '-' }}
+                            @endif
+                        </td>
                         <td class="text-center">
                             @if($transaction->transaction_type == 'in')
                                 @if($transaction->status == 'approved')
@@ -234,7 +247,10 @@
                             @endif
                         </td>
                         <td>
-                            @if($transaction->transaction_type == 'in')
+                            @if(isset($transaction->reference_type) && $transaction->reference_type == 'public_request')
+                                {{ $transaction->processor_label ?? '-' }}
+                                <br><small class="badge badge-success">PIC</small>
+                            @elseif($transaction->transaction_type == 'in')
                                 @php $approval = $transaction->approvals->first(); @endphp
                                 @if($approval)
                                     {{ $approval->admin->name }}

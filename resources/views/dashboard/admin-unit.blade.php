@@ -7,7 +7,7 @@
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h4 class="mb-1">Dashboard Admin Gudang - {{ $warehouseName }}</h4>
+                <h4 class="mb-1">Dashboard Admin Unit - {{ $warehouseName }}</h4>
                 <p class="text-muted mb-0">Pantau dan kelola aktivitas Unit dengan mudah</p>
             </div>
         </div>
@@ -67,7 +67,7 @@
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <h5 class="mb-1">{{ number_format($stats['total_items']) }}</h5>
-                                <p class="text-muted small mb-0">Total Items di Gudang</p>
+                                <p class="text-muted small mb-0">Total Items di Unit</p>
                                 <small class="text-success">Klik untuk detail</small>
                             </div>
                             <div class="text-success">

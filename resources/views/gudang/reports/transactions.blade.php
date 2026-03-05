@@ -223,7 +223,10 @@
                                 </td>
                                 <td>{{ $transaction->item->category->name ?? '-' }}</td>
                                 <td>
-                                    @if($transaction->transaction_type == 'adjustment')
+                                    @if(isset($transaction->reference_type) && $transaction->reference_type == 'public_request')
+                                        {{ $transaction->requester_label ?? '-' }}
+                                        <br><small class="badge bg-warning text-dark">Publik</small>
+                                    @elseif($transaction->transaction_type == 'adjustment')
                                         {{ $transaction->creator->name ?? '-' }}
                                     @else
                                         {{ $transaction->staff->name ?? '-' }}
@@ -245,7 +248,10 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if($transaction->transaction_type == 'in')
+                                    @if(isset($transaction->reference_type) && $transaction->reference_type == 'public_request')
+                                        {{ $transaction->processor_label ?? '-' }}
+                                        <br><small class="text-muted">PIC</small>
+                                    @elseif($transaction->transaction_type == 'in')
                                         @php $approval = $transaction->approvals->first(); @endphp
                                         @if($approval)
                                             {{ $approval->admin->name }}

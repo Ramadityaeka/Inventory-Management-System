@@ -220,7 +220,12 @@
                             @endif
                         </td>
                         <td>
-                            @if($transaction->staff)
+                            @if(isset($transaction->reference_type) && $transaction->reference_type == 'public_request')
+                                {{ $transaction->requester_label ?? '-' }}
+                                <br><small class="badge badge-info">Publik</small>
+                            @elseif($transaction->transaction_type == 'adjustment')
+                                {{ $transaction->creator->name ?? '-' }}
+                            @elseif($transaction->staff)
                                 <strong>{{ $transaction->staff->name }}</strong>
                             @else
                                 -
@@ -240,13 +245,18 @@
                             @endif
                         </td>
                         <td>
-                            @if($transaction->transaction_type == 'in')
+                            @if(isset($transaction->reference_type) && $transaction->reference_type == 'public_request')
+                                {{ $transaction->processor_label ?? '-' }}
+                                <br><small class="badge badge-success">PIC</small>
+                            @elseif($transaction->transaction_type == 'in')
                                 @php $approval = $transaction->approvals->first(); @endphp
                                 @if($approval)
                                     <strong>{{ $approval->admin->name }}</strong>
                                 @else
                                     -
                                 @endif
+                            @elseif($transaction->transaction_type == 'adjustment')
+                                {{ $transaction->creator->name ?? '-' }}
                             @else
                                 @if($transaction->approver)
                                     <strong>{{ $transaction->approver->name }}</strong>

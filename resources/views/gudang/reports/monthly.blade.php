@@ -239,6 +239,77 @@
         </div>
     </div>
 
+    <!-- TABEL PERMINTAAN PUBLIK KELUAR -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                    <i class="bi bi-people me-2"></i>Tabel Permintaan Publik (Barang Keluar)
+                    <span class="badge bg-dark ms-2">{{ $reportData['public_requests_count'] ?? 0 }}</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                @if(($reportData['public_requests_out'] ?? collect())->count() > 0)
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="5%">No</th>
+                                    <th width="12%">Kode Permintaan</th>
+                                    <th width="15%">Nama Pemohon</th>
+                                    <th width="20%">Barang yang Dikeluarkan</th>
+                                    <th width="10%" class="text-center">Total Item</th>
+                                    <th width="10%" class="text-center">Status</th>
+                                    <th width="13%">PIC</th>
+                                    <th width="15%" class="text-center">Tanggal Disetujui</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($reportData['public_requests_out'] as $index => $pr)
+                                    <tr>
+                                        <td class="text-center">{{ $index + 1 }}</td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ $pr->request_code }}</span>
+                                        </td>
+                                        <td><strong>{{ $pr->requester_name }}</strong></td>
+                                        <td>
+                                            <ul class="mb-0 ps-3 small">
+                                                @foreach($pr->items as $item)
+                                                    <li>{{ $item->item->name }} — <strong>{{ $item->quantity_approved ?? $item->quantity_requested }}</strong> {{ $item->item->unit }}</li>
+                                                @endforeach
+                                            </ul>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-info text-dark">{{ $pr->items->count() }} item</span>
+                                        </td>
+                                        <td class="text-center">
+                                            @if($pr->status === 'completed')
+                                                <span class="badge bg-success">Selesai</span>
+                                            @elseif($pr->status === 'approved')
+                                                <span class="badge bg-primary">Disetujui</span>
+                                            @elseif($pr->status === 'partial')
+                                                <span class="badge bg-warning text-dark">Sebagian</span>
+                                            @endif
+                                        </td>
+                                        <td>{{ $pr->pic->name ?? '-' }}</td>
+                                        <td class="text-center">
+                                            <small>{{ $pr->approved_at?->format('d M Y H:i') ?? '-' }}</small>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="text-center py-4">
+                        <i class="bi bi-people text-muted fs-1"></i>
+                        <p class="text-muted mt-2 mb-0">Tidak ada permintaan publik bulan ini</p>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+
     <!-- TABEL 2: Stok Barang dengan Harga -->
     <div class="col-12 mb-4">
         <div class="card">

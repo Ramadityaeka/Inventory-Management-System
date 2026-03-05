@@ -64,6 +64,11 @@ class Warehouse extends Model
         return $this->hasMany(Transfer::class, 'to_warehouse_id');
     }
 
+    public function publicRequests(): HasMany
+    {
+        return $this->hasMany(PublicRequest::class);
+    }
+
     // Scopes
     public function scopeActive($query)
     {
