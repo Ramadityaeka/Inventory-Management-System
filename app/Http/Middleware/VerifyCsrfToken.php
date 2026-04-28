@@ -18,6 +18,23 @@ class VerifyCsrfToken extends Middleware
     ];
     
     /**
+     * Handle an incoming request.
+     * Override to catch token mismatch and redirect instead of 403.
+     */
+    public function handle($request, \Closure $next)
+    {
+        try {
+            return parent::handle($request, $next);
+        } catch (\Illuminate\Session\TokenMismatchException $e) {
+            // If user is logged in but token expired/mismatched (e.g. multi-account),
+            // redirect back with a friendly message instead of showing 403
+            return redirect()->back()
+                ->withInput($request->except('_token'))
+                ->with('error', 'Sesi Anda telah berubah. Silakan coba lagi.');
+        }
+    }
+    
+    /**
      * Determine if the session and input CSRF tokens match.
      *
      * @param  \Illuminate\Http\Request  $request

@@ -395,6 +395,26 @@ class GudangReportController extends Controller
             $pubNoteParts = explode(' - ', $lastPublicMovement->notes ?? '', 2);
             $stock->last_public_requester = (isset($pubNoteParts[1]) && $pubNoteParts[1] !== '') ? $pubNoteParts[1] : (\App\Models\PublicRequest::find($lastPublicMovement?->reference_id)?->requester_name ?? '-');
             $stock->last_public_processor = $lastPublicMovement?->creator->name ?? '-';
+
+            // Calculate Total In
+            $stock->total_in = StockMovement::where('item_id', $stock->item_id)
+                ->where('warehouse_id', $stock->warehouse_id)
+                ->where(function($q) {
+                    $q->where('movement_type', 'in')
+                      ->orWhere(function($subQ) {
+                          $subQ->where('movement_type', 'adjustment')->where('quantity', '>', 0);
+                      });
+                })->sum('quantity');
+
+            // Calculate Total Out
+            $stock->total_out = abs(StockMovement::where('item_id', $stock->item_id)
+                ->where('warehouse_id', $stock->warehouse_id)
+                ->where(function($q) {
+                    $q->where('movement_type', 'out')
+                      ->orWhere(function($subQ) {
+                          $subQ->where('movement_type', 'adjustment')->where('quantity', '<', 0);
+                      });
+                })->sum('quantity'));
         }
 
         // Get filter options

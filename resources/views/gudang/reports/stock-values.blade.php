@@ -133,15 +133,17 @@
                             <th>Kode Barang</th>
                             <th>Nama Barang</th>
                             <th>Kategori</th>
-                            <th class="text-end">Jumlah</th>
+                            <th class="text-end">Masuk</th>
+                            <th class="text-end">Keluar</th>
+                            <th class="text-end">Stok</th>
                             <th>Satuan</th>
                             <th class="text-end">Harga/Satuan</th>
                             <th class="text-end">Total Nilai</th>
-                            <th>Diajukan Oleh <small class="text-warning">(Publik Terakhir)</small></th>
-                            <th>Diproses Oleh</th>
+                        </tr>
                     </thead>
                     <tbody>
                         @forelse($stocks as $index => $stock)
+                            @if($stock->item)
                             <tr>
                                 <td>{{ $stocks->firstItem() + $index }}</td>
                                 <td>{{ $stock->warehouse->name ?? '-' }}</td>
@@ -153,10 +155,16 @@
                                 </td>
                                 <td>{{ $stock->item->category->name ?? '-' }}</td>
                                 <td class="text-end">
-                                    {{ number_format($stock->quantity, 0, ',', '.') }}
+                                    {{ number_format($stock->total_in, 0, ',', '.') }}
+                                </td>
+                                <td class="text-end">
+                                    {{ number_format($stock->total_out, 0, ',', '.') }}
+                                </td>
+                                <td class="text-end">
+                                    <strong>{{ number_format($stock->quantity, 0, ',', '.') }}</strong>
                                 </td>
                                 <td>
-                                    {{ $stock->item->unit }}
+                                    {{ $stock->item->unit ?? '-' }}
                                 </td>
                                 <td class="text-end">
                                     @if($stock->latest_unit_price > 0)
@@ -172,15 +180,7 @@
                                         <span class="text-muted">-</span>
                                     @endif
                                 </td>
-                                <td>
-                                    @if(isset($stock->last_public_requester) && $stock->last_public_requester != '-')
-                                        <small>{{ $stock->last_public_requester }}</small>
-                                        <br><span class="badge bg-warning text-dark" style="font-size:0.7em">Publik</span>
-                                    @else
-                                        <span class="text-muted">-</span>
-                                    @endif
-                                </td>
-                                <td><small>{{ $stock->last_public_processor ?? '-' }}</small></td>
+                            @endif
                         @empty
                             <tr>
                                 <td colspan="11" class="text-center py-4 text-muted">

@@ -99,10 +99,32 @@ class StockValueReportController extends Controller
             $lastPublicRequester = (isset($pubNoteParts[1]) && $pubNoteParts[1] !== '') ? $pubNoteParts[1] : (\App\Models\PublicRequest::find($lastPublicMovement?->reference_id)?->requester_name ?? '-');
             $lastPublicProcessor = $lastPublicMovement?->creator->name ?? '-';
 
+            // Calculate Total In
+            $totalIn = StockMovement::where('item_id', $stock->item_id)
+                ->where('warehouse_id', $stock->warehouse_id)
+                ->where(function($q) {
+                    $q->where('movement_type', 'in')
+                      ->orWhere(function($subQ) {
+                          $subQ->where('movement_type', 'adjustment')->where('quantity', '>', 0);
+                      });
+                })->sum('quantity');
+
+            // Calculate Total Out
+            $totalOut = abs(StockMovement::where('item_id', $stock->item_id)
+                ->where('warehouse_id', $stock->warehouse_id)
+                ->where(function($q) {
+                    $q->where('movement_type', 'out')
+                      ->orWhere(function($subQ) {
+                          $subQ->where('movement_type', 'adjustment')->where('quantity', '<', 0);
+                      });
+                })->sum('quantity'));
+
             return [
                 'stock' => $stock,
                 'item' => $stock->item,
                 'warehouse' => $stock->warehouse,
+                'total_in' => $totalIn,
+                'total_out' => $totalOut,
                 'quantity' => $stock->quantity,
                 'display_quantity' => $stock->quantity,
                 'unit_price' => $unitPrice,

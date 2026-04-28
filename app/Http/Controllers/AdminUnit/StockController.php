@@ -85,7 +85,7 @@ class StockController extends Controller
         
         $statistics = [
             'total_items' => $statsQuery->count(),
-            'total_stock' => $statsQuery->clone()->where('quantity', '>', 0)->sum('quantity'),
+            'total_stock' => $statsQuery->clone()->sum('quantity'),
             'out_stock_count' => $statsQuery->clone()->where('quantity', '=', 0)->count()
         ];
         
@@ -301,6 +301,7 @@ class StockController extends Controller
             'adjustment_type' => 'required|in:add,reduce',
             'quantity' => 'required|integer|min:1',
             'notes' => 'required|string|max:500',
+            'adjustment_date' => 'nullable|date',
         ]);
 
         try {
@@ -322,11 +323,7 @@ class StockController extends Controller
                 return redirect()->back()->with('error', "Tidak dapat melakukan adjustment. Barang {$stock->item->name} sudah dinonaktifkan ({$reasonText}).");
             }
 
-            // Get base unit for stock movement
-            $baseUnit = $stock->item->itemUnits->first();
-            if (!$baseUnit) {
-                return redirect()->back()->with('error', 'Item tidak memiliki unit yang terkonfigurasi.');
-            }
+            // Base unit check removed - not all items have itemUnits configured
 
             // Calculate new quantity
             $quantity = $validated['quantity'];
@@ -346,7 +343,7 @@ class StockController extends Controller
             $stock->save();
 
             // Record stock movement
-            StockMovement::create([
+            $movementData = [
                 'item_id' => $stock->item_id,
                 'unit_id' => $stock->warehouse_id,
                 'warehouse_id' => $stock->warehouse_id,
@@ -356,7 +353,13 @@ class StockController extends Controller
                 'reference_id' => auth()->id(),
                 'notes' => $validated['notes'] . ' (' . ($validated['adjustment_type'] === 'add' ? 'Penambahan' : 'Pengurangan') . ' oleh ' . auth()->user()->name . ')',
                 'created_by' => auth()->id(),
-            ]);
+            ];
+
+            if (!empty($validated['adjustment_date'])) {
+                $movementData['created_at'] = $validated['adjustment_date'];
+            }
+
+            StockMovement::create($movementData);
 
             DB::commit();
 
@@ -392,8 +395,6 @@ class StockController extends Controller
             }
 
             $stock = Stock::firstOrCreate(['item_id' => $item->id, 'warehouse_id' => $validated['warehouse_id']], ['quantity' => 0, 'last_updated' => now()]);
-            $baseUnit = $item->itemUnits->first();
-            if (!$baseUnit) return redirect()->back()->with('error', 'Item tidak memiliki satuan.');
 
             $quantity = $validated['quantity'];
             if ($quantity < 0 && ($stock->quantity + $quantity) < 0) {

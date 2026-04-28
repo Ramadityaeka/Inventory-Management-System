@@ -173,6 +173,12 @@
             if (adjustmentModal) {
                 const submitBtn = adjustmentModal.querySelector('button[type="submit"]');
                 
+                // Set default date
+                const dateInput = document.getElementById('adjustment_date');
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                dateInput.value = now.toISOString().slice(0, 16);
+                
                 adjustmentModal.addEventListener('show.bs.modal', function (event) {
                     const button = event.relatedTarget;
                     const stockId = button.getAttribute('data-stock-id');
@@ -196,6 +202,11 @@
                     stockPreview.classList.add('d-none');
                     submitBtn.disabled = false;
                     quantityInput.classList.remove('is-invalid');
+                    
+                    // Re-set default date
+                    const nowDate = new Date();
+                    nowDate.setMinutes(nowDate.getMinutes() - nowDate.getTimezoneOffset());
+                    dateInput.value = nowDate.toISOString().slice(0, 16);
                 });
                 
                 // Real-time validation
@@ -476,6 +487,9 @@
                                             <span class="badge bg-danger">
                                                 <i class="bi bi-arrow-down-circle me-1"></i>Barang Keluar
                                             </span>
+                                            @if($movement->reference_type === 'public_request')
+                                                <br><span class="badge bg-warning text-dark mt-1" style="font-size:0.7em">Publik</span>
+                                            @endif
                                             @break
                                         @case('adjustment')
                                             <span class="badge bg-warning text-dark">
@@ -699,6 +713,12 @@
                         <textarea class="form-control" id="notes" name="notes" rows="3" 
                                   placeholder="Contoh: Barang rusak, Barang digunakan untuk kegiatan X, Stock opname, dll." required></textarea>
                         <small class="text-muted">Jelaskan alasan adjustment untuk audit trail</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="adjustment_date" class="form-label">Tanggal Adjustment</label>
+                        <input type="datetime-local" class="form-control" id="adjustment_date" name="adjustment_date">
+                        <small class="text-muted">Kosongkan untuk menggunakan tanggal saat ini</small>
                     </div>
 
                     <div class="alert alert-warning d-none" id="warning_reduce">

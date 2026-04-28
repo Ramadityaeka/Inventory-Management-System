@@ -48,8 +48,8 @@
                     <div class="col-md-6">
                         <table class="table table-sm table-borderless">
                             <tr><th class="text-muted fw-normal w-40">Pemohon</th><td class="fw-semibold">{{ $publicRequest->requester_name }}</td></tr>
-                            <tr><th class="text-muted fw-normal">Unit Tujuan</th><td>{{ $publicRequest->warehouse->name }}</td></tr>
-                            <tr><th class="text-muted fw-normal">PIC</th><td>{{ $publicRequest->pic->name }}</td></tr>
+                            <tr><th class="text-muted fw-normal">Unit Tujuan</th><td>{{ $publicRequest->warehouse->name ?? '-' }}</td></tr>
+                            <tr><th class="text-muted fw-normal">PIC</th><td>{{ $publicRequest->pic->name ?? '-' }}</td></tr>
                             <tr><th class="text-muted fw-normal">Tanggal</th><td>{{ $publicRequest->created_at->format('d/m/Y H:i') }}</td></tr>
                         </table>
                     </div>
@@ -87,10 +87,10 @@
                             @foreach($publicRequest->items as $i => $item)
                                 <tr>
                                     <td>{{ $i + 1 }}</td>
-                                    <td>{{ $item->item->name }}</td>
-                                    <td class="text-center">{{ $item->quantity_requested }} {{ $item->item->unit }}</td>
+                                    <td>{{ $item->item->name ?? 'Barang Dihapus' }}</td>
+                                    <td class="text-center">{{ $item->quantity_requested }} {{ $item->item->unit ?? '-' }}</td>
                                     @if(!$publicRequest->isPending())
-                                        <td class="text-center">{{ $item->quantity_approved ?? '-' }} {{ $item->item->unit }}</td>
+                                        <td class="text-center">{{ $item->quantity_approved ?? '-' }} {{ $item->item->unit ?? '-' }}</td>
                                     @endif
                                 </tr>
                             @endforeach
@@ -125,7 +125,7 @@
                                      alt="TTD PIC"
                                      style="max-width: 200px; max-height: 100px; display: block;">
                             </div>
-                            <p class="fw-semibold small mt-2 mb-0">{{ $publicRequest->pic->name }}</p>
+                            <p class="fw-semibold small mt-2 mb-0">{{ $publicRequest->pic->name ?? '-' }}</p>
                             <p class="text-muted" style="font-size:11px;">
                                 {{ $publicRequest->picSignature->signed_at?->format('d/m/Y H:i') }}
                             </p>
@@ -157,14 +157,14 @@
                         @csrf
                         @foreach($publicRequest->items as $i => $item)
                             <div class="mb-3">
-                                <label class="form-label small fw-medium">{{ $item->item->name }}</label>
+                                <label class="form-label small fw-medium">{{ $item->item->name ?? 'Barang Dihapus' }}</label>
                                 <div class="input-group input-group-sm">
                                     <input type="hidden" name="items[{{ $i }}][item_id]" value="{{ $item->item_id }}">
                                     <input type="number" name="items[{{ $i }}][quantity_approved]"
                                            class="form-control"
                                            value="{{ $item->quantity_requested }}"
                                            min="0" max="{{ $item->quantity_requested }}">
-                                    <span class="input-group-text">/ {{ $item->quantity_requested }} {{ $item->item->unit }}</span>
+                                    <span class="input-group-text">/ {{ $item->quantity_requested }} {{ $item->item->unit ?? '-' }}</span>
                                 </div>
                             </div>
                         @endforeach
@@ -232,7 +232,7 @@
                         </tr>
                         <tr>
                             <td class="text-muted small">PIC</td>
-                            <td class="small fw-semibold">{{ $publicRequest->pic->name }}</td>
+                            <td class="small fw-semibold">{{ $publicRequest->pic->name ?? '-' }}</td>
                         </tr>
                     </table>
                     <div class="d-grid gap-2">

@@ -279,9 +279,26 @@
                         <small class="text-muted">Jelaskan alasan adjustment untuk audit trail</small>
                     </div>
 
+                    <div class="mb-3">
+                        <label for="adjustment_date" class="form-label">Tanggal Adjustment</label>
+                        <input type="datetime-local" class="form-control" id="adjustment_date" name="adjustment_date">
+                        <small class="text-muted">Kosongkan untuk menggunakan tanggal saat ini</small>
+                    </div>
+
+                    <div class="alert alert-success d-none" id="stock_preview">
+                        <strong>Preview:</strong>
+                        <div id="stock_calculation"></div>
+                    </div>
+
                     <div class="alert alert-warning d-none" id="warning_reduce">
                         <i class="bi bi-exclamation-triangle me-2"></i>
                         <small>Pengurangan stock akan mengurangi jumlah barang yang tersedia di unit.</small>
+                    </div>
+
+                    <div class="alert alert-danger d-none" id="error_insufficient">
+                        <i class="bi bi-x-circle me-2"></i>
+                        <strong>Stok tidak mencukupi!</strong><br>
+                        <small id="error_insufficient_text"></small>
                     </div>
                 </div>
                 
@@ -302,41 +319,110 @@
     document.addEventListener('DOMContentLoaded', function() {
         const adjustmentModal = document.getElementById('adjustmentModal');
         const adjustmentTypeSelect = document.getElementById('adjustment_type');
+        const quantityInput = document.getElementById('quantity');
         const warningReduce = document.getElementById('warning_reduce');
+        const errorInsufficient = document.getElementById('error_insufficient');
+        const stockPreview = document.getElementById('stock_preview');
+        let currentStock = 0;
+        
+        const submitBtn = adjustmentModal.querySelector('button[type="submit"]');
+        
+        // Set default date
+        const dateInput = document.getElementById('adjustment_date');
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        dateInput.value = now.toISOString().slice(0, 16);
         
         // Handle adjustment modal
         adjustmentModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             const stockId = button.getAttribute('data-stock-id');
             const itemName = button.getAttribute('data-item-name');
-            const currentStock = button.getAttribute('data-current-stock');
+            currentStock = parseInt(button.getAttribute('data-current-stock')) || 0;
             const itemUnit = button.getAttribute('data-item-unit');
             
             // Set modal data
             document.getElementById('modal_stock_id').value = stockId;
             document.getElementById('modal_item_name').textContent = itemName;
-            document.getElementById('modal_current_stock').textContent = currentStock;
+            document.getElementById('modal_current_stock').textContent = new Intl.NumberFormat().format(currentStock);
             document.getElementById('modal_item_unit').textContent = itemUnit;
             
             // Reset form
             document.getElementById('adjustmentForm').reset();
             document.getElementById('modal_stock_id').value = stockId;
             warningReduce.classList.add('d-none');
+            errorInsufficient.classList.add('d-none');
+            stockPreview.classList.add('d-none');
+            submitBtn.disabled = false;
+            quantityInput.classList.remove('is-invalid');
+            
+            // Re-set default date
+            const nowDate = new Date();
+            nowDate.setMinutes(nowDate.getMinutes() - nowDate.getTimezoneOffset());
+            dateInput.value = nowDate.toISOString().slice(0, 16);
         });
         
-        // Show warning when reduce is selected
-        adjustmentTypeSelect.addEventListener('change', function() {
-            if (this.value === 'reduce') {
+        // Real-time validation
+        function validateAndPreview() {
+            const type = adjustmentTypeSelect.value;
+            const quantity = parseInt(quantityInput.value) || 0;
+            
+            if (!type || quantity <= 0) {
+                stockPreview.classList.add('d-none');
+                errorInsufficient.classList.add('d-none');
+                warningReduce.classList.add('d-none');
+                return;
+            }
+
+            if (type === 'reduce') {
                 warningReduce.classList.remove('d-none');
+                
+                if (quantity > currentStock) {
+                    errorInsufficient.classList.remove('d-none');
+                    document.getElementById('error_insufficient_text').innerHTML = 
+                        `Anda mencoba mengurangi <strong>${new Intl.NumberFormat().format(quantity)}</strong> item, ` +
+                        `tetapi stok saat ini hanya <strong>${new Intl.NumberFormat().format(currentStock)}</strong> item. ` +
+                        `Maksimal pengurangan: <strong>${new Intl.NumberFormat().format(currentStock)}</strong> item.`;
+                    quantityInput.classList.add('is-invalid');
+                    submitBtn.disabled = true;
+                    stockPreview.classList.add('d-none');
+                    return;
+                } else {
+                    errorInsufficient.classList.add('d-none');
+                    quantityInput.classList.remove('is-invalid');
+                    submitBtn.disabled = false;
+                }
             } else {
                 warningReduce.classList.add('d-none');
+                errorInsufficient.classList.add('d-none');
+                quantityInput.classList.remove('is-invalid');
+                submitBtn.disabled = false;
             }
-        });
+
+            // Show preview
+            const newStock = type === 'add' ? currentStock + quantity : currentStock - quantity;
+            const previewClass = type === 'add' ? 'text-success' : 'text-danger';
+            const operator = type === 'add' ? '+' : '-';
+            
+            document.getElementById('stock_calculation').innerHTML = 
+                `Stok saat ini: <strong>${new Intl.NumberFormat().format(currentStock)}</strong> ` +
+                `<span class="${previewClass}">${operator} ${new Intl.NumberFormat().format(quantity)}</span> = ` +
+                `<strong class="${previewClass}">${new Intl.NumberFormat().format(newStock)}</strong> ` +
+                `<span class="text-muted">${document.getElementById('modal_item_unit').textContent}</span>`;
+            stockPreview.classList.remove('d-none');
+        }
+
+        adjustmentTypeSelect.addEventListener('change', validateAndPreview);
+        quantityInput.addEventListener('input', validateAndPreview);
         
         // Reset modal when hidden
         adjustmentModal.addEventListener('hidden.bs.modal', function () {
             document.getElementById('adjustmentForm').reset();
             warningReduce.classList.add('d-none');
+            errorInsufficient.classList.add('d-none');
+            stockPreview.classList.add('d-none');
+            quantityInput.classList.remove('is-invalid');
+            submitBtn.disabled = false;
         });
     });
 </script>

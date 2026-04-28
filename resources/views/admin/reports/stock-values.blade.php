@@ -134,38 +134,45 @@
                             <th>Kode Barang</th>
                             <th>Nama Barang</th>
                             <th>Kategori</th>
+                            <th class="text-end">Masuk</th>
+                            <th class="text-end">Keluar</th>
                             <th class="text-end">Stok</th>
                             <th>Satuan</th>
                             <th class="text-end">Harga/Satuan</th>
                             <th class="text-end">Harga Total</th>
-                            <th>Diajukan Oleh <small class="text-warning">(Publik Terakhir)</small></th>
-                            <th>Diproses Oleh</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($stocksData as $index => $data)
+                            @if(isset($data['item']) && $data['item'])
                             <tr>
                                 <td>{{ $stocks->firstItem() + $index }}</td>
                                 <td>
-                                    <span class="badge bg-info">{{ $data['warehouse']->name }}</span>
+                                    <span class="badge bg-info">{{ $data['warehouse']->name ?? '-' }}</span>
                                 </td>
                                 <td>
-                                    <code>{{ $data['item']->code }}</code>
+                                    <code>{{ $data['item']->code ?? '-' }}</code>
                                 </td>
                                 <td>
-                                    <strong>{{ $data['item']->name }}</strong>
+                                    <strong>{{ $data['item']->name ?? '-' }}</strong>
                                     @if($data['quantity'] <= 0)
                                         <br><span class="badge bg-danger">Habis</span>
                                     @endif
                                 </td>
                                 <td>
-                                    <span class="badge bg-secondary">{{ $data['item']->category->name }}</span>
+                                    <span class="badge bg-secondary">{{ $data['item']->category->name ?? '-' }}</span>
                                 </td>
                                 <td class="text-end">
-                                    <strong>{{ number_format($data['display_quantity']) }}</strong>
+                                    {{ number_format($data['total_in'], 0, ',', '.') }}
+                                </td>
+                                <td class="text-end">
+                                    {{ number_format($data['total_out'], 0, ',', '.') }}
+                                </td>
+                                <td class="text-end">
+                                    <strong>{{ number_format($data['display_quantity'], 0, ',', '.') }}</strong>
                                 </td>
                                 <td>
-                                    {{ $data['item']->unit }}
+                                    {{ $data['item']->unit ?? '-' }}
                                 </td>
                                 <td class="text-end">
                                     @if($data['unit_price'] > 0)
@@ -181,16 +188,8 @@
                                         <span class="text-muted">-</span>
                                     @endif
                                 </td>
-                                <td>
-                                    @if(isset($data['last_public_requester']) && $data['last_public_requester'] != '-')
-                                        <small>{{ $data['last_public_requester'] }}</small>
-                                        <br><span class="badge bg-warning text-dark" style="font-size:0.7em">Publik</span>
-                                    @else
-                                        <span class="text-muted">-</span>
-                                    @endif
-                                </td>
-                                <td><small>{{ $data['last_public_processor'] ?? '-' }}</small></td>
                             </tr>
+                            @endif
                         @empty
                             <tr>
                                 <td colspan="11" class="text-center py-4 text-muted">
